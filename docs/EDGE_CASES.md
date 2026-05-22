@@ -201,3 +201,11 @@ When an item is decided, leave it in this file with the decision summarised inli
 - **Risk**: low — there is one meal per session, so any absence on the date means "no meal needed". But if a school later has two sessions on one date, the assumption breaks.
 - **Status**: open.
 - **Proposed stance**: treat each absence row as "missing from the unique tutoring session at that school on that date" and fail-loud if more than one session matches.
+
+## E-23 — `day` and `date` columns disagree with the Gregorian calendar
+
+- **Where**: `sessions.xlsx`. Surfaced during ingestion.
+- **Observation**: The previous inventory claim ("`day` is always `date.strftime('%A')`") is incorrect. The source labels `2026-05-02` as Tuesday, but in the real Gregorian calendar that date is a Saturday. The dates and day labels are internally consistent under the operational assumption that May 1 = Monday → May 4 = Thursday, but they do not match real-world weekdays. Likely this dataset has dates transposed from a 2023 week (when 2023-05-01 was a Monday).
+- **Risk**: a Python-derived `date.strftime('%A')` would mislabel every session. `students.xlsx` sheets use the source day labels (e.g. `"JPC - Tuesday"`), so any matching by computed weekday silently fails.
+- **Status**: open.
+- **Proposed stance**: treat the **source `day` column as authoritative** for day-of-week semantics during ingestion (used to map sheets → sessions). The schema does not need to store it (D-03 holds), but the ingestion pipeline must read it from the parsed source rather than deriving it from `session_date`. Document the assumption that the operational week is Mon→Thu regardless of the underlying calendar.

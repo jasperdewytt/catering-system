@@ -32,9 +32,11 @@ The order generator filters out any student whose year level appears in the excl
 
 ## D-03 — Drop `day` column (E-11)
 
-**Decision**: `day` is not stored in the schema. `date` is the authoritative column. Day-of-week is derived via `date.strftime('%A')` wherever it needs to be displayed.
+**Decision**: `day` is not stored in the schema. `date` is the authoritative column for delivery scheduling.
 
-**Why**: `day` is always redundant with `date` (verified across all 11 source rows). Storing both creates a potential inconsistency with no upside.
+**Update (during ingestion)**: The original rationale ("`day` always matches `date.strftime('%A')`") turned out to be wrong — see [E-23](EDGE_CASES.md#e-23--day-and-date-columns-disagree-with-the-gregorian-calendar). `2026-05-02` is labelled Tuesday in the source but is actually a Saturday. The decision still stands — we don't store `day` in `sessions` — but the **ingestion pipeline reads the source `day` column** to match `students.xlsx` sheet labels (e.g. `"JPC - Tuesday"`) to sessions. Python's `strftime('%A')` would give the wrong answer for this dataset.
+
+**Why the decision still holds**: the schema only needs the date for delivery, and downstream queries that want to display a weekday should still derive from the date (which describes when delivery happens in real-world time). The source `day` label is an operational sheet-naming artefact, not a calendrical fact worth persisting.
 
 ---
 
