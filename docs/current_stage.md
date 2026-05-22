@@ -2,7 +2,7 @@
 
 _Update this file whenever a significant phase completes or the active focus shifts._
 
-## Status: Schema Applied — Ingestion Pipeline Next
+## Status: Ingestion Complete — Validation Preflight Next
 
 **Last updated**: 2026-05-22
 
@@ -32,30 +32,37 @@ _Update this file whenever a significant phase completes or the active focus shi
   - `20260522120400_enrolments_dishes_absences.sql` — session_enrolments, dishes, absences
   - `20260522120500_move_citext_to_extensions_schema.sql` — security advisor fix
 - [x] Advisors clean: only intentional INFOs remain (RLS-no-policy by design until operator UI; unused indexes expected on empty schema)
+- [x] **Python package initialised** — `pyproject.toml` with `pandas`, `openpyxl`, `pdfplumber`, `supabase<2.30`, `python-dotenv`, `pydantic`, `streamlit`; dev deps `pytest`, `ruff`. Python pinned to `>=3.12,<3.14` (avoid pyiceberg-on-3.14 C-build).
+- [x] **Ingestion pipeline complete** — `uv run python -m padea_catering.ingestion` populates all 14 tables in one pass, idempotently. Verified row counts:
+  - 6 schools (+ 1 alias for E-21 punctuation drift)
+  - 4 caterers, 12 weekly minimums (4×3 menu-item tiers), 6 contacts
+  - 11 sessions (no `day` column; D-03 with E-23 caveat)
+  - 3 exclusions, including partial CHAC `[10, 12]` per D-02
+  - 320 students, 7 opted-out, 61 dietary tags, 0 unrecognised warnings
+  - 320 session_enrolments
+  - 40 dishes (36 halal-inferred, 4 non-halal, 8 with no declared tags per E-13)
+  - 10 absences resolved fail-loud per D-01
+- [x] **E-23 surfaced**: source `day` and `date` columns don't match real calendar — DATA_INVENTORY's "day = strftime('%A')" claim was wrong. D-03 still holds (don't store `day`), but ingestion now uses the source `day_label` for sheet→session matching.
+- [x] 26 unit tests passing on `padea_catering.ingestion.normalisation`. Ruff clean.
 
 ## Active Focus
 
-**Build the ingestion pipeline** in `src/padea_catering/ingestion/`.
+**Validation preflight** in `src/padea_catering/validation/`.
 
-The 14-table schema is now in place. Ingestion needs to:
+Now that data is in the database, the validation layer should surface preflight warnings *before* an order is generated. From the open edge cases:
 
-1. Parse each of the 7 raw files into the corresponding tables.
-2. Normalise school names via `school_aliases` (E-21).
-3. Parse `Dietary` text into structured `student_dietary_tags`, with unrecognised values routed to `student_dietary_warnings` (D-04).
-4. Resolve `(school, full_name, date)` → `(student_id, session_id)` for absences, failing loud on 0 or >1 match (D-01).
-5. Compute `is_halal_inferred` per dish from absence of pork (E-19).
-6. Preserve raw source rows in `source_row jsonb` columns for audit.
-
-`pyproject.toml` is still empty — first step is `uv init` and adding dependencies (`pandas` / `openpyxl`, `pdfplumber`, `supabase-py`, `pydantic`).
+- E-04 — caterer weekly minimum vs realised demand (forecast meals < minimum at chosen menu_item_count)
+- E-16 — missing room number on a session's building
+- D-05 — student enrolled in >1 session on the same date (already tracked by ingestion; surface via DB)
+- E-09 — caterer contacts with gmail.com / unverified emails before sending
+- Cross-check: every session has at least one enrolled student after exclusions/absences
 
 ## Up Next (in order)
 
-1. Initialise `pyproject.toml` with `uv` and add ingestion dependencies
-2. Ingestion pipeline → `src/padea_catering/ingestion/`
-3. Validation preflight → `src/padea_catering/validation/`
-4. Order generation / matchmaking → `src/padea_catering/ordering/` (will require Phase 2 migrations: `order_runs`, `order_lines`, `menu_offers`)
-5. Streamlit operator UI → `app/streamlit_app.py` (will require Phase 4 migrations: RLS policies + views)
-6. Submission artefacts
+1. Validation preflight → `src/padea_catering/validation/` + `session_validation_findings` table (Phase 3 migration)
+2. Order generation / matchmaking → `src/padea_catering/ordering/` (requires Phase 2 migrations: `order_runs`, `order_lines`, `menu_offers`, `order_allocations`)
+3. Streamlit operator UI → `app/streamlit_app.py` (requires Phase 4 migrations: RLS policies + views)
+4. Submission artefacts
 
 ## Known schema follow-ups (Phase 2+)
 
