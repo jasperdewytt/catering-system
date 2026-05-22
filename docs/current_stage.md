@@ -2,7 +2,7 @@
 
 _Update this file whenever a significant phase completes or the active focus shifts._
 
-## Status: Variant-Aware Menu Setup MVP Implemented — Menu Review In Progress
+## Status: Order Review MVP Implemented — Communications Approval Next
 
 **Last updated**: 2026-05-22
 
@@ -68,34 +68,39 @@ _Update this file whenever a significant phase completes or the active focus shi
   - selecting weekly `menu_offers` per active caterer by variant
   - reviewing variant dietary/ingredient flags and saving `operator_reviewed` metadata
   - running validation and order-generation dry runs
+- [x] **Generated order run achieved** — `order_run_id=9b23f6a1-38f1-4ec7-a933-d4f6a1d2d6f0`, `status=generated`, 320 allocations, 33 order lines, 0 issues.
+- [x] **Narrow Order Review MVP implemented** — `uv run streamlit run app/order_review_mvp.py` provides a read-only/export-only UI for:
+  - selecting generated order runs
+  - reviewing order lines, allocations, contacts, and delivery notes
+  - preparing deterministic copy-ready caterer email drafts
+  - downloading draft text files
 
 ## Active Focus
 
-**Operator menu review** before a generated order can succeed.
+**Communications approval and operational workflow** after generated order review.
 
-The backend can dry-run or write order runs, and the temporary menu setup MVP can now fill the `menu_offers` and dish-variant review data required to unblock generation. Customisable parent dishes must be split into concrete orderable variants before they are offered to restricted students. The implemented algorithm:
+The backend can write generated order runs, and the temporary order review MVP can inspect those runs without mutating them. Customisable parent dishes are split into concrete orderable variants before they are offered to restricted students. The implemented algorithm:
 
 1. For each non-cancelled session, walk the enrolled students minus opted-out, year-excluded, and absent.
 2. For each student, pick a safe offered variant given their dietary tags.
 3. Aggregate per-session into variant-aware `order_lines`, per-student into `order_allocations`.
 4. Reproducibility: the same DB state should always produce the same order_run output.
 
-Current live validation after the variant migration and ingestion reports `9 errors, 19 warnings, 9 info` because Guzman y Gomez has 4 offered options already selected, while Kenko, Lakehouse, and Terrific still need menu offers. The 4 offered Guzman options still need operator review before a clean production order.
+The current generated run has no allocation issues. Remaining validation warnings are operational warnings such as missing room numbers, unverified contacts, and suspicious/free-webmail caterer addresses.
 
 ## Up Next (in order)
 
-1. Use the Menu Setup MVP to create variants for customisable dishes where needed
-2. Select `menu_offers` for Kenko, Lakehouse, and Terrific, and review all offered variants
-3. Run validation and order dry run until there are no blocking errors
-4. Generate a clean `order_run`
-5. Plan/build order review and caterer email draft/export flow
-6. Streamlit final operator UI → `app/streamlit_app.py` (requires Phase 4 migrations: RLS policies + views)
-7. (Optional Phase 3) `session_validation_findings` table to persist validation output
-8. Submission artefacts
+1. Use the Order Review MVP to inspect the generated run and draft caterer emails
+2. Decide the approval/audit model before any status-changing action is added
+3. Build explicit approval + audit trail (`manual_overrides`, `audit_log`) before live sending
+4. Add email sending/export workflow after contact verification rules are settled
+5. Streamlit final operator UI → `app/streamlit_app.py` (requires Phase 4 migrations: RLS policies + views)
+6. (Optional Phase 3) `session_validation_findings` table to persist validation output
+7. Submission artefacts
 
 ## Known schema follow-ups (Phase 2+)
 
-- final UI replacement for `app/menu_setup_mvp.py` — the MVP is intentionally separate from the future full app
+- final UI replacement for `app/menu_setup_mvp.py` and `app/order_review_mvp.py` — the MVPs are intentionally separate from the future full app
 - `manual_overrides`, `audit_log` — operator action audit (Phase 3, per AGENTS.md non-negotiables)
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
 - `session_validation_findings` — preflight warning queue for E-04, E-16, multi-session date conflicts (Phase 3)
