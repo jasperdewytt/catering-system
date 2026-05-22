@@ -111,11 +111,24 @@ def render_menu_offers(week_start: date, selected_by: str) -> None:
                     for variant in variants
                 ]
             )
-            st.dataframe(offer_df, use_container_width=True, hide_index=True)
+            st.dataframe(offer_df, width="stretch", hide_index=True)
+
+            available_ids = {variant["id"] for variant in variants if variant["is_available"]}
+            option_ids = [
+                variant["id"]
+                for variant in variants
+                if variant["is_available"] or variant["id"] in caterer["selected_variant_ids"]
+            ]
+            unavailable_selected = sorted(set(selected_ids) - available_ids)
+            if unavailable_selected:
+                st.warning(
+                    "Some saved offers are now marked unavailable. They remain selected here "
+                    "so you can remove them and save the corrected offer set."
+                )
 
             chosen = st.multiselect(
                 "Offered options",
-                options=[variant["id"] for variant in variants if variant["is_available"]],
+                options=option_ids,
                 default=selected_ids,
                 format_func=lambda variant_id, mapping=variant_by_id: mapping[variant_id][
                     "display_name"
@@ -306,7 +319,7 @@ def render_validation(week_start: date) -> None:
         col_b.metric("Warnings", len(warnings))
         col_c.metric("Info", len(info))
         if findings:
-            st.dataframe(_findings_table(findings), use_container_width=True, hide_index=True)
+            st.dataframe(_findings_table(findings), width="stretch", hide_index=True)
         else:
             st.success("No validation findings.")
 
@@ -318,7 +331,7 @@ def render_validation(week_start: date) -> None:
         col_c.metric("Issues", len(plan.issues))
         if plan.issues:
             st.error("Order generation is blocked.")
-            st.dataframe(_issue_table(plan.issues), use_container_width=True, hide_index=True)
+            st.dataframe(_issue_table(plan.issues), width="stretch", hide_index=True)
         else:
             st.success("Dry run can generate an order.")
 
