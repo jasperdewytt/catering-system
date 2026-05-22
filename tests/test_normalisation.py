@@ -8,6 +8,7 @@ import pytest
 
 from padea_catering.ingestion.normalisation import (
     canonicalise_school_name,
+    infer_ingredient_flags,
     is_halal,
     parse_dietary,
     parse_ordinal_english_date,
@@ -154,3 +155,24 @@ class TestIsHalal:
     def test_case_insensitive(self) -> None:
         ok, _ = is_halal("PULLED PORK BURRITO BOWL")
         assert ok is False
+
+
+class TestInferIngredientFlags:
+    def test_beef_and_red_meat(self) -> None:
+        flags = infer_ingredient_flags("Beef Pad Thai")
+        assert flags.contains_beef is True
+        assert flags.contains_red_meat is True
+        assert flags.contains_pork is False
+
+    def test_pork(self) -> None:
+        flags = infer_ingredient_flags("Chicken, Bacon, Avo Wrap")
+        assert flags.contains_pork is True
+        assert flags.contains_red_meat is False
+
+    def test_fish_and_shellfish(self) -> None:
+        fish = infer_ingredient_flags("Teriyaki Salmon rice bowl")
+        shellfish = infer_ingredient_flags("Shrimp Fried Rice")
+        assert fish.contains_fish is True
+        assert fish.contains_shellfish is False
+        assert shellfish.contains_shellfish is True
+        assert shellfish.contains_fish is False

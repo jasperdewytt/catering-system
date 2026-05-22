@@ -495,11 +495,6 @@ def ingest_dishes(
     report: IngestionReport,
 ) -> None:
     menus = parse_caterer_menus_pdf(raw_dir / "caterer-menus.pdf")
-    # Wipe and re-insert (small table, simpler than upsert with case-insensitive uniqueness).
-    cid_list = list(caterer_id_by_name.values())
-    if cid_list:
-        client.table("dishes").delete().in_("caterer_id", cid_list).execute()
-
     dish_rows: list[dict[str, Any]] = []
     for m in menus:
         cid = caterer_id_by_name.get(m.caterer_name)
@@ -518,11 +513,17 @@ def ingest_dishes(
                     "is_halal_inferred": d.is_halal_inferred,
                     "halal_inference_note": d.halal_inference_note,
                     "has_no_declared_tags": d.has_no_declared_tags,
+                    "contains_beef": d.ingredient_flags.contains_beef,
+                    "contains_pork": d.ingredient_flags.contains_pork,
+                    "contains_red_meat": d.ingredient_flags.contains_red_meat,
+                    "contains_fish": d.ingredient_flags.contains_fish,
+                    "contains_shellfish": d.ingredient_flags.contains_shellfish,
+                    "ingredient_flags_source": "keyword_inferred",
                     **_provenance("caterer-menus.pdf", d),
                 }
             )
     if dish_rows:
-        client.table("dishes").insert(dish_rows).execute()
+        client.table("dishes").upsert(dish_rows, on_conflict="caterer_id,name").execute()
     report.dishes = len(dish_rows)
 
 

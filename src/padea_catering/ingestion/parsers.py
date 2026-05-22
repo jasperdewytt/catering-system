@@ -15,7 +15,9 @@ import pandas as pd
 import pdfplumber
 
 from .normalisation import (
+    IngredientFlags,
     ParsedDietary,
+    infer_ingredient_flags,
     is_halal,
     parse_dietary,
     parse_ordinal_english_date,
@@ -70,6 +72,7 @@ class ParsedDish:
     has_no_declared_tags: bool
     is_halal_inferred: bool
     halal_inference_note: str | None
+    ingredient_flags: IngredientFlags
 
 
 @dataclass
@@ -157,6 +160,7 @@ def parse_caterer_menus_pdf(path: Path) -> list[ParsedMenu]:
                         has_no_declared_tags=(len(flags) == 0),
                         is_halal_inferred=halal,
                         halal_inference_note=halal_note,
+                        ingredient_flags=infer_ingredient_flags(name),
                     )
                 )
 

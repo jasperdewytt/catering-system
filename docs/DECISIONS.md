@@ -81,3 +81,30 @@ Opted-out students are excluded from meal counts and do not appear in generated 
 **Pending**: stakeholder confirmation. Treat this as the working assumption until confirmed.
 
 **Why this interpretation**: The caterer needs to know upfront how many dishes to prepare, so the offered menu count (operator-controlled) is the operationally meaningful number, not the count of dishes that happen to be ordered.
+
+**Phase 2 implementation note**: `menu_offers` is operator-owned state. The migration does not seed default offers; validation and order generation block until an operator-selected offer set exists for each active caterer.
+
+---
+
+## D-08 — Deterministic dietary matching and dish ingredient review (E-05, E-13, E-19)
+
+**Decision**: Meal allocation is deterministic and must never rely on LLM judgement for dietary safety.
+
+Known student dietary tags are matched against explicit dish fields:
+
+- `vegetarian` requires `dishes.is_vegetarian_option = true`.
+- `nut_free` requires `dishes.is_nut_free = true`.
+- `gluten_free` requires `dishes.is_gluten_free = true`.
+- `dairy_free` requires `dishes.is_dairy_free = true`.
+- `halal` requires `dishes.is_halal_inferred = true`.
+- `excludes_beef`, `excludes_pork`, `excludes_red_meat`, `excludes_fish`, `excludes_shellfish`, and `excludes_seafood` require operator-reviewable ingredient flags on `dishes` before order generation is considered production-safe.
+
+Unknown student dietary text remains fail-loud per D-04: ingestion creates a pending `student_dietary_warnings` row, and the student must not receive an automatic allocation until an operator resolves the warning with a reason and timestamp.
+
+Dishes with `has_no_declared_tags = true` are treated as "no claim made", not safe-by-default. If their ingredient flags are still `unreviewed`, they may be offered to unrestricted students only. Phase 2 may use `keyword_inferred` ingredient flags as a deterministic development bridge for restricted students, but validation must warn until an operator changes the dish to `operator_reviewed`. The Phase 2 schema should add reviewable ingredient columns such as `contains_beef`, `contains_pork`, `contains_red_meat`, `contains_fish`, `contains_shellfish`, plus review metadata (`ingredient_notes`, `tags_reviewed_at`, `tags_reviewed_by`, and a review reason or audit-log link).
+
+Before the operator review UI exists, name-keyword matching may be used only as a deterministic development stop-gap for obvious ingredient exclusions, following the same style as the existing halal inference (`pork`, `bacon`, etc.). Production order generation should prefer stored reviewed dish flags over name-string guesses.
+
+If no safe offered dish remains for a student after all filters run, the order generator records an allocation issue for operator intervention and does not silently assign a meal.
+
+**Why this shape**: The raw menu flags do not cover every student restriction, and unknown dietary requirements will appear over time. Explicit reviewed fields keep the matching rules auditable while preserving the non-negotiable that safety-critical catering decisions are deterministic and reviewable.

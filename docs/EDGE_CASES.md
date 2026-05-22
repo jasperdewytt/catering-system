@@ -56,8 +56,8 @@ When an item is decided, leave it in this file with the decision summarised inli
   - "Vegetarian" (menu uses `VO` = vegetarian *option*)
   - "Opted out of Catering" (not a dietary restriction; see [E-15](#e-15-opted-out-of-catering-is-an-attendance-flag-not-a-diet))
 - **Risk**: students get meals that violate their stated restrictions, or are excluded from menus they could safely eat.
-- **Status**: open.
-- **Proposed stance**: structured `dietary_tag` enum derived from a parsing map (`"No Pork"` → tag `excludes_pork`); each menu dish gets a *derived* tag set produced by combining its declared flags with ingredient inference. Matching is rule-based, not LLM, per AGENTS.md.
+- **Status**: decided — see `docs/DECISIONS.md` D-08.
+- **Decision**: Structured student tags are matched deterministically against dish dietary fields and operator-reviewable ingredient flags. Unknown student dietary text creates a pending warning and blocks automatic allocation until operator resolution.
 
 ## E-06 — Caterer capacity overlap
 
@@ -123,8 +123,8 @@ When an item is decided, leave it in this file with the decision summarised inli
   Beef Pad Thai; Bacon Carbonara; Creamy Udon; Mongolian Beef and Rice; Cali Burrito; Grilled Chicken Burrito; Chicken Quesadilla; Crispy Chicken Taco.
 - **Observation**: Ambiguous whether absent-tag means "contains everything" (gluten, dairy, nuts, animal) or "unknown".
 - **Risk**: if treated as unrestricted, a NF student could be assigned Bacon Carbonara without anyone noticing.
-- **Status**: open.
-- **Proposed stance**: treat absent-tag as "no claim made" (i.e. assume not GF / not DF / not NF / not VO). Conservative.
+- **Status**: decided — see `docs/DECISIONS.md` D-08.
+- **Decision**: treat absent-tag as "no claim made" (i.e. assume not GF / not DF / not NF / not VO). Untagged dishes may be offered to unrestricted students. For restricted students, `unreviewed` ingredient flags block allocation; `keyword_inferred` flags are allowed only as a deterministic development bridge and validation warning until operator review.
 
 ## E-14 — Students attending multiple sessions
 
@@ -172,8 +172,8 @@ When an item is decided, leave it in this file with the decision summarised inli
 - **Where**: `caterer-menus.pdf` page 1 ("Assume all non-pork meals are halal").
 - **Observation**: The system must derive a per-dish `is_halal` from the dish name / ingredients.
 - **Risk**: misclassifying a dish (e.g. dishes containing alcohol or non-halal-slaughtered meat would not be halal even without pork).
-- **Status**: open.
-- **Proposed stance**: literal interpretation of the rule (no pork → halal). Surface a warning that this is a coarse heuristic.
+- **Status**: decided — see `docs/DECISIONS.md` D-08.
+- **Decision**: apply the source rule literally (`no pork` → halal) through deterministic inference, with pork indicators such as pork and bacon marking a dish as not halal. Future operator-reviewed ingredient flags should supersede name-keyword guesses for production matching.
 
 ## E-20 — Same dish name, different flags across caterers
 
