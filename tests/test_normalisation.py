@@ -7,6 +7,7 @@ from datetime import date, time
 import pytest
 
 from padea_catering.ingestion.normalisation import (
+    canonicalise_school_name,
     is_halal,
     parse_dietary,
     parse_ordinal_english_date,
@@ -103,6 +104,35 @@ class TestParseDietary:
         r = parse_dietary("Halal, Eats only blue food")
         assert r.tag_codes == ["halal"]
         assert r.unrecognised == ["Eats only blue food"]
+
+
+class TestCanonicaliseSchoolName:
+    ALIAS_LOOKUP = {
+        "Moreton Bay Boys College": "Moreton Bay Boys' College",
+    }
+
+    def test_alias_resolves_to_canonical(self) -> None:
+        assert (
+            canonicalise_school_name("Moreton Bay Boys College", self.ALIAS_LOOKUP)
+            == "Moreton Bay Boys' College"
+        )
+
+    def test_canonical_input_passes_through(self) -> None:
+        # Already canonical — should be returned unchanged.
+        assert (
+            canonicalise_school_name("Moreton Bay Boys' College", self.ALIAS_LOOKUP)
+            == "Moreton Bay Boys' College"
+        )
+
+    def test_unknown_passes_through(self) -> None:
+        # No alias known — assume the input is canonical.
+        assert canonicalise_school_name("Some New School", self.ALIAS_LOOKUP) == "Some New School"
+
+    def test_whitespace_stripped(self) -> None:
+        assert (
+            canonicalise_school_name("  Moreton Bay Boys College  ", self.ALIAS_LOOKUP)
+            == "Moreton Bay Boys' College"
+        )
 
 
 class TestIsHalal:

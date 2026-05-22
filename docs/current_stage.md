@@ -21,16 +21,17 @@ _Update this file whenever a significant phase completes or the active focus shi
   - `data/raw/exclusions.pdf` — 3 session cancellations (1 partial by year-level)
   - `data/raw/absences.pdf` — 10 individual student absences across 6 school/date groups
 - [x] `docs/DATA_INVENTORY.md` written — field names, types, row counts, samples, cross-file reference map
-- [x] `docs/EDGE_CASES.md` written — 22 open edge cases (E-01..E-22) with proposed stances
+- [x] `docs/EDGE_CASES.md` written — 23 edge cases (E-01..E-23): 7 decided via D-01..D-07, 1 resolved on inspection (E-02), 1 deferred (E-06), the rest open
 - [x] `docs/DECISIONS.md` written — D-01..D-07 decided (student PK, exclusion model, day column, null dietary, multi-session, opt-out, menu-item count)
 - [x] Supabase project connected (`fogxaakhlpqnjmznyurm`) and MCP authenticated
-- [x] **Schema applied** — 14 tables across 6 migrations in `supabase/migrations/`:
+- [x] **Schema applied** — 14 tables across 7 migrations in `supabase/migrations/`:
   - `20260522120000_extensions_and_helpers.sql` — pgcrypto, citext, trigger fn, 3 enum types
   - `20260522120100_schools_and_caterers.sql` — schools, school_aliases, caterers, caterer_weekly_minimums, caterer_contacts
   - `20260522120200_sessions_and_exclusions.sql` — sessions, exclusions
   - `20260522120300_students_and_diets.sql` — students, dietary_tags (11 seeded), student_dietary_tags, student_dietary_warnings
   - `20260522120400_enrolments_dishes_absences.sql` — session_enrolments, dishes, absences
-  - `20260522120500_move_citext_to_extensions_schema.sql` — security advisor fix
+  - `20260522120500_move_citext_to_extensions_schema.sql` — security advisor fix (later reverted)
+  - `20260522180000_revert_citext_to_public.sql` — revert citext-schema move because PostgREST expects `public.citext`
 - [x] Advisors clean: only intentional INFOs remain (RLS-no-policy by design until operator UI; unused indexes expected on empty schema)
 - [x] **Python package initialised** — `pyproject.toml` with `pandas`, `openpyxl`, `pdfplumber`, `supabase<2.30`, `python-dotenv`, `pydantic`, `streamlit`; dev deps `pytest`, `ruff`. Python pinned to `>=3.12,<3.14` (avoid pyiceberg-on-3.14 C-build).
 - [x] **Ingestion pipeline complete** — `uv run python -m padea_catering.ingestion` populates all 14 tables in one pass, idempotently. Verified row counts:
@@ -83,4 +84,4 @@ Now that the data is validated, the next phase is to actually generate orders. T
 
 - `README.md` is empty — fill in after the schema is stable.
 - Skills under `skills/` have not been written yet.
-- No tests exist yet; pytest is configured but has nothing to find.
+- Test suite covers `ingestion.normalisation` (26 cases); ingestion `pipeline.py` and `validation/` modules have no unit tests yet (they read the live DB; integration tests would be the natural fit).

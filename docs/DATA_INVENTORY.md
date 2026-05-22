@@ -105,7 +105,7 @@ Files inspected directly: structures, headers, row counts, and sample values bel
 
 - **Structural quirks**:
   - 2 of the 11 sessions overlap with exclusions (rows 7 and 9 fully cancelled; row 11 partially cancelled — see exclusions.pdf).
-  - Saturday MBBC sheet date 2026-05-02 falls on a Tuesday — internally consistent. (`day` column matches `date.strftime('%A')` on every row.)
+  - **Correction (see [E-23](EDGE_CASES.md#e-23--day-and-date-columns-disagree-with-the-gregorian-calendar))**: the earlier claim that `day` matches `date.strftime('%A')` on every row is **wrong**. `2026-05-02` is labelled `Tuesday` in the source but is actually a Saturday in the Gregorian calendar. The `day` column is internally consistent with the operational week (May 1 = Monday → May 4 = Thursday), but it cannot be derived from `date`. Ingestion must treat the source `day` column as authoritative for sheet→session matching.
 
 ### 2.3 `data/raw/caterers.xlsx`
 
