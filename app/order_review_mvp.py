@@ -21,6 +21,8 @@ from padea_catering.order_review import (
 
 st.set_page_config(page_title="Padea Order Review MVP", layout="wide")
 
+REVIEW_CACHE_VERSION = 2
+
 
 @st.cache_resource
 def _client():
@@ -33,7 +35,8 @@ def _cached_order_runs() -> list[dict]:
 
 
 @st.cache_data(ttl=60, show_spinner=False)
-def _cached_order_review(order_run_id: str) -> dict:
+def _cached_order_review(order_run_id: str, cache_version: int) -> dict:
+    _ = cache_version
     return get_order_review(_client(), order_run_id)
 
 
@@ -267,8 +270,9 @@ def render_approval(review: dict) -> None:
             st.rerun()
 
     st.subheader("Audit history")
-    if review["audit_history"]:
-        st.dataframe(_audit_table(review["audit_history"]), width="stretch", hide_index=True)
+    audit_history = review.get("audit_history", [])
+    if audit_history:
+        st.dataframe(_audit_table(audit_history), width="stretch", hide_index=True)
     else:
         st.info("No audit history recorded for this order run.")
 
@@ -318,7 +322,7 @@ def main() -> None:
             st.cache_data.clear()
             st.rerun()
 
-    review = _cached_order_review(selected_run_id)
+    review = _cached_order_review(selected_run_id, REVIEW_CACHE_VERSION)
     run = review["run"]
     st.caption(
         f"Week {run['service_week_start']} to {run['service_week_end']} | "
