@@ -2,7 +2,7 @@
 
 _Update this file whenever a significant phase completes or the active focus shifts._
 
-## Status: Phase 2 Order Generation Implemented — Menu Offers Next
+## Status: Menu Setup MVP Implemented — Order Review Next
 
 **Last updated**: 2026-05-22
 
@@ -60,13 +60,17 @@ _Update this file whenever a significant phase completes or the active focus shi
   - RLS enabled and anon/authenticated revoked, matching the existing service-role-only pattern
 - [x] **Order generation implemented** — `uv run python -m padea_catering.ordering --week-start 2026-05-01 --dry-run` builds a deterministic plan without writing; normal mode writes blocked/generated order runs.
 - [x] **Validation updated for Phase 2** — validation now checks `menu_offers`, offered dish review status, and ordering dry-run readiness. With no operator `menu_offers` seeded, the current expected report is blocked: 13 errors, 15 warnings, 8 info.
-- [x] **Tests expanded** — 40 unit tests passing: normalisation helpers plus deterministic ordering rules.
+- [x] **Tests expanded** — unit tests cover normalisation helpers, deterministic ordering rules, and menu setup helper rules.
+- [x] **Narrow Menu Setup MVP implemented** — `uv run streamlit run app/menu_setup_mvp.py` provides a temporary UI for:
+  - selecting weekly `menu_offers` per active caterer
+  - reviewing dish ingredient flags and saving `operator_reviewed` metadata
+  - running validation and order-generation dry runs
 
 ## Active Focus
 
-**Menu offer selection and dish review** before a generated order can succeed.
+**Order review and communications planning** after a generated order can succeed.
 
-The backend can now dry-run or write order runs, but it correctly blocks because no operator-selected `menu_offers` exist yet. The next work is to provide a way to select offered dishes and review keyword-inferred ingredient flags. The implemented algorithm:
+The backend can dry-run or write order runs, and the temporary menu setup MVP can now fill the `menu_offers` and dish review data required to unblock generation. The implemented algorithm:
 
 1. For each non-cancelled session, walk the enrolled students minus opted-out, year-excluded, and absent.
 2. For each student, pick a safe dish from the offered menu given their dietary tags.
@@ -75,15 +79,16 @@ The backend can now dry-run or write order runs, but it correctly blocks because
 
 ## Up Next (in order)
 
-1. Insert/operator-select `menu_offers` for each active caterer and week
-2. Operator review flow for dish ingredient flags (`ingredient_flags_source = 'operator_reviewed'`)
-3. Streamlit operator UI → `app/streamlit_app.py` (requires Phase 4 migrations: RLS policies + views)
-4. (Optional Phase 3) `session_validation_findings` table to persist validation output
-5. Submission artefacts
+1. Use the Menu Setup MVP to select `menu_offers` and review dish flags for the current week
+2. Generate a clean `order_run`
+3. Plan/build order review and caterer email draft/export flow
+4. Streamlit final operator UI → `app/streamlit_app.py` (requires Phase 4 migrations: RLS policies + views)
+5. (Optional Phase 3) `session_validation_findings` table to persist validation output
+6. Submission artefacts
 
 ## Known schema follow-ups (Phase 2+)
 
-- seed or UI action for `menu_offers` — operator-owned weekly menu selection
+- final UI replacement for `app/menu_setup_mvp.py` — the MVP is intentionally separate from the future full app
 - `manual_overrides`, `audit_log` — operator action audit (Phase 3, per AGENTS.md non-negotiables)
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
 - `session_validation_findings` — preflight warning queue for E-04, E-16, multi-session date conflicts (Phase 3)
@@ -93,4 +98,4 @@ The backend can now dry-run or write order runs, but it correctly blocks because
 
 - `README.md` is empty — fill in after the schema is stable.
 - Skills under `skills/` have not been written yet.
-- Test suite covers `ingestion.normalisation` and pure `ordering.rules`; ingestion `pipeline.py`, Supabase-backed `ordering.generator`, and `validation/` modules have no unit tests yet (they read the live DB; integration tests would be the natural fit).
+- Test suite covers `ingestion.normalisation`, pure `ordering.rules`, and menu setup helper rules; ingestion `pipeline.py`, Supabase-backed `ordering.generator`, UI actions, and `validation/` modules have no unit tests yet (they read/write the live DB; integration tests would be the natural fit).
