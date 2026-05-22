@@ -11,7 +11,7 @@ Each entry has a stable id (`E-NN`) that other docs reference. Status values:
 - **decided** — behaviour fixed, see linked decision
 - **deferred** — will not be handled before submission; record-and-move-on
 
-When an item is decided, leave it in this file with the decision summarised inline, and add a link to a fuller note in `docs/DECISIONS.md` (to be created).
+When an item is decided, leave it in this file with the decision summarised inline, and add a link to a fuller note in `docs/DECISIONS.md`.
 
 ---
 
@@ -104,10 +104,10 @@ When an item is decided, leave it in this file with the decision summarised inli
 ## E-11 — `day` redundant with `date`
 
 - **Where**: `sessions.xlsx`.
-- **Observation**: `day` column ("Tuesday") is always `date.strftime('%A')`. Verified on all 11 rows.
+- **Observation**: The source has both a `day` label and a `date`. The original inventory claim that they always match `date.strftime('%A')` was later proven wrong by E-23.
 - **Risk**: if the two ever disagree, which wins?
 - **Status**: decided — see `docs/DECISIONS.md` D-03.
-- **Decision**: `date` is authoritative. `day` is dropped from the schema; recomputed on display.
+- **Decision**: `day` is dropped from the schema. Ingestion still reads the source `day` label for sheet-to-session matching because this dataset's dates do not match the real Gregorian weekdays.
 
 ## E-12 — Empty `Dietary` cell — meaning
 
@@ -207,8 +207,8 @@ When an item is decided, leave it in this file with the decision summarised inli
 - **Where**: `sessions.xlsx`. Surfaced during ingestion.
 - **Observation**: The previous inventory claim ("`day` is always `date.strftime('%A')`") is incorrect. The source labels `2026-05-02` as Tuesday, but in the real Gregorian calendar that date is a Saturday. The dates and day labels are internally consistent under the operational assumption that May 1 = Monday → May 4 = Thursday, but they do not match real-world weekdays. Likely this dataset has dates transposed from a 2023 week (when 2023-05-01 was a Monday).
 - **Risk**: a Python-derived `date.strftime('%A')` would mislabel every session. `students.xlsx` sheets use the source day labels (e.g. `"JPC - Tuesday"`), so any matching by computed weekday silently fails.
-- **Status**: open.
-- **Proposed stance**: treat the **source `day` column as authoritative** for day-of-week semantics during ingestion (used to map sheets → sessions). The schema does not need to store it (D-03 holds), but the ingestion pipeline must read it from the parsed source rather than deriving it from `session_date`. Document the assumption that the operational week is Mon→Thu regardless of the underlying calendar.
+- **Status**: decided — see `docs/DECISIONS.md` D-03.
+- **Decision**: treat the **source `day` column as authoritative** for day-label semantics during ingestion (used to map sheets → sessions). The schema does not store it (D-03 holds), and downstream delivery scheduling remains date-based.
 
 ## E-24 — Customisable dishes cannot be represented by one safety flag set
 

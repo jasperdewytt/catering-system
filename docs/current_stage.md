@@ -21,7 +21,7 @@ _Update this file whenever a significant phase completes or the active focus shi
   - `data/raw/exclusions.pdf` — 3 session cancellations (1 partial by year-level)
   - `data/raw/absences.pdf` — 10 individual student absences across 6 school/date groups
 - [x] `docs/DATA_INVENTORY.md` written — field names, types, row counts, samples, cross-file reference map
-- [x] `docs/EDGE_CASES.md` written — 24 edge cases (E-01..E-24): 11 decided via D-01..D-09, 1 resolved on inspection (E-02), 1 deferred (E-06), the rest open
+- [x] `docs/EDGE_CASES.md` written — 24 edge cases (E-01..E-24): 12 decided via D-01..D-09 including the E-23 update to D-03, 1 resolved on inspection (E-02), 1 deferred (E-06), the rest open
 - [x] `docs/DECISIONS.md` written — D-01..D-10 decided (student PK, exclusion model, day column, null dietary, multi-session, opt-out, menu-item count, deterministic dietary matching, customisable dish variants, approval/audit)
 - [x] Supabase project connected (`fogxaakhlpqnjmznyurm`) and MCP authenticated
 - [x] **Phase 1 schema applied** — 14 source/validation tables across 7 migrations in `supabase/migrations/`:
@@ -103,6 +103,7 @@ The current generated run has no allocation issues. Remaining validation warning
 
 - final UI replacement for `app/menu_setup_mvp.py` and `app/order_review_mvp.py` — the MVPs are intentionally separate from the future full app
 - manual override application logic — Phase 3 records overrides but does not yet mutate generated allocations/order lines
+- communication persistence tables — planned next so exported/sent caterer drafts have recipient snapshots and audit history before live sending
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
 - `session_validation_findings` — preflight warning queue for E-04, E-16, multi-session date conflicts (Phase 3)
 - RLS policies + `security_invoker` views — once Streamlit auth shape is decided (Phase 4)
