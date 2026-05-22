@@ -2,7 +2,7 @@
 
 _Update this file whenever a significant phase completes or the active focus shifts._
 
-## Status: Ingestion Complete — Validation Preflight Next
+## Status: Validation Preflight Complete — Order Generation Next
 
 **Last updated**: 2026-05-22
 
@@ -44,25 +44,32 @@ _Update this file whenever a significant phase completes or the active focus shi
   - 10 absences resolved fail-loud per D-01
 - [x] **E-23 surfaced**: source `day` and `date` columns don't match real calendar — DATA_INVENTORY's "day = strftime('%A')" claim was wrong. D-03 still holds (don't store `day`), but ingestion now uses the source `day_label` for sheet→session matching.
 - [x] 26 unit tests passing on `padea_catering.ingestion.normalisation`. Ruff clean.
+- [x] **Validation preflight complete** — `uv run python -m padea_catering.validation` queries the live DB and reports findings without writing. On the current data: 0 errors, 15 warnings, 12 info.
+  - E-04 caterer minimums: all 4 caterers' forecasts satisfy their minimums (Lakehouse 16 up to 4-item, others 6-item).
+  - E-16 missing rooms: 11 sessions (all of them — `room` column is currently unset).
+  - D-05 multi-session same-date: 0 conflicts (Riley Turner is correctly two UUIDs).
+  - E-09 suspicious emails: 4 free-webmail contacts flagged.
+  - Empty session: ISHS-Thursday and LC-Tuesday are fully cancelled by exclusions (info, "no order needed"); 0 unexpected empties.
+  - Dietary warning backlog: 0 pending.
 
 ## Active Focus
 
-**Validation preflight** in `src/padea_catering/validation/`.
+**Order generation** in `src/padea_catering/ordering/`.
 
-Now that data is in the database, the validation layer should surface preflight warnings *before* an order is generated. From the open edge cases:
+Now that the data is validated, the next phase is to actually generate orders. This needs new schema (Phase 2 migration): `menu_offers` (operator's per-week dish selection), `order_runs`, `order_lines`, `order_allocations`. Algorithm:
 
-- E-04 — caterer weekly minimum vs realised demand (forecast meals < minimum at chosen menu_item_count)
-- E-16 — missing room number on a session's building
-- D-05 — student enrolled in >1 session on the same date (already tracked by ingestion; surface via DB)
-- E-09 — caterer contacts with gmail.com / unverified emails before sending
-- Cross-check: every session has at least one enrolled student after exclusions/absences
+1. For each non-cancelled session, walk the enrolled students minus opted-out, year-excluded, and absent.
+2. For each student, pick a safe dish from the offered menu given their dietary tags.
+3. Aggregate per-session into `order_lines`, per-student into `order_allocations`.
+4. Reproducibility: the same DB state should always produce the same order_run output.
 
 ## Up Next (in order)
 
-1. Validation preflight → `src/padea_catering/validation/` + `session_validation_findings` table (Phase 3 migration)
-2. Order generation / matchmaking → `src/padea_catering/ordering/` (requires Phase 2 migrations: `order_runs`, `order_lines`, `menu_offers`, `order_allocations`)
-3. Streamlit operator UI → `app/streamlit_app.py` (requires Phase 4 migrations: RLS policies + views)
-4. Submission artefacts
+1. Phase 2 migrations: `menu_offers`, `order_runs`, `order_lines`, `order_allocations`
+2. Order generation / matchmaking → `src/padea_catering/ordering/`
+3. (Optional Phase 3) `session_validation_findings` table to persist validation output
+4. Streamlit operator UI → `app/streamlit_app.py` (requires Phase 4 migrations: RLS policies + views)
+5. Submission artefacts
 
 ## Known schema follow-ups (Phase 2+)
 
