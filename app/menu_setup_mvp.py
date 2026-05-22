@@ -31,6 +31,35 @@ from padea_catering.validation.checks import run_all_checks
 st.set_page_config(page_title="Padea Menu Setup MVP", layout="wide")
 
 
+@st.cache_resource
+def _client():
+    return get_client()
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def _cached_default_week_start() -> date:
+    return get_default_week_start(_client())
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def _cached_menu_offer_state(week_start_iso: str) -> list[dict]:
+    return get_menu_offer_state(_client(), date.fromisoformat(week_start_iso))
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def _cached_dish_review_rows() -> list[dict]:
+    return get_dish_review_rows(_client())
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def _cached_base_dish_rows() -> list[dict]:
+    return get_base_dish_rows(_client())
+
+
+def _clear_cached_data() -> None:
+    st.cache_data.clear()
+
+
 def _flag_summary(option: dict) -> str:
     flags = []
     if option["is_gluten_free"]:
@@ -85,7 +114,7 @@ def _issue_table(issues) -> pd.DataFrame:
 def render_menu_offers(week_start: date, selected_by: str) -> None:
     st.subheader("Menu Offers")
     st.caption("Temporary MVP: select the offered orderable options for each active caterer.")
-    state = get_menu_offer_state(get_client(), week_start)
+    state = _cached_menu_offer_state(week_start.isoformat())
     if not state:
         st.info("No active caterers found for this week.")
         return
@@ -126,15 +155,17 @@ def render_menu_offers(week_start: date, selected_by: str) -> None:
                     "so you can remove them and save the corrected offer set."
                 )
 
-            chosen = st.multiselect(
-                "Offered options",
-                options=option_ids,
-                default=selected_ids,
-                format_func=lambda variant_id, mapping=variant_by_id: mapping[variant_id][
-                    "display_name"
-                ],
-                key=f"offers-{caterer['caterer_id']}",
-            )
+            with st.form(f"offers-form-{caterer['caterer_id']}"):
+                chosen = st.multiselect(
+                    "Offered options",
+                    options=option_ids,
+                    default=selected_ids,
+                    format_func=lambda variant_id, mapping=variant_by_id: mapping[variant_id][
+                        "display_name"
+                    ],
+                    key=f"offers-{caterer['caterer_id']}",
+                )
+                submitted = st.form_submit_button("Save offers")
             errors = validate_offer_count(len(chosen), valid_tiers)
             if errors:
                 st.error(" ".join(errors))
@@ -143,10 +174,10 @@ def render_menu_offers(week_start: date, selected_by: str) -> None:
                     f"{len(chosen)} options selected; valid tiers are {sorted(valid_tiers)}."
                 )
 
-            if st.button("Save offers", key=f"save-offers-{caterer['caterer_id']}"):
+            if submitted:
                 try:
                     save_menu_offers(
-                        get_client(),
+                        _client(),
                         week_start,
                         caterer["caterer_id"],
                         chosen,
@@ -155,6 +186,7 @@ def render_menu_offers(week_start: date, selected_by: str) -> None:
                 except ValueError as exc:
                     st.error(str(exc))
                 else:
+                    _clear_cached_data()
                     st.success("Menu offers saved.")
                     st.rerun()
 
@@ -165,7 +197,7 @@ def render_dish_review(selected_by: str) -> None:
         "Temporary MVP: split customisable dishes into concrete orderable options, then review "
         "the safety flags for each option."
     )
-    rows = get_dish_review_rows(get_client())
+    rows = _cached_dish_review_rows()
     if not rows:
         st.info("No dish variants found.")
         return
@@ -179,37 +211,41 @@ def render_dish_review(selected_by: str) -> None:
     cols[2].metric("Needs review", len(rows) - summary_counts["operator_reviewed"])
 
     with st.expander("Add a custom option", expanded=False):
-        base_dishes = get_base_dish_rows(get_client())
-        base_dish_id = st.selectbox(
-            "Base menu item",
-            options=[row["id"] for row in base_dishes],
-            format_func=lambda row_id: next(
-                f"{row['caterer_name']} | {row['name']}"
-                for row in base_dishes
-                if row["id"] == row_id
-            ),
-        )
-        variant_name = st.text_input("Option name", placeholder="Vegetarian, Chicken, Beef, etc.")
-        col_a, col_b, col_c, col_d, col_e = st.columns(5)
-        new_gf = col_a.checkbox("GF", key="new-gf")
-        new_df = col_b.checkbox("DF", key="new-df")
-        new_nf = col_c.checkbox("NF", key="new-nf")
-        new_vo = col_d.checkbox("Vegetarian option", key="new-vo")
-        new_halal = col_e.checkbox("Halal", key="new-halal")
+        base_dishes = _cached_base_dish_rows()
+        with st.form("create-option-form"):
+            base_dish_id = st.selectbox(
+                "Base menu item",
+                options=[row["id"] for row in base_dishes],
+                format_func=lambda row_id: next(
+                    f"{row['caterer_name']} | {row['name']}"
+                    for row in base_dishes
+                    if row["id"] == row_id
+                ),
+            )
+            variant_name = st.text_input(
+                "Option name", placeholder="Vegetarian, Chicken, Beef, etc."
+            )
+            col_a, col_b, col_c, col_d, col_e = st.columns(5)
+            new_gf = col_a.checkbox("GF", key="new-gf")
+            new_df = col_b.checkbox("DF", key="new-df")
+            new_nf = col_c.checkbox("NF", key="new-nf")
+            new_vo = col_d.checkbox("Vegetarian option", key="new-vo")
+            new_halal = col_e.checkbox("Halal", key="new-halal")
 
-        col_f, col_g, col_h, col_i, col_j = st.columns(5)
-        new_beef = col_f.checkbox("Contains beef", key="new-beef")
-        new_pork = col_g.checkbox("Contains pork", key="new-pork")
-        new_red_meat = col_h.checkbox("Contains red meat", key="new-red-meat")
-        new_fish = col_i.checkbox("Contains fish", key="new-fish")
-        new_shellfish = col_j.checkbox("Contains shellfish", key="new-shellfish")
+            col_f, col_g, col_h, col_i, col_j = st.columns(5)
+            new_beef = col_f.checkbox("Contains beef", key="new-beef")
+            new_pork = col_g.checkbox("Contains pork", key="new-pork")
+            new_red_meat = col_h.checkbox("Contains red meat", key="new-red-meat")
+            new_fish = col_i.checkbox("Contains fish", key="new-fish")
+            new_shellfish = col_j.checkbox("Contains shellfish", key="new-shellfish")
 
-        new_notes = st.text_area("Ingredient notes", key="new-notes")
-        new_reason = st.text_input("Review reason", value="Operator created custom option")
-        if st.button("Create option"):
+            new_notes = st.text_area("Ingredient notes", key="new-notes")
+            new_reason = st.text_input("Review reason", value="Operator created custom option")
+            create_submitted = st.form_submit_button("Create option")
+        if create_submitted:
             try:
                 create_dish_variant(
-                    get_client(),
+                    _client(),
                     base_dish_id,
                     variant_name,
                     DishReviewUpdate(
@@ -232,6 +268,7 @@ def render_dish_review(selected_by: str) -> None:
             except ValueError as exc:
                 st.error(str(exc))
             else:
+                _clear_cached_data()
                 st.success("Custom option created.")
                 st.rerun()
 
@@ -252,34 +289,38 @@ def render_dish_review(selected_by: str) -> None:
         if row["has_no_declared_tags"]:
             st.warning("The source menu item had no declared GF/DF/NF/VO tags.")
 
-        available = st.checkbox("Available to offer", value=row["is_available"])
-        col_a, col_b, col_c, col_d, col_e = st.columns(5)
-        gf = col_a.checkbox("GF", value=row["is_gluten_free"])
-        df = col_b.checkbox("DF", value=row["is_dairy_free"])
-        nf = col_c.checkbox("NF", value=row["is_nut_free"])
-        vo = col_d.checkbox("Vegetarian option", value=row["is_vegetarian_option"])
-        halal = col_e.checkbox("Halal", value=row["is_halal_inferred"])
+        with st.form(f"dish-review-form-{variant_id}"):
+            available = st.checkbox("Available to offer", value=row["is_available"])
+            col_a, col_b, col_c, col_d, col_e = st.columns(5)
+            gf = col_a.checkbox("GF", value=row["is_gluten_free"])
+            df = col_b.checkbox("DF", value=row["is_dairy_free"])
+            nf = col_c.checkbox("NF", value=row["is_nut_free"])
+            vo = col_d.checkbox("Vegetarian option", value=row["is_vegetarian_option"])
+            halal = col_e.checkbox("Halal", value=row["is_halal_inferred"])
 
-        col_f, col_g, col_h, col_i, col_j = st.columns(5)
-        contains_beef = col_f.checkbox("Contains beef", value=row["contains_beef"])
-        contains_pork = col_g.checkbox("Contains pork", value=row["contains_pork"])
-        contains_red_meat = col_h.checkbox("Contains red meat", value=row["contains_red_meat"])
-        contains_fish = col_i.checkbox("Contains fish", value=row["contains_fish"])
-        contains_shellfish = col_j.checkbox("Contains shellfish", value=row["contains_shellfish"])
+            col_f, col_g, col_h, col_i, col_j = st.columns(5)
+            contains_beef = col_f.checkbox("Contains beef", value=row["contains_beef"])
+            contains_pork = col_g.checkbox("Contains pork", value=row["contains_pork"])
+            contains_red_meat = col_h.checkbox("Contains red meat", value=row["contains_red_meat"])
+            contains_fish = col_i.checkbox("Contains fish", value=row["contains_fish"])
+            contains_shellfish = col_j.checkbox(
+                "Contains shellfish", value=row["contains_shellfish"]
+            )
 
-        notes = st.text_area("Ingredient notes", value=row["ingredient_notes"] or "")
-        reason = st.text_input(
-            "Review reason",
-            value=row["tags_review_reason"] or "Operator ingredient review",
-        )
+            notes = st.text_area("Ingredient notes", value=row["ingredient_notes"] or "")
+            reason = st.text_input(
+                "Review reason",
+                value=row["tags_review_reason"] or "Operator ingredient review",
+            )
+            review_submitted = st.form_submit_button("Save dish review")
 
         if row["tags_reviewed_at"]:
             st.caption(f"Last reviewed by {row['tags_reviewed_by']} at {row['tags_reviewed_at']}.")
 
-        if st.button("Save dish review"):
+        if review_submitted:
             try:
                 save_dish_review(
-                    get_client(),
+                    _client(),
                     variant_id,
                     DishReviewUpdate(
                         is_gluten_free=gf,
@@ -301,6 +342,7 @@ def render_dish_review(selected_by: str) -> None:
             except ValueError as exc:
                 st.error(str(exc))
             else:
+                _clear_cached_data()
                 st.success("Dish review saved.")
                 st.rerun()
 
@@ -310,7 +352,7 @@ def render_validation(week_start: date) -> None:
     st.caption("This uses the same backend checks as the CLI.")
 
     if st.button("Run validation"):
-        findings = run_all_checks(get_client(), week_start)
+        findings = run_all_checks(_client(), week_start)
         errors = [finding for finding in findings if finding.severity == "error"]
         warnings = [finding for finding in findings if finding.severity == "warning"]
         info = [finding for finding in findings if finding.severity == "info"]
@@ -324,7 +366,7 @@ def render_validation(week_start: date) -> None:
             st.success("No validation findings.")
 
     if st.button("Run order dry run"):
-        plan = build_order_plan(get_client(), week_start)
+        plan = build_order_plan(_client(), week_start)
         col_a, col_b, col_c = st.columns(3)
         col_a.metric("Allocations", len(plan.allocations))
         col_b.metric("Order lines", 0 if plan.has_blockers else len(plan.order_lines))
@@ -343,8 +385,7 @@ def main() -> None:
         "This is not the final operator app."
     )
 
-    client = get_client()
-    default_week = get_default_week_start(client)
+    default_week = _cached_default_week_start()
     with st.sidebar:
         st.header("Setup")
         week_start = st.date_input("Service week start", value=default_week)
