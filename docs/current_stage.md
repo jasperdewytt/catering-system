@@ -61,7 +61,7 @@ _Update this file whenever a significant phase completes or the active focus shi
   - `20260522202000_dish_variants.sql` makes `menu_offers`, allocations, and order lines variant-aware
   - RLS enabled and anon/authenticated revoked, matching the existing service-role-only pattern
 - [x] **Order generation implemented** — `uv run python -m padea_catering.ordering --week-start 2026-05-01 --dry-run` builds a deterministic plan without writing; normal mode writes blocked/generated order runs.
-- [x] **Validation updated for Phase 2** — validation now checks `menu_offers`, offered variant review status, and ordering dry-run readiness. Current live validation is blocked until all active caterers have reviewed offered variants.
+- [x] **Validation updated for Phase 2** — validation now checks `menu_offers`, offered variant review status, and ordering dry-run readiness. Current live validation has no blocking errors after operator menu review; remaining findings are operational warnings.
 - [x] **Tests expanded** — unit tests cover normalisation helpers, deterministic ordering rules, and menu setup helper rules.
 - [x] **Narrow Menu Setup MVP implemented** — `uv run streamlit run app/menu_setup_mvp.py` provides a temporary UI for:
   - creating concrete orderable variants for customisable dishes such as burritos
