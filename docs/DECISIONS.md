@@ -120,3 +120,15 @@ Every ingested dish receives one default `Standard` variant that inherits the so
 The Streamlit MVP supports creating variants and reviewing their GF/DF/NF/VO/halal and ingredient-exclusion flags. A generic customisable parent item should not be marked as safe for restricted students unless the specific orderable variant is safe.
 
 **Why this shape**: A single boolean set on `dishes` cannot correctly represent a meal that may contain beef, chicken, or no meat depending on how it is ordered. Variants let the operator describe the exact option being offered without LLM guessing, and the generated caterer order can name the concrete option rather than a vague parent dish.
+
+---
+
+## D-10 — Approval and override audit model
+
+**Decision**: Order-run approval and manual overrides are explicit audited operator actions.
+
+Approving an order run changes `order_runs.status` from `generated` to `approved` and stores approval metadata (`approved_at`, `approved_by`, `approval_note`) for convenient display. The durable trace is an append-only `audit_log` row containing actor, action, entity, reason, timestamp, and before/after state snapshots.
+
+Manual overrides are recorded in `manual_overrides` before any future override-application logic is added. Recording an override also writes an `audit_log` row. Override records require actor, reason, type, entity, and timestamp.
+
+**Why this shape**: Approval and overrides are operational decisions, not generated facts. They must preserve who made the decision, when, and why before the system can safely support live communications or manual corrections.

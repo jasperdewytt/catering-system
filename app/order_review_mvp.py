@@ -11,6 +11,7 @@ import pandas as pd
 import streamlit as st
 
 from padea_catering.db import get_client
+from padea_catering.operations import approve_order_run, unapprove_order_run
 from padea_catering.order_review import (
     format_money,
     get_order_review,
@@ -115,6 +116,21 @@ def _contacts_table(contacts: list[dict]) -> pd.DataFrame:
     )
 
 
+def _audit_table(rows: list[dict]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "time": row["created_at"],
+                "actor": row["actor_name"],
+                "action": row["action"],
+                "entity": row["entity_type"],
+                "reason": row["reason"],
+            }
+            for row in rows
+        ]
+    )
+
+
 def render_overview(review: dict) -> None:
     run = review["run"]
     total_meals = sum(row["quantity"] for row in review["order_lines"])
@@ -133,7 +149,7 @@ def render_overview(review: dict) -> None:
     cols[4].metric("Skipped", skipped)
 
     if run["status"] != "generated":
-        st.warning("This MVP only prepares drafts for generated runs.")
+        st.info("Drafts are available for generated and approved runs.")
     if review["issues"]:
         st.error(f"{len(review['issues'])} allocation issue(s) are attached to this run.")
 
@@ -193,8 +209,10 @@ def render_contacts_delivery(review: dict) -> None:
 
 
 def render_email_drafts(review: dict) -> None:
-    if review["run"]["status"] != "generated" or review["issues"]:
-        st.warning("Drafts are suppressed unless the selected run is generated with no issues.")
+    if review["run"]["status"] not in {"generated", "approved"} or review["issues"]:
+        st.warning(
+            "Drafts are suppressed unless the selected run is generated or approved with no issues."
+        )
         return
     for caterer_id, summary in review["caterer_summaries"].items():
         caterer_name = summary["caterer"]["name"]
@@ -208,6 +226,51 @@ def render_email_drafts(review: dict) -> None:
             mime="text/plain",
             key=f"download-{caterer_id}",
         )
+
+
+def render_approval(review: dict) -> None:
+    run = review["run"]
+    st.subheader("Approval")
+    st.caption("Phase 3 MVP: status-changing actions require actor, reason, and audit log.")
+
+    cols = st.columns(3)
+    cols[0].metric("Status", run["status"])
+    cols[1].metric("Approved by", run.get("approved_by") or "not approved")
+    cols[2].metric("Approved at", run.get("approved_at") or "-")
+    if run.get("approval_note"):
+        st.info(run["approval_note"])
+
+    with st.form("approval-form"):
+        actor = st.text_input("Actor name")
+        reason = st.text_area("Reason / approval note")
+        if run["status"] == "generated":
+            submitted = st.form_submit_button("Approve generated run")
+            action = "approve"
+        elif run["status"] == "approved":
+            submitted = st.form_submit_button("Reopen approved run")
+            action = "reopen"
+        else:
+            submitted = st.form_submit_button("No action available", disabled=True)
+            action = "none"
+
+    if submitted and action != "none":
+        try:
+            if action == "approve":
+                approve_order_run(_client(), run["id"], actor, reason)
+            else:
+                unapprove_order_run(_client(), run["id"], actor, reason)
+        except ValueError as exc:
+            st.error(str(exc))
+        else:
+            st.cache_data.clear()
+            st.success("Order run status updated and audit log written.")
+            st.rerun()
+
+    st.subheader("Audit history")
+    if review["audit_history"]:
+        st.dataframe(_audit_table(review["audit_history"]), width="stretch", hide_index=True)
+    else:
+        st.info("No audit history recorded for this order run.")
 
 
 def _group_by(rows: list[dict], key: str) -> dict[str, list[dict]]:
@@ -232,7 +295,8 @@ def main() -> None:
     st.title("Order Review MVP")
     st.caption(
         "Temporary read-only UI for reviewing generated orders and preparing copy-ready drafts. "
-        "No approval, sending, manual override, or LLM review is performed here."
+        "Approval is audited; no sending, manual override application, "
+        "or LLM review is performed here."
     )
 
     runs = _cached_order_runs()
@@ -262,8 +326,15 @@ def main() -> None:
         f"algorithm {run['algorithm_version']}"
     )
 
-    tab_overview, tab_lines, tab_allocations, tab_delivery, tab_drafts = st.tabs(
-        ["Overview", "Order lines", "Allocations", "Contacts & delivery", "Email drafts"]
+    tab_overview, tab_lines, tab_allocations, tab_delivery, tab_drafts, tab_approval = st.tabs(
+        [
+            "Overview",
+            "Order lines",
+            "Allocations",
+            "Contacts & delivery",
+            "Email drafts",
+            "Approval",
+        ]
     )
     with tab_overview:
         render_overview(review)
@@ -275,6 +346,8 @@ def main() -> None:
         render_contacts_delivery(review)
     with tab_drafts:
         render_email_drafts(review)
+    with tab_approval:
+        render_approval(review)
 
 
 if __name__ == "__main__":

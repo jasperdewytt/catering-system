@@ -2,7 +2,7 @@
 
 Operational catering system for weekly school tutoring meal ordering.
 
-Current stage: **variant-aware Menu Setup MVP**.
+Current stage: **Phase 3 approval/audit implemented; communications next**.
 
 Run the temporary MVP UI:
 
@@ -30,5 +30,6 @@ The order review MVP currently supports:
 - reviewing order lines, allocation summaries, contacts, and delivery notes
 - preparing deterministic copy-ready caterer email drafts
 - downloading draft text files
+- approving or reopening generated order runs with an audit log
 
 See `docs/current_stage.md` for the authoritative project status and next steps.

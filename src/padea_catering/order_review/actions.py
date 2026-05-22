@@ -1,7 +1,7 @@
-"""Read-only order review actions.
+"""Order review read helpers.
 
-The review MVP displays generated order state and deterministic draft text.
-It must not approve, mutate, or send anything.
+The review MVP displays generated order state, audit history, and deterministic
+draft text. Mutating actions live in ``padea_catering.operations``.
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from typing import Any
 
+from padea_catering.operations import get_audit_history
 from supabase import Client
 
 FREE_WEBMAIL_DOMAINS = {"gmail.com", "outlook.com", "yahoo.com", "hotmail.com"}
@@ -65,7 +66,8 @@ def get_order_runs(client: Client) -> list[dict[str, Any]]:
         "order_runs",
         (
             "id, service_week_start, service_week_end, status, algorithm_version, "
-            "generated_by, generated_at, issue_count, created_at"
+            "generated_by, generated_at, issue_count, approved_at, approved_by, "
+            "approval_note, created_at"
         ),
     )
     return sorted(
@@ -170,6 +172,7 @@ def get_order_review(client: Client, order_run_id: str) -> dict[str, Any]:
 
     return {
         "run": run,
+        "audit_history": get_audit_history(client, order_run_id),
         "order_lines": line_rows,
         "allocations": allocation_rows,
         "allocation_counts": status_counts(allocation_rows),

@@ -2,7 +2,7 @@
 
 _Update this file whenever a significant phase completes or the active focus shifts._
 
-## Status: Order Review MVP Implemented — Communications Approval Next
+## Status: Phase 3 Approval/Audit Implemented — Communications Next
 
 **Last updated**: 2026-05-22
 
@@ -22,7 +22,7 @@ _Update this file whenever a significant phase completes or the active focus shi
   - `data/raw/absences.pdf` — 10 individual student absences across 6 school/date groups
 - [x] `docs/DATA_INVENTORY.md` written — field names, types, row counts, samples, cross-file reference map
 - [x] `docs/EDGE_CASES.md` written — 24 edge cases (E-01..E-24): 11 decided via D-01..D-09, 1 resolved on inspection (E-02), 1 deferred (E-06), the rest open
-- [x] `docs/DECISIONS.md` written — D-01..D-09 decided (student PK, exclusion model, day column, null dietary, multi-session, opt-out, menu-item count, deterministic dietary matching, customisable dish variants)
+- [x] `docs/DECISIONS.md` written — D-01..D-10 decided (student PK, exclusion model, day column, null dietary, multi-session, opt-out, menu-item count, deterministic dietary matching, customisable dish variants, approval/audit)
 - [x] Supabase project connected (`fogxaakhlpqnjmznyurm`) and MCP authenticated
 - [x] **Phase 1 schema applied** — 14 source/validation tables across 7 migrations in `supabase/migrations/`:
   - `20260522120000_extensions_and_helpers.sql` — pgcrypto, citext, trigger fn, 3 enum types
@@ -74,12 +74,13 @@ _Update this file whenever a significant phase completes or the active focus shi
   - reviewing order lines, allocations, contacts, and delivery notes
   - preparing deterministic copy-ready caterer email drafts
   - downloading draft text files
+- [x] **Phase 3 approval/audit implemented** — order runs can be approved/reopened through audited backend actions. `audit_log` and `manual_overrides` provide the durable record path required before live sending or manual correction logic.
 
 ## Active Focus
 
-**Communications approval and operational workflow** after generated order review.
+**Communications workflow** after approval/audit.
 
-The backend can write generated order runs, and the temporary order review MVP can inspect those runs without mutating them. Customisable parent dishes are split into concrete orderable variants before they are offered to restricted students. The implemented algorithm:
+The backend can write generated order runs, and the temporary order review MVP can inspect and approve those runs with an audit trail. Customisable parent dishes are split into concrete orderable variants before they are offered to restricted students. The implemented algorithm:
 
 1. For each non-cancelled session, walk the enrolled students minus opted-out, year-excluded, and absent.
 2. For each student, pick a safe offered variant given their dietary tags.
@@ -90,10 +91,10 @@ The current generated run has no allocation issues. Remaining validation warning
 
 ## Up Next (in order)
 
-1. Use the Order Review MVP to inspect the generated run and draft caterer emails
-2. Decide the approval/audit model before any status-changing action is added
-3. Build explicit approval + audit trail (`manual_overrides`, `audit_log`) before live sending
-4. Add email sending/export workflow after contact verification rules are settled
+1. Review the approved run in the Order Review MVP and confirm the caterer draft content
+2. Add communication export/send tracking after contact verification rules are settled
+3. Build explicit contact verification workflow for suspicious/free-webmail addresses
+4. Add email sending only after communication audit state exists
 5. Streamlit final operator UI → `app/streamlit_app.py` (requires Phase 4 migrations: RLS policies + views)
 6. (Optional Phase 3) `session_validation_findings` table to persist validation output
 7. Submission artefacts
@@ -101,7 +102,7 @@ The current generated run has no allocation issues. Remaining validation warning
 ## Known schema follow-ups (Phase 2+)
 
 - final UI replacement for `app/menu_setup_mvp.py` and `app/order_review_mvp.py` — the MVPs are intentionally separate from the future full app
-- `manual_overrides`, `audit_log` — operator action audit (Phase 3, per AGENTS.md non-negotiables)
+- manual override application logic — Phase 3 records overrides but does not yet mutate generated allocations/order lines
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
 - `session_validation_findings` — preflight warning queue for E-04, E-16, multi-session date conflicts (Phase 3)
 - RLS policies + `security_invoker` views — once Streamlit auth shape is decided (Phase 4)
