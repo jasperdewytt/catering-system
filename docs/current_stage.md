@@ -75,6 +75,7 @@ _Update this file whenever a significant phase completes or the active focus shi
   - preparing deterministic copy-ready caterer email drafts
   - downloading draft text files
 - [x] **Phase 3 approval/audit implemented** — order runs can be approved/reopened through audited backend actions. `audit_log` and `manual_overrides` provide the durable record path required before live sending or manual correction logic.
+- [x] **LLM integration plan written** — `docs/LLM_INTEGRATION_PLAN.md` defines advisory-only LLM use cases, forbidden safety-critical uses, provider boundaries, and the recommended order after communications persistence.
 
 ## Active Focus
 
@@ -104,6 +105,7 @@ The current generated run has no allocation issues. Remaining validation warning
 - final UI replacement for `app/menu_setup_mvp.py` and `app/order_review_mvp.py` — the MVPs are intentionally separate from the future full app
 - manual override application logic — Phase 3 records overrides but does not yet mutate generated allocations/order lines
 - communication persistence tables — planned next so exported/sent caterer drafts have recipient snapshots and audit history before live sending
+- LLM integration is planned but intentionally deferred until communications persistence exists; first likely LLM feature is advisory order-review storage
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
 - `session_validation_findings` — preflight warning queue for E-04, E-16, multi-session date conflicts (Phase 3)
 - RLS policies + `security_invoker` views — once Streamlit auth shape is decided (Phase 4)
