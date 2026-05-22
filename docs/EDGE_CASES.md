@@ -155,9 +155,9 @@ When an item is decided, leave it in this file with the decision summarised inli
 
 - **Where**: `caterers.xlsx` column headers `minimum order quantity for {4,5,6} menu items`.
 - **Observation**: Implied that the operator chooses to offer 4, 5, or 6 dishes from the caterer's 10-item menu that week, and the minimum scales with that choice.
-- **Risk**: ambiguity about whether "menu items" means *distinct dishes ordered* or *number of menu choices offered to students*.
+- **Risk**: ambiguity about whether "menu items" means *distinct options ordered* or *number of menu choices offered to students*.
 - **Status**: decided — see `docs/DECISIONS.md` D-07.
-- **Decision**: "menu items" = number of distinct dishes on the offered menu for that week, chosen by the operator. Pending stakeholder confirmation.
+- **Decision**: "menu items" = number of distinct orderable options on the offered menu for that week, chosen by the operator. Pending stakeholder confirmation. Customisable parent dishes are split into variants per D-09.
 
 ## E-18 — Delivery scope ambiguous
 
@@ -209,3 +209,11 @@ When an item is decided, leave it in this file with the decision summarised inli
 - **Risk**: a Python-derived `date.strftime('%A')` would mislabel every session. `students.xlsx` sheets use the source day labels (e.g. `"JPC - Tuesday"`), so any matching by computed weekday silently fails.
 - **Status**: open.
 - **Proposed stance**: treat the **source `day` column as authoritative** for day-of-week semantics during ingestion (used to map sheets → sessions). The schema does not need to store it (D-03 holds), but the ingestion pipeline must read it from the parsed source rather than deriving it from `session_date`. Document the assumption that the operational week is Mon→Thu regardless of the underlying calendar.
+
+## E-24 — Customisable dishes cannot be represented by one safety flag set
+
+- **Where**: `caterer-menus.pdf`; discussed while reviewing untagged/customisable dishes such as `Cali Burrito`.
+- **Observation**: Some caterer menu items are customisable. A `Cali Burrito` might be beef, chicken, vegetarian, or another confirmed option depending on what is ordered.
+- **Risk**: Marking the generic parent dish as vegetarian-safe or meat-containing is both overbroad and under-specific. Restricted students could be allocated a vague parent item whose actual preparation violates their requirements, or safe variants could be unnecessarily blocked.
+- **Status**: decided — see `docs/DECISIONS.md` D-09.
+- **Decision**: keep the source `dishes` row as the parent menu item and create concrete `dish_variants` for orderable options. Menu offers and generated orders operate on variants, each with its own reviewed dietary and ingredient flags.

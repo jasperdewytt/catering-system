@@ -24,6 +24,7 @@ class AllocationDraft:
     session_id: str
     student_id: str
     dish_id: str | None
+    dish_variant_id: str | None
     status: str
     reason_codes: list[str]
     dietary_tag_codes: list[str]
@@ -33,6 +34,7 @@ class AllocationDraft:
 class OrderLineDraft:
     session_id: str
     dish_id: str
+    dish_variant_id: str
     quantity: int
     unit_price_cents: int
     gst_inclusive: bool
@@ -47,6 +49,7 @@ class IssueDraft:
     session_id: str | None = None
     student_id: str | None = None
     dish_id: str | None = None
+    dish_variant_id: str | None = None
     details: dict[str, Any] | None = None
 
 
@@ -80,6 +83,7 @@ def _in_week(session: dict[str, Any], week_start: date, week_end: date) -> bool:
 def _dish_option(row: dict[str, Any]) -> DishOption:
     return DishOption(
         id=row["id"],
+        dish_id=row["dish_id"],
         name=row["name"],
         is_gluten_free=row["is_gluten_free"],
         is_dairy_free=row["is_dairy_free"],
@@ -171,27 +175,44 @@ def build_order_plan(client: Client, service_week_start: date) -> OrderPlan:
         for row in _select(
             client,
             "dishes",
-            (
-                "id, caterer_id, name, is_gluten_free, is_dairy_free, is_nut_free, "
-                "is_vegetarian_option, is_halal_inferred, has_no_declared_tags, "
-                "contains_beef, contains_pork, contains_red_meat, contains_fish, "
-                "contains_shellfish, ingredient_flags_source"
-            ),
+            "id, caterer_id, name",
         )
     }
+    variants = {}
+    for row in _select(
+        client,
+        "dish_variants",
+        (
+            "id, dish_id, name, is_available, is_gluten_free, is_dairy_free, is_nut_free, "
+            "is_vegetarian_option, is_halal_inferred, has_no_declared_tags, contains_beef, "
+            "contains_pork, contains_red_meat, contains_fish, contains_shellfish, "
+            "ingredient_flags_source"
+        ),
+    ):
+        dish = dishes.get(row["dish_id"])
+        if not dish:
+            continue
+        display_name = (
+            dish["name"] if row["name"] == "Standard" else f"{dish['name']} - {row['name']}"
+        )
+        variants[row["id"]] = {**row, "caterer_id": dish["caterer_id"], "name": display_name}
     offers = [
         row
-        for row in _select(client, "menu_offers", "id, service_week_start, dish_id")
+        for row in _select(
+            client,
+            "menu_offers",
+            "id, service_week_start, dish_id, dish_variant_id",
+        )
         if row["service_week_start"] == service_week_start.isoformat()
     ]
     offered_by_caterer: dict[str, list[DishOption]] = defaultdict(list)
-    offered_dish_ids: list[str] = []
+    offered_variant_ids: list[str] = []
     for offer in offers:
-        dish = dishes.get(offer["dish_id"])
-        if dish is None:
+        variant = variants.get(offer["dish_variant_id"])
+        if variant is None or not variant["is_available"]:
             continue
-        offered_dish_ids.append(offer["dish_id"])
-        offered_by_caterer[dish["caterer_id"]].append(_dish_option(dish))
+        offered_variant_ids.append(offer["dish_variant_id"])
+        offered_by_caterer[variant["caterer_id"]].append(_dish_option(variant))
     for caterer_id in offered_by_caterer:
         offered_by_caterer[caterer_id].sort(key=lambda dish: (dish.name, dish.id))
 
@@ -220,6 +241,7 @@ def build_order_plan(client: Client, service_week_start: date) -> OrderPlan:
                         session_id=session_id,
                         student_id=student_id,
                         dish_id=None,
+                        dish_variant_id=None,
                         status="skipped_opted_out",
                         reason_codes=["opted_out"],
                         dietary_tag_codes=tag_codes,
@@ -232,6 +254,7 @@ def build_order_plan(client: Client, service_week_start: date) -> OrderPlan:
                         session_id=session_id,
                         student_id=student_id,
                         dish_id=None,
+                        dish_variant_id=None,
                         status="skipped_absent",
                         reason_codes=["absent"],
                         dietary_tag_codes=tag_codes,
@@ -244,6 +267,7 @@ def build_order_plan(client: Client, service_week_start: date) -> OrderPlan:
                         session_id=session_id,
                         student_id=student_id,
                         dish_id=None,
+                        dish_variant_id=None,
                         status="skipped_year_excluded",
                         reason_codes=["year_excluded"],
                         dietary_tag_codes=tag_codes,
@@ -256,6 +280,7 @@ def build_order_plan(client: Client, service_week_start: date) -> OrderPlan:
                         session_id=session_id,
                         student_id=student_id,
                         dish_id=None,
+                        dish_variant_id=None,
                         status="blocked_pending_dietary_warning",
                         reason_codes=["pending_dietary_warning"],
                         dietary_tag_codes=tag_codes,
@@ -280,6 +305,7 @@ def build_order_plan(client: Client, service_week_start: date) -> OrderPlan:
                         session_id=session_id,
                         student_id=student_id,
                         dish_id=None,
+                        dish_variant_id=None,
                         status="blocked_no_menu_offer",
                         reason_codes=["no_menu_offer"],
                         dietary_tag_codes=tag_codes,
@@ -295,7 +321,7 @@ def build_order_plan(client: Client, service_week_start: date) -> OrderPlan:
                             code="no_menu_offer",
                             message=(
                                 f"{school_name} on {session['session_date']}: {caterer_name} "
-                                "has no offered dishes for this week."
+                                "has no offered options for this week."
                             ),
                             session_id=session_id,
                             details={"caterer_id": caterer_id},
@@ -310,6 +336,7 @@ def build_order_plan(client: Client, service_week_start: date) -> OrderPlan:
                         session_id=session_id,
                         student_id=student_id,
                         dish_id=None,
+                        dish_variant_id=None,
                         status="blocked_no_safe_dish",
                         reason_codes=["no_safe_dish"],
                         dietary_tag_codes=tag_codes,
@@ -330,12 +357,14 @@ def build_order_plan(client: Client, service_week_start: date) -> OrderPlan:
             session_dish_counts[session_id][chosen.id] = (
                 session_dish_counts[session_id].get(chosen.id, 0) + 1
             )
+            parent_dish_id = chosen.dish_id or chosen.id
             line_counts[(session_id, chosen.id)] += 1
             allocations.append(
                 AllocationDraft(
                     session_id=session_id,
                     student_id=student_id,
-                    dish_id=chosen.id,
+                    dish_id=parent_dish_id,
+                    dish_variant_id=chosen.id,
                     status="allocated",
                     reason_codes=[],
                     dietary_tag_codes=tag_codes,
@@ -343,14 +372,16 @@ def build_order_plan(client: Client, service_week_start: date) -> OrderPlan:
             )
 
     order_lines: list[OrderLineDraft] = []
-    for (session_id, dish_id), quantity in sorted(line_counts.items()):
+    for (session_id, dish_variant_id), quantity in sorted(line_counts.items()):
         session = session_by_id[session_id]
         caterer = caterers[session["caterer_id"]]
         unit_price = caterer["per_item_price_cents"]
+        dish_id = variants[dish_variant_id]["dish_id"]
         order_lines.append(
             OrderLineDraft(
                 session_id=session_id,
                 dish_id=dish_id,
+                dish_variant_id=dish_variant_id,
                 quantity=quantity,
                 unit_price_cents=unit_price,
                 gst_inclusive=caterer["gst_inclusive"],
@@ -363,12 +394,13 @@ def build_order_plan(client: Client, service_week_start: date) -> OrderPlan:
         "service_week_start": service_week_start.isoformat(),
         "service_week_end": service_week_end.isoformat(),
         "session_ids": [session["id"] for session in sessions],
-        "offered_dish_ids": sorted(offered_dish_ids),
+        "offered_variant_ids": sorted(offered_variant_ids),
         "source_counts": {
             "sessions": len(sessions),
             "enrolments": len(enrolments),
             "students": len(students),
             "dishes": len(dishes),
+            "dish_variants": len(variants),
             "menu_offers": len(offers),
         },
     }
@@ -431,6 +463,7 @@ def generate_order_run(
                     "session_id": issue.session_id,
                     "student_id": issue.student_id,
                     "dish_id": issue.dish_id,
+                    "dish_variant_id": issue.dish_variant_id,
                     "severity": issue.severity,
                     "code": issue.code,
                     "message": issue.message,

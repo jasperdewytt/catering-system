@@ -10,8 +10,10 @@ def test_validate_offer_count_accepts_recorded_tier() -> None:
 
 
 def test_validate_offer_count_rejects_zero() -> None:
-    assert validate_offer_count(0, {4, 5, 6}) == ["Select at least one offered dish."]
+    assert validate_offer_count(0, {4, 5, 6}) == ["Select at least one offered option."]
 
 
 def test_validate_offer_count_rejects_unrecorded_tier() -> None:
-    assert validate_offer_count(3, {4, 5, 6}) == ["Select one of the valid menu counts: [4, 5, 6]."]
+    assert validate_offer_count(3, {4, 5, 6}) == [
+        "Select one of the valid option counts: [4, 5, 6]."
+    ]

@@ -524,6 +524,42 @@ def ingest_dishes(
             )
     if dish_rows:
         client.table("dishes").upsert(dish_rows, on_conflict="caterer_id,name").execute()
+        existing_dishes = {
+            (row["caterer_id"], row["name"]): row["id"]
+            for row in _select_all(client, "dishes", "id, caterer_id, name")
+        }
+        existing_default_variants = {
+            row["dish_id"]
+            for row in _select_all(client, "dish_variants", "dish_id, is_default")
+            if row["is_default"]
+        }
+        default_variant_rows = []
+        for row in dish_rows:
+            dish_id = existing_dishes[(row["caterer_id"], row["name"])]
+            if dish_id in existing_default_variants:
+                continue
+            default_variant_rows.append(
+                {
+                    "dish_id": dish_id,
+                    "name": "Standard",
+                    "is_default": True,
+                    "is_available": True,
+                    "is_gluten_free": row["is_gluten_free"],
+                    "is_dairy_free": row["is_dairy_free"],
+                    "is_nut_free": row["is_nut_free"],
+                    "is_vegetarian_option": row["is_vegetarian_option"],
+                    "is_halal_inferred": row["is_halal_inferred"],
+                    "has_no_declared_tags": row["has_no_declared_tags"],
+                    "contains_beef": row["contains_beef"],
+                    "contains_pork": row["contains_pork"],
+                    "contains_red_meat": row["contains_red_meat"],
+                    "contains_fish": row["contains_fish"],
+                    "contains_shellfish": row["contains_shellfish"],
+                    "ingredient_flags_source": "keyword_inferred",
+                }
+            )
+        if default_variant_rows:
+            client.table("dish_variants").insert(default_variant_rows).execute()
     report.dishes = len(dish_rows)
 
 

@@ -13,6 +13,7 @@ from dataclasses import dataclass
 class DishOption:
     id: str
     name: str
+    dish_id: str | None = None
     is_gluten_free: bool = False
     is_dairy_free: bool = False
     is_nut_free: bool = False

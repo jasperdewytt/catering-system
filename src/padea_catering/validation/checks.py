@@ -71,9 +71,14 @@ def check_caterer_minimums(client: Client, week_start: date | None = None) -> li
     students = _select(client, "students", "id, year_level, opted_out, full_name")
     absences = _select(client, "absences", "session_id, student_id")
     dishes = {d["id"]: d for d in _select(client, "dishes", "id, caterer_id")}
+    variants = {
+        row["id"]: {**row, "caterer_id": dishes[row["dish_id"]]["caterer_id"]}
+        for row in _select(client, "dish_variants", "id, dish_id")
+        if row["dish_id"] in dishes
+    }
     menu_offers = [
         row
-        for row in _select(client, "menu_offers", "service_week_start, dish_id")
+        for row in _select(client, "menu_offers", "service_week_start, dish_variant_id")
         if row["service_week_start"] == week_start.isoformat()
     ]
 
@@ -103,9 +108,9 @@ def check_caterer_minimums(client: Client, week_start: date | None = None) -> li
 
     offered_count_by_caterer: dict[str, int] = defaultdict(int)
     for offer in menu_offers:
-        dish = dishes.get(offer["dish_id"])
-        if dish:
-            offered_count_by_caterer[dish["caterer_id"]] += 1
+        variant = variants.get(offer["dish_variant_id"])
+        if variant:
+            offered_count_by_caterer[variant["caterer_id"]] += 1
 
     for c in caterers:
         forecast = attending_by_caterer.get(c["id"], 0)
@@ -130,7 +135,7 @@ def check_caterer_minimums(client: Client, week_start: date | None = None) -> li
                     severity="error",
                     category="caterer_minimum",
                     message=(
-                        f"{c['name']}: {offered_count} offered dishes does not match "
+                        f"{c['name']}: {offered_count} offered options does not match "
                         f"any recorded minimum tier {sorted(tier_lookup)}."
                     ),
                     related={"caterer_id": c["id"], "offered_count": offered_count},
@@ -394,16 +399,21 @@ def check_menu_offers_exist(client: Client, week_start: date | None = None) -> l
     active_caterers = _active_caterer_ids_for_week(client, week_start)
     caterers = {row["id"]: row["name"] for row in _select(client, "caterers", "id, name")}
     dishes = {row["id"]: row for row in _select(client, "dishes", "id, caterer_id")}
+    variants = {
+        row["id"]: {**row, "caterer_id": dishes[row["dish_id"]]["caterer_id"]}
+        for row in _select(client, "dish_variants", "id, dish_id")
+        if row["dish_id"] in dishes
+    }
     offers = [
         row
-        for row in _select(client, "menu_offers", "service_week_start, dish_id")
+        for row in _select(client, "menu_offers", "service_week_start, dish_variant_id")
         if row["service_week_start"] == week_start.isoformat()
     ]
     offered_by_caterer: dict[str, set[str]] = defaultdict(set)
     for offer in offers:
-        dish = dishes.get(offer["dish_id"])
-        if dish:
-            offered_by_caterer[dish["caterer_id"]].add(offer["dish_id"])
+        variant = variants.get(offer["dish_variant_id"])
+        if variant:
+            offered_by_caterer[variant["caterer_id"]].add(offer["dish_variant_id"])
 
     tier_counts: dict[str, set[int]] = defaultdict(set)
     for row in _select(client, "caterer_weekly_minimums", "caterer_id, menu_item_count"):
@@ -427,7 +437,7 @@ def check_menu_offers_exist(client: Client, week_start: date | None = None) -> l
                     severity="error",
                     category="menu_offers",
                     message=(
-                        f"{caterer_name}: {offered_count} offered dishes does not match "
+                        f"{caterer_name}: {offered_count} offered options does not match "
                         f"minimum tiers {sorted(tier_counts.get(caterer_id, set()))}."
                     ),
                     related={
@@ -444,7 +454,7 @@ def check_offered_dish_review_status(
     client: Client,
     week_start: date | None = None,
 ) -> list[Finding]:
-    """D-08: offered dishes should eventually be operator-reviewed."""
+    """D-08/D-09: offered variants should eventually be operator-reviewed."""
     findings: list[Finding] = []
     week_start = resolve_week_start(client, week_start)
     dishes = {
@@ -452,31 +462,45 @@ def check_offered_dish_review_status(
         for row in _select(
             client,
             "dishes",
-            "id, name, ingredient_flags_source, has_no_declared_tags",
+            "id, name",
         )
     }
+    variants = {}
+    for row in _select(
+        client,
+        "dish_variants",
+        "id, dish_id, name, ingredient_flags_source, has_no_declared_tags",
+    ):
+        dish = dishes.get(row["dish_id"])
+        if not dish:
+            continue
+        display_name = (
+            dish["name"] if row["name"] == "Standard" else f"{dish['name']} - {row['name']}"
+        )
+        variants[row["id"]] = {**row, "display_name": display_name}
     offers = [
         row
-        for row in _select(client, "menu_offers", "service_week_start, dish_id")
+        for row in _select(client, "menu_offers", "service_week_start, dish_variant_id")
         if row["service_week_start"] == week_start.isoformat()
     ]
     for offer in offers:
-        dish = dishes.get(offer["dish_id"])
-        if not dish:
+        variant = variants.get(offer["dish_variant_id"])
+        if not variant:
             continue
-        if dish["ingredient_flags_source"] != "operator_reviewed":
+        if variant["ingredient_flags_source"] != "operator_reviewed":
             findings.append(
                 Finding(
                     severity="warning",
                     category="dish_review",
                     message=(
-                        f"Offered dish {dish['name']!r} has ingredient flags source "
-                        f"{dish['ingredient_flags_source']!r}; operator review still required."
+                        f"Offered option {variant['display_name']!r} has ingredient flags source "
+                        f"{variant['ingredient_flags_source']!r}; operator review still required."
                     ),
                     related={
-                        "dish_id": offer["dish_id"],
+                        "dish_id": variant["dish_id"],
+                        "dish_variant_id": offer["dish_variant_id"],
                         "week_start": week_start.isoformat(),
-                        "has_no_declared_tags": dish["has_no_declared_tags"],
+                        "has_no_declared_tags": variant["has_no_declared_tags"],
                     },
                 )
             )
@@ -502,6 +526,7 @@ def check_order_generation_readiness(
                     "session_id": issue.session_id,
                     "student_id": issue.student_id,
                     "dish_id": issue.dish_id,
+                    "dish_variant_id": issue.dish_variant_id,
                     **(issue.details or {}),
                 },
             )
