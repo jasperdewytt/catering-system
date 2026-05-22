@@ -175,3 +175,6 @@ deterministic-vs-LLM rules
 testing expectations
 edge-case recording rules
 ````
+
+Git workflow:
+See @GIT_WORKFLOW.md
