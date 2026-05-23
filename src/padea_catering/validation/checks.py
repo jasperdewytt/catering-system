@@ -182,28 +182,9 @@ def check_caterer_minimums(client: Client, week_start: date | None = None) -> li
 
 
 def check_missing_rooms(client: Client) -> list[Finding]:
-    """E-16: sessions with a building but no room number."""
-    findings: list[Finding] = []
-    sessions = _select(client, "sessions", "id, school_id, session_date, building, room")
-    school_names = {
-        s["id"]: s["canonical_name"] for s in _select(client, "schools", "id, canonical_name")
-    }
-    for sess in sessions:
-        if sess["building"] and not sess.get("room"):
-            findings.append(
-                Finding(
-                    severity="warning",
-                    category="missing_room",
-                    message=(
-                        f"{school_names.get(sess['school_id'], '?')} "
-                        f"on {sess['session_date']}: building "
-                        f"{sess['building']!r} has no room number — "
-                        f"include manager mobile in the order email."
-                    ),
-                    related={"session_id": sess["id"]},
-                )
-            )
-    return findings
+    """E-16/D-12: building-only delivery locations are expected for this dataset."""
+    _ = client
+    return []
 
 
 def check_multi_session_same_date(client: Client) -> list[Finding]:
@@ -240,7 +221,7 @@ def check_multi_session_same_date(client: Client) -> list[Finding]:
 
 
 def check_caterer_contact_emails(client: Client) -> list[Finding]:
-    """E-09: free webmail addresses and unverified contacts."""
+    """E-09/D-11: report incomplete contacts, but do not flag synthetic webmail."""
     findings: list[Finding] = []
     contacts = _select(
         client,
@@ -250,20 +231,15 @@ def check_caterer_contact_emails(client: Client) -> list[Finding]:
     caterer_names = {c["id"]: c["name"] for c in _select(client, "caterers", "id, name")}
     for c in contacts:
         cname = caterer_names.get(c["caterer_id"], "?")
-        if c["email"]:
-            domain = c["email"].split("@")[-1].lower() if "@" in c["email"] else ""
-            if domain in ("gmail.com", "outlook.com", "yahoo.com", "hotmail.com"):
-                findings.append(
-                    Finding(
-                        severity="warning",
-                        category="suspicious_email",
-                        message=(
-                            f"{cname} contact {c['display_name']!r} uses free webmail "
-                            f"{c['email']} — operator must confirm before sending."
-                        ),
-                        related={"contact_id": c["id"]},
-                    )
+        if not c["email"]:
+            findings.append(
+                Finding(
+                    severity="info",
+                    category="missing_contact_email",
+                    message=f"{cname}: contact {c['display_name']!r} has no email address.",
+                    related={"contact_id": c["id"]},
                 )
+            )
         if not c["is_verified"]:
             findings.append(
                 Finding(

@@ -9,10 +9,12 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from typing import Any
 
+from padea_catering.communications import (
+    build_caterer_communication_draft,
+    build_caterer_email_draft,
+)
 from padea_catering.operations import get_audit_history
 from supabase import Client
-
-FREE_WEBMAIL_DOMAINS = {"gmail.com", "outlook.com", "yahoo.com", "hotmail.com"}
 
 
 def _select(client: Client, table: str, columns: str = "*", **eq) -> list[dict[str, Any]]:
@@ -51,12 +53,10 @@ def select_default_order_run_id(runs: list[dict[str, Any]]) -> str | None:
 
 
 def _contact_warning(contact: dict[str, Any]) -> str | None:
+    if not contact.get("email"):
+        return "missing email"
     if not contact.get("is_verified"):
         return "unverified"
-    email = str(contact.get("email") or "")
-    domain = email.split("@")[-1].lower() if "@" in email else ""
-    if domain in FREE_WEBMAIL_DOMAINS:
-        return "free webmail"
     return None
 
 
@@ -169,6 +169,16 @@ def get_order_review(client: Client, order_run_id: str) -> dict[str, Any]:
         )
         for caterer_id, summaries in caterer_summaries.items()
     }
+    communication_drafts = {
+        caterer_id: build_caterer_communication_draft(
+            caterer=summaries["caterer"],
+            contacts=contacts_by_caterer.get(caterer_id, []),
+            sessions=summaries["sessions"],
+            order_lines=summaries["order_lines"],
+        )
+        for caterer_id, summaries in caterer_summaries.items()
+    }
+    communications_by_caterer = _communications_by_caterer(client, order_run_id)
 
     return {
         "run": run,
@@ -181,6 +191,8 @@ def get_order_review(client: Client, order_run_id: str) -> dict[str, Any]:
         "contacts_by_caterer": dict(contacts_by_caterer),
         "caterer_summaries": caterer_summaries,
         "email_drafts": email_drafts,
+        "communication_drafts": communication_drafts,
+        "communications_by_caterer": communications_by_caterer,
     }
 
 
@@ -259,76 +271,30 @@ def _caterer_summaries(
     return summaries
 
 
-def build_caterer_email_draft(
-    caterer: dict[str, Any],
-    contacts: list[dict[str, Any]],
-    sessions: list[dict[str, Any]],
-    order_lines: list[dict[str, Any]],
-) -> str:
-    contact_emails = [str(contact["email"]) for contact in contacts if contact.get("email")]
-    warnings = [contact for contact in contacts if contact.get("warning")]
-    subtotal_cents = sum(row["line_total_cents"] for row in order_lines)
-    total_meals = sum(row["quantity"] for row in order_lines)
-
-    lines = [
-        f"To: {', '.join(contact_emails) if contact_emails else '[confirm caterer email]'}",
-        f"Subject: Padea catering order - {caterer['name']}",
-        "",
-    ]
-    if warnings:
-        lines.append("CONTACT REVIEW REQUIRED:")
-        for contact in warnings:
-            lines.append(
-                f"- {contact['display_name']} <{contact.get('email') or 'no email'}>: "
-                f"{contact['warning']}"
-            )
-        lines.append("")
-
-    lines.extend(
-        [
-            f"Hi {caterer['name']},",
-            "",
-            "Please prepare the following Padea tutoring meals:",
-            "",
-        ]
-    )
-
-    lines_by_session: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for line in order_lines:
-        lines_by_session[line["session_id"]].append(line)
-
-    for session in sessions:
-        destination = session.get("building") or "delivery location TBC"
-        if session.get("room"):
-            destination = f"{destination}, Room {session['room']}"
-        session_heading = (
-            f"{session['school_name']} - {session['session_date']} "
-            f"dinner {session.get('dinner_time') or 'TBC'}"
+def _communications_by_caterer(client: Client, order_run_id: str) -> dict[str, dict[str, Any]]:
+    communications: dict[str, dict[str, Any]] = {}
+    for communication in _select(
+        client,
+        "order_communications",
+        "*",
+        order_run_id=order_run_id,
+    ):
+        communication_id = communication["id"]
+        communication["recipients"] = _select(
+            client,
+            "order_communication_recipients",
+            "*",
+            communication_id=communication_id,
         )
-        lines.extend(
-            [
-                session_heading,
-                f"Delivery: {destination}",
-                f"Manager contact: {session.get('manager_name') or 'TBC'} "
-                f"{session.get('manager_mobile') or ''}".strip(),
-            ]
+        communication["events"] = sorted(
+            _select(
+                client,
+                "order_communication_events",
+                "*",
+                communication_id=communication_id,
+            ),
+            key=lambda row: (row["created_at"], row["id"]),
+            reverse=True,
         )
-        if session.get("building") and not session.get("room"):
-            lines.append("Note: room number is not recorded; please call the manager on arrival.")
-        for order_line in lines_by_session.get(session["session_id"], []):
-            lines.append(f"- {order_line['quantity']} x {order_line['variant_name']}")
-        lines.append("")
-
-    lines.extend(
-        [
-            f"Total meals: {total_meals}",
-            f"Item subtotal: {format_money(subtotal_cents)}",
-        ]
-    )
-    if caterer.get("delivery_fee_cents"):
-        lines.append(
-            f"Delivery fee noted in system: {format_money(caterer['delivery_fee_cents'])} "
-            f"({caterer.get('delivery_scope') or 'scope unknown'})"
-        )
-    lines.extend(["", "Thanks,", "Padea"])
-    return "\n".join(lines)
+        communications[communication["caterer_id"]] = communication
+    return communications

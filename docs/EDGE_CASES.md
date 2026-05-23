@@ -90,8 +90,8 @@ When an item is decided, leave it in this file with the decision summarised inli
   - Two Padea-domain addresses (`carmen@padea.com.au`, `dylan@padea.com.au`) appear as caterer contacts, suggesting either staff act as proxies or the data is adversarial.
   - Several contacts use clearly pseudonymous names (`Big Mom`, `Big Chicken`, `Medium Giraffe`).
 - **Risk**: order emails could be routed to the wrong party, or to a spoofed address.
-- **Status**: open.
-- **Proposed stance**: surface contact data verbatim with a verification flag; do not auto-send to gmail.com addresses without operator confirmation. Belongs in operator review UI.
+- **Status**: decided — see `docs/DECISIONS.md` D-11.
+- **Decision**: this dataset is competition/synthetic data, so suspicious/free-webmail caterer addresses are expected fixture artefacts, not a real production signal. Keep surfacing contact data verbatim and snapshot recipients for communications audit, but do not prioritise a contact-verification workflow for this submission.
 
 ## E-10 — Times stored as strings
 
@@ -148,8 +148,8 @@ When an item is decided, leave it in this file with the decision summarised inli
 - **Where**: `sessions.xlsx.Building`.
 - **Observation**: Delivery destination is a building name only (`Library`, `X Block`, `Ella Building`). No room number.
 - **Risk**: caterer arrives at the building and can't find the session.
-- **Status**: open.
-- **Proposed stance**: include the manager's mobile in every order email so the driver can call. Surface a "missing room number" warning at preflight.
+- **Status**: decided — see `docs/DECISIONS.md` D-12.
+- **Decision**: room numbers are expected to be absent; the operationally important destination is the school block/building. Use the `Building` value as the delivery location and include the manager mobile in delivery notes/emails. Do not treat missing room numbers as a preflight warning for this dataset.
 
 ## E-17 — Meaning of "menu item count"
 

@@ -2,9 +2,9 @@
 
 _Update this file whenever a significant phase completes or the active focus shifts._
 
-## Status: Phase 3 Approval/Audit Implemented — Communications Next
+## Status: Phase 3 Communications Persistence Implemented — Live Sending Deferred
 
-**Last updated**: 2026-05-22
+**Last updated**: 2026-05-23
 
 ---
 
@@ -21,8 +21,8 @@ _Update this file whenever a significant phase completes or the active focus shi
   - `data/raw/exclusions.pdf` — 3 session cancellations (1 partial by year-level)
   - `data/raw/absences.pdf` — 10 individual student absences across 6 school/date groups
 - [x] `docs/DATA_INVENTORY.md` written — field names, types, row counts, samples, cross-file reference map
-- [x] `docs/EDGE_CASES.md` written — 24 edge cases (E-01..E-24): 12 decided via D-01..D-09 including the E-23 update to D-03, 1 resolved on inspection (E-02), 1 deferred (E-06), the rest open
-- [x] `docs/DECISIONS.md` written — D-01..D-10 decided (student PK, exclusion model, day column, null dietary, multi-session, opt-out, menu-item count, deterministic dietary matching, customisable dish variants, approval/audit)
+- [x] `docs/EDGE_CASES.md` written — 24 edge cases (E-01..E-24): E-09 and E-16 now resolved by D-11/D-12, E-23 updates D-03, E-02 resolved on inspection, E-06 deferred, remaining cases open
+- [x] `docs/DECISIONS.md` written — D-01..D-13 decided (student PK, exclusion model, day column, null dietary, multi-session, opt-out, menu-item count, deterministic dietary matching, customisable dish variants, approval/audit, synthetic contact anomalies, delivery-location granularity, export-vs-send semantics)
 - [x] Supabase project connected (`fogxaakhlpqnjmznyurm`) and MCP authenticated
 - [x] **Phase 1 schema applied** — 14 source/validation tables across 7 migrations in `supabase/migrations/`:
   - `20260522120000_extensions_and_helpers.sql` — pgcrypto, citext, trigger fn, 3 enum types
@@ -47,9 +47,9 @@ _Update this file whenever a significant phase completes or the active focus shi
 - [x] 26 unit tests passing on `padea_catering.ingestion.normalisation`. Ruff clean.
 - [x] **Phase 1 validation preflight complete** — before Phase 2 menu-offer checks, `uv run python -m padea_catering.validation` reported 0 errors, 15 warnings, 12 info.
   - E-04 caterer minimums: all 4 caterers' forecasts satisfy their minimums (Lakehouse 16 up to 4-item, others 6-item).
-  - E-16 missing rooms: 11 sessions (all of them — `room` column is currently unset).
+  - E-16 building-only delivery locations: resolved by D-12; room numbers are expected to be absent and should not warn for this dataset.
   - D-05 multi-session same-date: 0 conflicts (Riley Turner is correctly two UUIDs).
-  - E-09 suspicious emails: 4 free-webmail contacts flagged.
+  - E-09 suspicious emails: resolved by D-11; addresses are competition/synthetic fixture data, but communications should still snapshot recipients.
   - Empty session: ISHS-Thursday and LC-Tuesday are fully cancelled by exclusions (info, "no order needed"); 0 unexpected empties.
   - Dietary warning backlog: 0 pending.
 - [x] **Phase 2 schema applied** — order-generation and variant tables across 3 migrations:
@@ -75,11 +75,12 @@ _Update this file whenever a significant phase completes or the active focus shi
   - preparing deterministic copy-ready caterer email drafts
   - downloading draft text files
 - [x] **Phase 3 approval/audit implemented** — order runs can be approved/reopened through audited backend actions. `audit_log` and `manual_overrides` provide the durable record path required before live sending or manual correction logic.
+- [x] **Phase 3 communications persistence/export tracking implemented** — approved, issue-free runs can record caterer export events before any live sending. The first export per `(order_run_id, caterer_id)` creates an immutable communication snapshot with subject/body/rendered text, delivery notes, recipient snapshots, template version, actor/timestamps, and an audit-log row. Repeated exports reuse the snapshot and append export events. Export semantics are recorded in D-13: exported means prepared for manual sending, not sent.
 - [x] **LLM integration plan written** — `docs/LLM_INTEGRATION_PLAN.md` defines advisory-only LLM use cases, forbidden safety-critical uses, provider boundaries, and the recommended order after communications persistence.
 
 ## Active Focus
 
-**Communications workflow** after approval/audit.
+**Final operator workflow and submission artefacts** after communications persistence.
 
 The backend can write generated order runs, and the temporary order review MVP can inspect and approve those runs with an audit trail. Customisable parent dishes are split into concrete orderable variants before they are offered to restricted students. The implemented algorithm:
 
@@ -88,26 +89,25 @@ The backend can write generated order runs, and the temporary order review MVP c
 3. Aggregate per-session into variant-aware `order_lines`, per-student into `order_allocations`.
 4. Reproducibility: the same DB state should always produce the same order_run output.
 
-The current generated run has no allocation issues. Remaining validation warnings are operational warnings such as missing room numbers, unverified contacts, and suspicious/free-webmail caterer addresses.
+The current generated run has no allocation issues. Building-only delivery locations and suspicious/free-webmail caterer addresses are documented as expected competition-data artefacts, not blockers. Communications now preserve recipient snapshots and delivery-note content for audit before any live email sending is added.
 
 ## Up Next (in order)
 
-1. Review the approved run in the Order Review MVP and confirm the caterer draft content
-2. Add communication export/send tracking after contact verification rules are settled
-3. Build explicit contact verification workflow for suspicious/free-webmail addresses
-4. Add email sending only after communication audit state exists
-5. Streamlit final operator UI → `app/streamlit_app.py` (requires Phase 4 migrations: RLS policies + views)
-6. (Optional Phase 3) `session_validation_findings` table to persist validation output
-7. Submission artefacts
+1. Review/record exports for the approved run in the Order Review MVP
+2. Streamlit final operator UI → `app/streamlit_app.py` (requires Phase 4 migrations: RLS policies + views)
+3. Add email sending only after the operator confirms the persisted export workflow
+4. (Optional Phase 3) `session_validation_findings` table to persist validation output
+5. Submission artefacts
 
 ## Known schema follow-ups (Phase 2+)
 
 - final UI replacement for `app/menu_setup_mvp.py` and `app/order_review_mvp.py` — the MVPs are intentionally separate from the future full app
 - manual override application logic — Phase 3 records overrides but does not yet mutate generated allocations/order lines
-- communication persistence tables — planned next so exported/sent caterer drafts have recipient snapshots and audit history before live sending
+- live email sending — intentionally deferred until persisted export snapshots have been operator-reviewed
+- contact verification workflow is no longer a priority for the competition dataset; suspicious addresses should remain visible and auditable, but not block communications persistence
 - LLM integration is planned but intentionally deferred until communications persistence exists; first likely LLM feature is advisory order-review storage
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
-- `session_validation_findings` — preflight warning queue for E-04, E-16, multi-session date conflicts (Phase 3)
+- `session_validation_findings` — preflight warning queue for E-04 and multi-session date conflicts (Phase 3)
 - RLS policies + `security_invoker` views — once Streamlit auth shape is decided (Phase 4)
 
 ## Parking Lot

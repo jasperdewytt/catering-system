@@ -132,3 +132,35 @@ Approving an order run changes `order_runs.status` from `generated` to `approved
 Manual overrides are recorded in `manual_overrides` before any future override-application logic is added. Recording an override also writes an `audit_log` row. Override records require actor, reason, type, entity, and timestamp.
 
 **Why this shape**: Approval and overrides are operational decisions, not generated facts. They must preserve who made the decision, when, and why before the system can safely support live communications or manual corrections.
+
+---
+
+## D-11 — Synthetic caterer contact anomalies (E-09)
+
+**Decision**: Treat suspicious, pseudonymous, and free-webmail caterer contacts as expected artefacts of the competition/synthetic dataset.
+
+The system should still surface recipient names and addresses verbatim in the order review UI and should snapshot the exact recipients used for each exported or sent communication. For this submission, these contact anomalies should not drive a dedicated verification workflow before communications persistence is implemented.
+
+**Why this shape**: The suspicious addresses are not real production contact data. The useful system behaviour for the submission is auditable communications state, not overfitting to fake-address patterns.
+
+---
+
+## D-12 — Delivery location granularity (E-16)
+
+**Decision**: Building/block is the delivery-location granularity for current school sessions.
+
+Room numbers are expected to be missing most of the time. Delivery notes and caterer emails should use the source `Building` value as the destination and include the manager's mobile so the driver can resolve exact handoff details if needed. Missing room numbers should not be reported as a validation warning for this dataset.
+
+**Why this shape**: The source data intentionally identifies the useful school block/building, and warning on absent room numbers creates noise without improving order correctness.
+
+---
+
+## D-13 — Communication export is not email delivery
+
+**Decision**: `exported` means an operator produced and recorded a send-ready communication snapshot from an approved, issue-free order run. It does not mean the email was sent or delivered.
+
+The first export for each `(order_run_id, caterer_id)` stores the immutable communication snapshot: exact recipients, subject, body, rendered text, delivery notes, template version, actor, reason, and timestamp. Repeated exports reuse that same snapshot and append export events. A human operator may then copy or download the recorded text and send it manually outside the system.
+
+Future live email sending should add a separate `sent` state or delivery event with provider metadata. It should not overload `exported`.
+
+**Why this shape**: The system needs a durable audit trail for what was prepared before it can safely send email. Separating "exported" from "sent" avoids claiming delivery that the current application cannot prove.

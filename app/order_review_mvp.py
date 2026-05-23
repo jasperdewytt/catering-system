@@ -10,6 +10,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from padea_catering.communications import record_communication_export
 from padea_catering.db import get_client
 from padea_catering.operations import approve_order_run, unapprove_order_run
 from padea_catering.order_review import (
@@ -21,7 +22,7 @@ from padea_catering.order_review import (
 
 st.set_page_config(page_title="Padea Order Review MVP", layout="wide")
 
-REVIEW_CACHE_VERSION = 2
+REVIEW_CACHE_VERSION = 3
 
 
 @st.cache_resource
@@ -134,6 +135,24 @@ def _audit_table(rows: list[dict]) -> pd.DataFrame:
     )
 
 
+def _communication_event_table(review: dict) -> pd.DataFrame:
+    rows = []
+    for caterer_id, communication in review.get("communications_by_caterer", {}).items():
+        caterer = review["caterer_summaries"].get(caterer_id, {}).get("caterer", {})
+        for event in communication.get("events", []):
+            rows.append(
+                {
+                    "time": event["created_at"],
+                    "caterer": caterer.get("name", caterer_id),
+                    "actor": event["actor_name"],
+                    "event": event["event_type"],
+                    "reason": event["reason"],
+                    "communication": communication["id"],
+                }
+            )
+    return pd.DataFrame(rows)
+
+
 def render_overview(review: dict) -> None:
     run = review["run"]
     total_meals = sum(row["quantity"] for row in review["order_lines"])
@@ -212,23 +231,87 @@ def render_contacts_delivery(review: dict) -> None:
 
 
 def render_email_drafts(review: dict) -> None:
-    if review["run"]["status"] not in {"generated", "approved"} or review["issues"]:
-        st.warning(
-            "Drafts are suppressed unless the selected run is generated or approved with no issues."
-        )
+    run = review["run"]
+    if run["status"] not in {"generated", "approved"}:
+        st.warning("Drafts are available only for generated or approved runs.")
         return
+    can_export = (
+        run["status"] == "approved" and run.get("issue_count", 0) == 0 and not review["issues"]
+    )
+    if run["status"] == "approved" and (run.get("issue_count", 0) != 0 or review["issues"]):
+        st.warning("Export controls are disabled until allocation issues are resolved.")
+    elif run["status"] == "generated":
+        st.info("Approve this run before recording export snapshots.")
+
     for caterer_id, summary in review["caterer_summaries"].items():
         caterer_name = summary["caterer"]["name"]
-        draft = review["email_drafts"][caterer_id]
+        draft = review["communication_drafts"][caterer_id]
+        communication = review.get("communications_by_caterer", {}).get(caterer_id)
         st.markdown(f"### {caterer_name}")
-        st.text_area("Draft", value=draft, height=420, key=f"draft-{caterer_id}")
-        st.download_button(
-            "Download draft",
-            data=draft,
-            file_name=f"{caterer_name.lower().replace(' ', '-')}-order-draft.txt",
-            mime="text/plain",
-            key=f"download-{caterer_id}",
+        st.text_area(
+            "Draft preview", value=draft["rendered_text"], height=360, key=f"draft-{caterer_id}"
         )
+
+        if can_export:
+            with st.form(f"export-form-{caterer_id}"):
+                actor = st.text_input("Actor name", key=f"export-actor-{caterer_id}")
+                reason = st.text_area("Reason", key=f"export-reason-{caterer_id}")
+                submitted = st.form_submit_button("Record export")
+            if submitted:
+                try:
+                    record_communication_export(
+                        _client(),
+                        order_run_id=run["id"],
+                        caterer_id=caterer_id,
+                        actor_name=actor,
+                        reason=reason,
+                    )
+                except ValueError as exc:
+                    st.error(str(exc))
+                else:
+                    st.cache_data.clear()
+                    st.success("Communication export recorded.")
+                    st.rerun()
+
+        if communication:
+            st.caption(
+                f"Persisted snapshot {communication['id']} | "
+                f"first exported {communication['exported_at']} by {communication['exported_by']}"
+            )
+            st.text_area(
+                "Persisted export snapshot",
+                value=communication["rendered_text"],
+                height=360,
+                key=f"snapshot-{caterer_id}",
+            )
+            st.download_button(
+                "Download recorded export",
+                data=communication["rendered_text"],
+                file_name=f"{caterer_name.lower().replace(' ', '-')}-recorded-order.txt",
+                mime="text/plain",
+                key=f"download-recorded-{caterer_id}",
+            )
+            if communication.get("events"):
+                st.dataframe(
+                    pd.DataFrame(
+                        [
+                            {
+                                "time": event["created_at"],
+                                "actor": event["actor_name"],
+                                "event": event["event_type"],
+                                "reason": event["reason"],
+                            }
+                            for event in communication["events"]
+                        ]
+                    ),
+                    width="stretch",
+                    hide_index=True,
+                )
+
+    communication_history = _communication_event_table(review)
+    if not communication_history.empty:
+        st.subheader("Communication history")
+        st.dataframe(communication_history, width="stretch", hide_index=True)
 
 
 def render_approval(review: dict) -> None:
@@ -275,6 +358,13 @@ def render_approval(review: dict) -> None:
         st.dataframe(_audit_table(audit_history), width="stretch", hide_index=True)
     else:
         st.info("No audit history recorded for this order run.")
+
+    communication_history = _communication_event_table(review)
+    st.subheader("Communication/export history")
+    if not communication_history.empty:
+        st.dataframe(communication_history, width="stretch", hide_index=True)
+    else:
+        st.info("No communication exports recorded for this order run.")
 
 
 def _group_by(rows: list[dict], key: str) -> dict[str, list[dict]]:
