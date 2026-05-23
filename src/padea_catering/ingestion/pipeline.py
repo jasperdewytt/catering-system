@@ -495,11 +495,6 @@ def ingest_dishes(
     report: IngestionReport,
 ) -> None:
     menus = parse_caterer_menus_pdf(raw_dir / "caterer-menus.pdf")
-    # Wipe and re-insert (small table, simpler than upsert with case-insensitive uniqueness).
-    cid_list = list(caterer_id_by_name.values())
-    if cid_list:
-        client.table("dishes").delete().in_("caterer_id", cid_list).execute()
-
     dish_rows: list[dict[str, Any]] = []
     for m in menus:
         cid = caterer_id_by_name.get(m.caterer_name)
@@ -518,11 +513,53 @@ def ingest_dishes(
                     "is_halal_inferred": d.is_halal_inferred,
                     "halal_inference_note": d.halal_inference_note,
                     "has_no_declared_tags": d.has_no_declared_tags,
+                    "contains_beef": d.ingredient_flags.contains_beef,
+                    "contains_pork": d.ingredient_flags.contains_pork,
+                    "contains_red_meat": d.ingredient_flags.contains_red_meat,
+                    "contains_fish": d.ingredient_flags.contains_fish,
+                    "contains_shellfish": d.ingredient_flags.contains_shellfish,
+                    "ingredient_flags_source": "keyword_inferred",
                     **_provenance("caterer-menus.pdf", d),
                 }
             )
     if dish_rows:
-        client.table("dishes").insert(dish_rows).execute()
+        client.table("dishes").upsert(dish_rows, on_conflict="caterer_id,name").execute()
+        existing_dishes = {
+            (row["caterer_id"], row["name"]): row["id"]
+            for row in _select_all(client, "dishes", "id, caterer_id, name")
+        }
+        existing_default_variants = {
+            row["dish_id"]
+            for row in _select_all(client, "dish_variants", "dish_id, is_default")
+            if row["is_default"]
+        }
+        default_variant_rows = []
+        for row in dish_rows:
+            dish_id = existing_dishes[(row["caterer_id"], row["name"])]
+            if dish_id in existing_default_variants:
+                continue
+            default_variant_rows.append(
+                {
+                    "dish_id": dish_id,
+                    "name": "Standard",
+                    "is_default": True,
+                    "is_available": True,
+                    "is_gluten_free": row["is_gluten_free"],
+                    "is_dairy_free": row["is_dairy_free"],
+                    "is_nut_free": row["is_nut_free"],
+                    "is_vegetarian_option": row["is_vegetarian_option"],
+                    "is_halal_inferred": row["is_halal_inferred"],
+                    "has_no_declared_tags": row["has_no_declared_tags"],
+                    "contains_beef": row["contains_beef"],
+                    "contains_pork": row["contains_pork"],
+                    "contains_red_meat": row["contains_red_meat"],
+                    "contains_fish": row["contains_fish"],
+                    "contains_shellfish": row["contains_shellfish"],
+                    "ingredient_flags_source": "keyword_inferred",
+                }
+            )
+        if default_variant_rows:
+            client.table("dish_variants").insert(default_variant_rows).execute()
     report.dishes = len(dish_rows)
 
 

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import argparse
+from datetime import date
+
 from ..db import get_client
-from .checks import ALL_CHECKS
+from .checks import run_all_checks
 from .framework import ValidationReport
 
 _SEV_ORDER = {"error": 0, "warning": 1, "info": 2}
@@ -11,10 +14,17 @@ _SEV_GLYPH = {"error": "ERR ", "warning": "WARN", "info": "INFO"}
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Run catering preflight validation.")
+    parser.add_argument(
+        "--week-start",
+        help="Service week start date, YYYY-MM-DD. Defaults to earliest session date.",
+    )
+    args = parser.parse_args()
+
     client = get_client()
+    week_start = date.fromisoformat(args.week_start) if args.week_start else None
     report = ValidationReport()
-    for check in ALL_CHECKS:
-        report.add(*check(client))
+    report.add(*run_all_checks(client, week_start))
 
     print("=" * 64)
     print("Preflight validation report")

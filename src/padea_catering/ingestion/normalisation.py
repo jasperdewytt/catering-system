@@ -207,3 +207,40 @@ def is_halal(dish_name: str) -> tuple[bool, str | None]:
         if indicator in name_lower:
             return False, f"contains {indicator}"
     return True, None
+
+
+# --- Ingredient inference (D-08) --------------------------------------------
+
+BEEF_INDICATORS = ("beef", "bolognese", "meatball")
+RED_MEAT_INDICATORS = BEEF_INDICATORS + ("lamb",)
+FISH_INDICATORS = ("fish", "salmon", "tuna", "cod")
+SHELLFISH_INDICATORS = ("shrimp", "prawn", "crab", "lobster")
+
+
+@dataclass(frozen=True)
+class IngredientFlags:
+    contains_beef: bool
+    contains_pork: bool
+    contains_red_meat: bool
+    contains_fish: bool
+    contains_shellfish: bool
+
+
+def infer_ingredient_flags(dish_name: str) -> IngredientFlags:
+    """Infer obvious ingredient flags from dish names as a reviewable stop-gap.
+
+    These flags are deterministic and auditable, but they are not a substitute
+    for operator-reviewed ingredients.
+    """
+    name_lower = dish_name.lower()
+
+    def has_any(indicators: tuple[str, ...]) -> bool:
+        return any(indicator in name_lower for indicator in indicators)
+
+    return IngredientFlags(
+        contains_beef=has_any(BEEF_INDICATORS),
+        contains_pork=has_any(PORK_INDICATORS),
+        contains_red_meat=has_any(RED_MEAT_INDICATORS),
+        contains_fish=has_any(FISH_INDICATORS),
+        contains_shellfish=has_any(SHELLFISH_INDICATORS),
+    )

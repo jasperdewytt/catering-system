@@ -11,7 +11,7 @@ Each entry has a stable id (`E-NN`) that other docs reference. Status values:
 - **decided** — behaviour fixed, see linked decision
 - **deferred** — will not be handled before submission; record-and-move-on
 
-When an item is decided, leave it in this file with the decision summarised inline, and add a link to a fuller note in `docs/DECISIONS.md` (to be created).
+When an item is decided, leave it in this file with the decision summarised inline, and add a link to a fuller note in `docs/DECISIONS.md`.
 
 ---
 
@@ -56,8 +56,8 @@ When an item is decided, leave it in this file with the decision summarised inli
   - "Vegetarian" (menu uses `VO` = vegetarian *option*)
   - "Opted out of Catering" (not a dietary restriction; see [E-15](#e-15-opted-out-of-catering-is-an-attendance-flag-not-a-diet))
 - **Risk**: students get meals that violate their stated restrictions, or are excluded from menus they could safely eat.
-- **Status**: open.
-- **Proposed stance**: structured `dietary_tag` enum derived from a parsing map (`"No Pork"` → tag `excludes_pork`); each menu dish gets a *derived* tag set produced by combining its declared flags with ingredient inference. Matching is rule-based, not LLM, per AGENTS.md.
+- **Status**: decided — see `docs/DECISIONS.md` D-08.
+- **Decision**: Structured student tags are matched deterministically against dish dietary fields and operator-reviewable ingredient flags. Unknown student dietary text creates a pending warning and blocks automatic allocation until operator resolution.
 
 ## E-06 — Caterer capacity overlap
 
@@ -90,8 +90,8 @@ When an item is decided, leave it in this file with the decision summarised inli
   - Two Padea-domain addresses (`carmen@padea.com.au`, `dylan@padea.com.au`) appear as caterer contacts, suggesting either staff act as proxies or the data is adversarial.
   - Several contacts use clearly pseudonymous names (`Big Mom`, `Big Chicken`, `Medium Giraffe`).
 - **Risk**: order emails could be routed to the wrong party, or to a spoofed address.
-- **Status**: open.
-- **Proposed stance**: surface contact data verbatim with a verification flag; do not auto-send to gmail.com addresses without operator confirmation. Belongs in operator review UI.
+- **Status**: decided — see `docs/DECISIONS.md` D-11.
+- **Decision**: this dataset is competition/synthetic data, so suspicious/free-webmail caterer addresses are expected fixture artefacts, not a real production signal. Keep surfacing contact data verbatim and snapshot recipients for communications audit, but do not prioritise a contact-verification workflow for this submission.
 
 ## E-10 — Times stored as strings
 
@@ -104,10 +104,10 @@ When an item is decided, leave it in this file with the decision summarised inli
 ## E-11 — `day` redundant with `date`
 
 - **Where**: `sessions.xlsx`.
-- **Observation**: `day` column ("Tuesday") is always `date.strftime('%A')`. Verified on all 11 rows.
+- **Observation**: The source has both a `day` label and a `date`. The original inventory claim that they always match `date.strftime('%A')` was later proven wrong by E-23.
 - **Risk**: if the two ever disagree, which wins?
 - **Status**: decided — see `docs/DECISIONS.md` D-03.
-- **Decision**: `date` is authoritative. `day` is dropped from the schema; recomputed on display.
+- **Decision**: `day` is dropped from the schema. Ingestion still reads the source `day` label for sheet-to-session matching because this dataset's dates do not match the real Gregorian weekdays.
 
 ## E-12 — Empty `Dietary` cell — meaning
 
@@ -123,8 +123,8 @@ When an item is decided, leave it in this file with the decision summarised inli
   Beef Pad Thai; Bacon Carbonara; Creamy Udon; Mongolian Beef and Rice; Cali Burrito; Grilled Chicken Burrito; Chicken Quesadilla; Crispy Chicken Taco.
 - **Observation**: Ambiguous whether absent-tag means "contains everything" (gluten, dairy, nuts, animal) or "unknown".
 - **Risk**: if treated as unrestricted, a NF student could be assigned Bacon Carbonara without anyone noticing.
-- **Status**: open.
-- **Proposed stance**: treat absent-tag as "no claim made" (i.e. assume not GF / not DF / not NF / not VO). Conservative.
+- **Status**: decided — see `docs/DECISIONS.md` D-08.
+- **Decision**: treat absent-tag as "no claim made" (i.e. assume not GF / not DF / not NF / not VO). Untagged dishes may be offered to unrestricted students. For restricted students, `unreviewed` ingredient flags block allocation; `keyword_inferred` flags are allowed only as a deterministic development bridge and validation warning until operator review.
 
 ## E-14 — Students attending multiple sessions
 
@@ -148,16 +148,16 @@ When an item is decided, leave it in this file with the decision summarised inli
 - **Where**: `sessions.xlsx.Building`.
 - **Observation**: Delivery destination is a building name only (`Library`, `X Block`, `Ella Building`). No room number.
 - **Risk**: caterer arrives at the building and can't find the session.
-- **Status**: open.
-- **Proposed stance**: include the manager's mobile in every order email so the driver can call. Surface a "missing room number" warning at preflight.
+- **Status**: decided — see `docs/DECISIONS.md` D-12.
+- **Decision**: room numbers are expected to be absent; the operationally important destination is the school block/building. Use the `Building` value as the delivery location and include the manager mobile in delivery notes/emails. Do not treat missing room numbers as a preflight warning for this dataset.
 
 ## E-17 — Meaning of "menu item count"
 
 - **Where**: `caterers.xlsx` column headers `minimum order quantity for {4,5,6} menu items`.
 - **Observation**: Implied that the operator chooses to offer 4, 5, or 6 dishes from the caterer's 10-item menu that week, and the minimum scales with that choice.
-- **Risk**: ambiguity about whether "menu items" means *distinct dishes ordered* or *number of menu choices offered to students*.
+- **Risk**: ambiguity about whether "menu items" means *distinct options ordered* or *number of menu choices offered to students*.
 - **Status**: decided — see `docs/DECISIONS.md` D-07.
-- **Decision**: "menu items" = number of distinct dishes on the offered menu for that week, chosen by the operator. Pending stakeholder confirmation.
+- **Decision**: "menu items" = number of distinct orderable options on the offered menu for that week, chosen by the operator. Pending stakeholder confirmation. Customisable parent dishes are split into variants per D-09.
 
 ## E-18 — Delivery scope ambiguous
 
@@ -172,8 +172,8 @@ When an item is decided, leave it in this file with the decision summarised inli
 - **Where**: `caterer-menus.pdf` page 1 ("Assume all non-pork meals are halal").
 - **Observation**: The system must derive a per-dish `is_halal` from the dish name / ingredients.
 - **Risk**: misclassifying a dish (e.g. dishes containing alcohol or non-halal-slaughtered meat would not be halal even without pork).
-- **Status**: open.
-- **Proposed stance**: literal interpretation of the rule (no pork → halal). Surface a warning that this is a coarse heuristic.
+- **Status**: decided — see `docs/DECISIONS.md` D-08.
+- **Decision**: apply the source rule literally (`no pork` → halal) through deterministic inference, with pork indicators such as pork and bacon marking a dish as not halal. Future operator-reviewed ingredient flags should supersede name-keyword guesses for production matching.
 
 ## E-20 — Same dish name, different flags across caterers
 
@@ -207,5 +207,13 @@ When an item is decided, leave it in this file with the decision summarised inli
 - **Where**: `sessions.xlsx`. Surfaced during ingestion.
 - **Observation**: The previous inventory claim ("`day` is always `date.strftime('%A')`") is incorrect. The source labels `2026-05-02` as Tuesday, but in the real Gregorian calendar that date is a Saturday. The dates and day labels are internally consistent under the operational assumption that May 1 = Monday → May 4 = Thursday, but they do not match real-world weekdays. Likely this dataset has dates transposed from a 2023 week (when 2023-05-01 was a Monday).
 - **Risk**: a Python-derived `date.strftime('%A')` would mislabel every session. `students.xlsx` sheets use the source day labels (e.g. `"JPC - Tuesday"`), so any matching by computed weekday silently fails.
-- **Status**: open.
-- **Proposed stance**: treat the **source `day` column as authoritative** for day-of-week semantics during ingestion (used to map sheets → sessions). The schema does not need to store it (D-03 holds), but the ingestion pipeline must read it from the parsed source rather than deriving it from `session_date`. Document the assumption that the operational week is Mon→Thu regardless of the underlying calendar.
+- **Status**: decided — see `docs/DECISIONS.md` D-03.
+- **Decision**: treat the **source `day` column as authoritative** for day-label semantics during ingestion (used to map sheets → sessions). The schema does not store it (D-03 holds), and downstream delivery scheduling remains date-based.
+
+## E-24 — Customisable dishes cannot be represented by one safety flag set
+
+- **Where**: `caterer-menus.pdf`; discussed while reviewing untagged/customisable dishes such as `Cali Burrito`.
+- **Observation**: Some caterer menu items are customisable. A `Cali Burrito` might be beef, chicken, vegetarian, or another confirmed option depending on what is ordered.
+- **Risk**: Marking the generic parent dish as vegetarian-safe or meat-containing is both overbroad and under-specific. Restricted students could be allocated a vague parent item whose actual preparation violates their requirements, or safe variants could be unnecessarily blocked.
+- **Status**: decided — see `docs/DECISIONS.md` D-09.
+- **Decision**: keep the source `dishes` row as the parent menu item and create concrete `dish_variants` for orderable options. Menu offers and generated orders operate on variants, each with its own reviewed dietary and ingredient flags.

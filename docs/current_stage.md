@@ -2,9 +2,9 @@
 
 _Update this file whenever a significant phase completes or the active focus shifts._
 
-## Status: Validation Preflight Complete — Order Generation Next
+## Status: Phase 3 Communications Persistence Implemented — Operator UI Pivoting to Next.js
 
-**Last updated**: 2026-05-22
+**Last updated**: 2026-05-23
 
 ---
 
@@ -21,10 +21,10 @@ _Update this file whenever a significant phase completes or the active focus shi
   - `data/raw/exclusions.pdf` — 3 session cancellations (1 partial by year-level)
   - `data/raw/absences.pdf` — 10 individual student absences across 6 school/date groups
 - [x] `docs/DATA_INVENTORY.md` written — field names, types, row counts, samples, cross-file reference map
-- [x] `docs/EDGE_CASES.md` written — 23 edge cases (E-01..E-23): 7 decided via D-01..D-07, 1 resolved on inspection (E-02), 1 deferred (E-06), the rest open
-- [x] `docs/DECISIONS.md` written — D-01..D-07 decided (student PK, exclusion model, day column, null dietary, multi-session, opt-out, menu-item count)
+- [x] `docs/EDGE_CASES.md` written — 24 edge cases (E-01..E-24): E-09 and E-16 now resolved by D-11/D-12, E-23 updates D-03, E-02 resolved on inspection, E-06 deferred, remaining cases open
+- [x] `docs/DECISIONS.md` written — D-01..D-14 decided (student PK, exclusion model, day column, null dietary, multi-session, opt-out, menu-item count, deterministic dietary matching, customisable dish variants, approval/audit, synthetic contact anomalies, delivery-location granularity, export-vs-send semantics, Next.js operator UI)
 - [x] Supabase project connected (`fogxaakhlpqnjmznyurm`) and MCP authenticated
-- [x] **Schema applied** — 14 tables across 7 migrations in `supabase/migrations/`:
+- [x] **Phase 1 schema applied** — 14 source/validation tables across 7 migrations in `supabase/migrations/`:
   - `20260522120000_extensions_and_helpers.sql` — pgcrypto, citext, trigger fn, 3 enum types
   - `20260522120100_schools_and_caterers.sql` — schools, school_aliases, caterers, caterer_weekly_minimums, caterer_contacts
   - `20260522120200_sessions_and_exclusions.sql` — sessions, exclusions
@@ -32,9 +32,9 @@ _Update this file whenever a significant phase completes or the active focus shi
   - `20260522120400_enrolments_dishes_absences.sql` — session_enrolments, dishes, absences
   - `20260522120500_move_citext_to_extensions_schema.sql` — security advisor fix (later reverted)
   - `20260522180000_revert_citext_to_public.sql` — revert citext-schema move because PostgREST expects `public.citext`
-- [x] Advisors clean: only intentional INFOs remain (RLS-no-policy by design until operator UI; unused indexes expected on empty schema)
+- [x] Advisors reviewed: RLS-no-policy INFOs are intentional until operator UI policies exist; unused-index INFOs are expected on a small/new schema; `citext` remains in `public` by deliberate PostgREST compatibility revert.
 - [x] **Python package initialised** — `pyproject.toml` with `pandas`, `openpyxl`, `pdfplumber`, `supabase<2.30`, `python-dotenv`, `pydantic`, `streamlit`; dev deps `pytest`, `ruff`. Python pinned to `>=3.12,<3.14` (avoid pyiceberg-on-3.14 C-build).
-- [x] **Ingestion pipeline complete** — `uv run python -m padea_catering.ingestion` populates all 14 tables in one pass, idempotently. Verified row counts:
+- [x] **Ingestion pipeline complete** — `uv run python -m padea_catering.ingestion` populates the 14 source/validation tables in one pass, idempotently. Verified row counts:
   - 6 schools (+ 1 alias for E-21 punctuation drift)
   - 4 caterers, 12 weekly minimums (4×3 menu-item tiers), 6 contacts
   - 11 sessions (no `day` column; D-03 with E-23 caveat)
@@ -45,43 +45,81 @@ _Update this file whenever a significant phase completes or the active focus shi
   - 10 absences resolved fail-loud per D-01
 - [x] **E-23 surfaced**: source `day` and `date` columns don't match real calendar — DATA_INVENTORY's "day = strftime('%A')" claim was wrong. D-03 still holds (don't store `day`), but ingestion now uses the source `day_label` for sheet→session matching.
 - [x] 26 unit tests passing on `padea_catering.ingestion.normalisation`. Ruff clean.
-- [x] **Validation preflight complete** — `uv run python -m padea_catering.validation` queries the live DB and reports findings without writing. On the current data: 0 errors, 15 warnings, 12 info.
+- [x] **Phase 1 validation preflight complete** — before Phase 2 menu-offer checks, `uv run python -m padea_catering.validation` reported 0 errors, 15 warnings, 12 info.
   - E-04 caterer minimums: all 4 caterers' forecasts satisfy their minimums (Lakehouse 16 up to 4-item, others 6-item).
-  - E-16 missing rooms: 11 sessions (all of them — `room` column is currently unset).
+  - E-16 building-only delivery locations: resolved by D-12; room numbers are expected to be absent and should not warn for this dataset.
   - D-05 multi-session same-date: 0 conflicts (Riley Turner is correctly two UUIDs).
-  - E-09 suspicious emails: 4 free-webmail contacts flagged.
+  - E-09 suspicious emails: resolved by D-11; addresses are competition/synthetic fixture data, but communications should still snapshot recipients.
   - Empty session: ISHS-Thursday and LC-Tuesday are fully cancelled by exclusions (info, "no order needed"); 0 unexpected empties.
   - Dietary warning backlog: 0 pending.
+- [x] **Phase 2 schema applied** — order-generation and variant tables across 3 migrations:
+  - dish ingredient review fields (`contains_*`, `ingredient_flags_source`, review metadata)
+  - `dish_variants` for concrete orderable options under a parent source dish
+  - `menu_offers`
+  - `order_runs`, `order_allocations`, `order_lines`, `order_allocation_issues`
+  - `20260522201000_index_order_allocation_issue_fks.sql` covers nullable issue-table foreign keys
+  - `20260522202000_dish_variants.sql` makes `menu_offers`, allocations, and order lines variant-aware
+  - RLS enabled and anon/authenticated revoked, matching the existing service-role-only pattern
+- [x] **Order generation implemented** — `uv run python -m padea_catering.ordering --week-start 2026-05-01 --dry-run` builds a deterministic plan without writing; normal mode writes blocked/generated order runs.
+- [x] **Validation updated for Phase 2** — validation now checks `menu_offers`, offered variant review status, and ordering dry-run readiness. Current live validation has no blocking errors after operator menu review; remaining findings are operational warnings.
+- [x] **Tests expanded** — unit tests cover normalisation helpers, deterministic ordering rules, and menu setup helper rules.
+- [x] **Narrow Menu Setup MVP implemented** — `uv run streamlit run app/menu_setup_mvp.py` provides a temporary UI for:
+  - creating concrete orderable variants for customisable dishes such as burritos
+  - selecting weekly `menu_offers` per active caterer by variant
+  - reviewing variant dietary/ingredient flags and saving `operator_reviewed` metadata
+  - running validation and order-generation dry runs
+- [x] **Generated order run achieved** — `order_run_id=9b23f6a1-38f1-4ec7-a933-d4f6a1d2d6f0`, `status=generated`, 320 allocations, 33 order lines, 0 issues.
+- [x] **Narrow Order Review MVP implemented** — `uv run streamlit run app/order_review_mvp.py` provides a read-only/export-only UI for:
+  - selecting generated order runs
+  - reviewing order lines, allocations, contacts, and delivery notes
+  - preparing deterministic copy-ready caterer email drafts
+  - downloading draft text files
+- [x] **Phase 3 approval/audit implemented** — order runs can be approved/reopened through audited backend actions. `audit_log` and `manual_overrides` provide the durable record path required before live sending or manual correction logic.
+- [x] **Phase 3 communications persistence/export tracking implemented** — approved, issue-free runs can record caterer export events before any live sending. The first export per `(order_run_id, caterer_id)` creates an immutable communication snapshot with subject/body/rendered text, delivery notes, recipient snapshots, template version, actor/timestamps, and an audit-log row. Repeated exports reuse the snapshot and append export events. Export semantics are recorded in D-13: exported means prepared for manual sending, not sent.
+- [x] **Approved-run export workflow verified** — the approved zero-issue run has persisted export snapshots for all four caterers, with recipient snapshots, export events, and matching `communication_exported` audit-log rows.
+- [x] **LLM integration plan written** — `docs/LLM_INTEGRATION_PLAN.md` defines advisory-only LLM use cases, forbidden safety-critical uses, provider boundaries, and the recommended order after communications persistence.
+- [x] **Operator UI direction decided** — see [D-14](DECISIONS.md#d-14--operator-ui-is-nextjs--supabase-not-streamlit). The final operator interface is Next.js 16 + TypeScript in `web/`, using shadcn/ui, Tailwind, and `@supabase/ssr`. Streamlit MVPs in `app/` become legacy verification harnesses and are scheduled for removal once `web/` reaches parity.
 
 ## Active Focus
 
-**Order generation** in `src/padea_catering/ordering/`.
+**Scaffold the Next.js operator UI in `web/` and land Phase 4 (RLS + views) so it can authenticate operators against Supabase.**
 
-Now that the data is validated, the next phase is to actually generate orders. This needs new schema (Phase 2 migration): `menu_offers` (operator's per-week dish selection), `order_runs`, `order_lines`, `order_allocations`. Algorithm:
+The deterministic Python backend can write generated order runs end-to-end, and communications persistence captures recipient snapshots and export events. The Streamlit MVPs have proven the workflow against the live DB; the polished surface is now the priority. The implemented allocation algorithm remains:
 
 1. For each non-cancelled session, walk the enrolled students minus opted-out, year-excluded, and absent.
-2. For each student, pick a safe dish from the offered menu given their dietary tags.
-3. Aggregate per-session into `order_lines`, per-student into `order_allocations`.
+2. For each student, pick a safe offered variant given their dietary tags.
+3. Aggregate per-session into variant-aware `order_lines`, per-student into `order_allocations`.
 4. Reproducibility: the same DB state should always produce the same order_run output.
+
+The current approved run has no allocation issues. Building-only delivery locations and suspicious/free-webmail caterer addresses are documented as expected competition-data artefacts, not blockers. Communications preserve recipient snapshots and delivery-note content for audit before any live email sending is added. The manual export workflow has been tested and verified against the database.
 
 ## Up Next (in order)
 
-1. Phase 2 migrations: `menu_offers`, `order_runs`, `order_lines`, `order_allocations`
-2. Order generation / matchmaking → `src/padea_catering/ordering/`
-3. (Optional Phase 3) `session_validation_findings` table to persist validation output
-4. Streamlit operator UI → `app/streamlit_app.py` (requires Phase 4 migrations: RLS policies + views)
-5. Submission artefacts
+1. **Scaffold `web/`** — Next.js 16 (App Router) + TypeScript, Tailwind, shadcn/ui, `@supabase/ssr`, generated `web/types/supabase.ts`. Bootstrap auth shell and a single read-only route. Use mocked/static data or server-only dev access until Phase 4 policies are available.
+2. **Phase 4 migrations** — RLS policies for operator role + `security_invoker` views for the Next.js read paths. Real browser-facing Supabase reads should wait for this step.
+3. **Port menu setup workflow** — variant creation, weekly menu offer selection, operator review metadata.
+4. **Port order review and approval** — run picker, allocation/line tables, contacts/delivery notes, approve/reopen actions calling existing audited backend operations.
+5. **Port export workflow** — render the deterministic draft, surface recipient snapshots, record export events; reuse the existing `communication_exported` action.
+6. **Retire Streamlit MVPs** once parity is verified.
+7. Live email sending only after the persisted export workflow is operator-confirmed in `web/`.
+8. (Optional Phase 3) `session_validation_findings` table to persist validation output.
+9. Submission artefacts.
 
 ## Known schema follow-ups (Phase 2+)
 
-- `order_runs`, `order_lines`, `order_allocations`, `menu_offers` — order generation tables (Phase 2)
-- `manual_overrides`, `audit_log` — operator action audit (Phase 3, per AGENTS.md non-negotiables)
+- final UI replacement for `app/menu_setup_mvp.py` and `app/order_review_mvp.py` — these are now classified as legacy under D-14 and tracked for removal once `web/` ships parity
+- manual override application logic — Phase 3 records overrides but does not yet mutate generated allocations/order lines
+- live email sending — intentionally deferred until persisted export snapshots have been operator-reviewed in `web/`
+- contact verification workflow is no longer a priority for the competition dataset; suspicious addresses should remain visible and auditable, but not block communications persistence
+- LLM integration is planned but intentionally deferred until communications persistence exists; first likely LLM feature is advisory order-review storage
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
-- `session_validation_findings` — preflight warning queue for E-04, E-16, multi-session date conflicts (Phase 3)
-- RLS policies + `security_invoker` views — once Streamlit auth shape is decided (Phase 4)
+- `session_validation_findings` — preflight warning queue for E-04 and multi-session date conflicts (Phase 3)
+- RLS policies + `security_invoker` views — required before `web/` is used outside dev (Phase 4, [D-14](DECISIONS.md#d-14--operator-ui-is-nextjs--supabase-not-streamlit))
 
 ## Parking Lot
 
-- `README.md` is empty — fill in after the schema is stable.
 - Skills under `skills/` have not been written yet.
-- Test suite covers `ingestion.normalisation` (26 cases); ingestion `pipeline.py` and `validation/` modules have no unit tests yet (they read the live DB; integration tests would be the natural fit).
+- Test suite covers `ingestion.normalisation`, pure `ordering.rules`, and menu setup helper rules; ingestion `pipeline.py`, Supabase-backed `ordering.generator`, UI actions, and `validation/` modules have no unit tests yet (they read/write the live DB; integration tests would be the natural fit).
+- `web/` will need its own test strategy — Playwright for end-to-end, Vitest for unit/component, and a shared fixture seed against a Supabase branch DB. Defer wiring until the scaffold lands.
+- Decide whether `web/` lives at the repository root or under a `web/` directory of a future pnpm workspace. Current direction: single Next.js project at `web/` for now; promote to a workspace only if a shared TypeScript package emerges.
+- Keep the Python/Next.js boundary narrow: Next.js may perform explicit audited database writes through Server Actions, but Python-owned jobs should stay CLI/service-triggered unless a deliberate HTTP/queue bridge is added.

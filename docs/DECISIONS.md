@@ -76,8 +76,133 @@ Opted-out students are excluded from meal counts and do not appear in generated 
 
 ## D-07 — Meaning of "menu item count" (E-17)
 
-**Decision**: "Menu items" = number of distinct dishes on the offered menu for that week, selected by the operator before the order is generated. The applicable minimum order quantity is determined by that count.
+**Decision**: "Menu items" = number of distinct orderable options on the offered menu for that week, selected by the operator before the order is generated. The applicable minimum order quantity is determined by that count.
 
 **Pending**: stakeholder confirmation. Treat this as the working assumption until confirmed.
 
-**Why this interpretation**: The caterer needs to know upfront how many dishes to prepare, so the offered menu count (operator-controlled) is the operationally meaningful number, not the count of dishes that happen to be ordered.
+**Why this interpretation**: The caterer needs to know upfront how many options to prepare, so the offered menu count (operator-controlled) is the operationally meaningful number, not the count of options that happen to be ordered.
+
+**Phase 2 implementation note**: `menu_offers` is operator-owned state. The migration does not seed default offers; validation and order generation block until an operator-selected offer set exists for each active caterer.
+
+---
+
+## D-08 — Deterministic dietary matching and dish ingredient review (E-05, E-13, E-19)
+
+**Decision**: Meal allocation is deterministic and must never rely on LLM judgement for dietary safety.
+
+Known student dietary tags are matched against explicit orderable-option fields:
+
+- `vegetarian` requires the orderable option's `is_vegetarian_option = true`.
+- `nut_free` requires the orderable option's `is_nut_free = true`.
+- `gluten_free` requires the orderable option's `is_gluten_free = true`.
+- `dairy_free` requires the orderable option's `is_dairy_free = true`.
+- `halal` requires the orderable option's `is_halal_inferred = true`.
+- `excludes_beef`, `excludes_pork`, `excludes_red_meat`, `excludes_fish`, `excludes_shellfish`, and `excludes_seafood` require operator-reviewable ingredient flags on the orderable option before order generation is considered production-safe.
+
+Unknown student dietary text remains fail-loud per D-04: ingestion creates a pending `student_dietary_warnings` row, and the student must not receive an automatic allocation until an operator resolves the warning with a reason and timestamp.
+
+Dishes with `has_no_declared_tags = true` are treated as "no claim made", not safe-by-default. If their orderable option flags are still `unreviewed`, they may be offered to unrestricted students only. Phase 2 may use `keyword_inferred` ingredient flags as a deterministic development bridge for restricted students, but validation must warn until an operator changes the option to `operator_reviewed`. The Phase 2 schema now stores reviewable ingredient columns such as `contains_beef`, `contains_pork`, `contains_red_meat`, `contains_fish`, `contains_shellfish`, plus review metadata (`ingredient_notes`, `tags_reviewed_at`, `tags_reviewed_by`, and a review reason).
+
+Before the operator review UI exists, name-keyword matching may be used only as a deterministic development stop-gap for obvious ingredient exclusions, following the same style as the existing halal inference (`pork`, `bacon`, etc.). Production order generation should prefer stored reviewed option flags over name-string guesses.
+
+If no safe offered option remains for a student after all filters run, the order generator records an allocation issue for operator intervention and does not silently assign a meal.
+
+**Why this shape**: The raw menu flags do not cover every student restriction, and unknown dietary requirements will appear over time. Explicit reviewed fields keep the matching rules auditable while preserving the non-negotiable that safety-critical catering decisions are deterministic and reviewable.
+
+---
+
+## D-09 — Customisable dishes are split into orderable variants (E-24)
+
+**Decision**: A source menu `dish` is the parent item from the caterer menu; an orderable choice is a `dish_variant`.
+
+Every ingested dish receives one default `Standard` variant that inherits the source and keyword-inferred flags. Customisable items such as `Cali Burrito` must be split by the operator into concrete variants such as `Vegetarian`, `Chicken`, `Beef`, or any other caterer-confirmed option. Menu offers, allocation, and order lines operate on `dish_variants`, while retaining the parent `dish_id` for traceability to the raw menu item.
+
+The Streamlit MVP currently supports creating variants and reviewing their GF/DF/NF/VO/halal and ingredient-exclusion flags; the equivalent workflow will be ported into the Next.js operator UI in `web/` under D-14. A generic customisable parent item should not be marked as safe for restricted students unless the specific orderable variant is safe.
+
+**Why this shape**: A single boolean set on `dishes` cannot correctly represent a meal that may contain beef, chicken, or no meat depending on how it is ordered. Variants let the operator describe the exact option being offered without LLM guessing, and the generated caterer order can name the concrete option rather than a vague parent dish.
+
+---
+
+## D-10 — Approval and override audit model
+
+**Decision**: Order-run approval and manual overrides are explicit audited operator actions.
+
+Approving an order run changes `order_runs.status` from `generated` to `approved` and stores approval metadata (`approved_at`, `approved_by`, `approval_note`) for convenient display. The durable trace is an append-only `audit_log` row containing actor, action, entity, reason, timestamp, and before/after state snapshots.
+
+Manual overrides are recorded in `manual_overrides` before any future override-application logic is added. Recording an override also writes an `audit_log` row. Override records require actor, reason, type, entity, and timestamp.
+
+**Why this shape**: Approval and overrides are operational decisions, not generated facts. They must preserve who made the decision, when, and why before the system can safely support live communications or manual corrections.
+
+---
+
+## D-11 — Synthetic caterer contact anomalies (E-09)
+
+**Decision**: Treat suspicious, pseudonymous, and free-webmail caterer contacts as expected artefacts of the competition/synthetic dataset.
+
+The system should still surface recipient names and addresses verbatim in the order review UI and should snapshot the exact recipients used for each exported or sent communication. For this submission, these contact anomalies should not drive a dedicated verification workflow before communications persistence is implemented.
+
+**Why this shape**: The suspicious addresses are not real production contact data. The useful system behaviour for the submission is auditable communications state, not overfitting to fake-address patterns.
+
+---
+
+## D-12 — Delivery location granularity (E-16)
+
+**Decision**: Building/block is the delivery-location granularity for current school sessions.
+
+Room numbers are expected to be missing most of the time. Delivery notes and caterer emails should use the source `Building` value as the destination and include the manager's mobile so the driver can resolve exact handoff details if needed. Missing room numbers should not be reported as a validation warning for this dataset.
+
+**Why this shape**: The source data intentionally identifies the useful school block/building, and warning on absent room numbers creates noise without improving order correctness.
+
+---
+
+## D-13 — Communication export is not email delivery
+
+**Decision**: `exported` means an operator produced and recorded a send-ready communication snapshot from an approved, issue-free order run. It does not mean the email was sent or delivered.
+
+The first export for each `(order_run_id, caterer_id)` stores the immutable communication snapshot: exact recipients, subject, body, rendered text, delivery notes, template version, actor, reason, and timestamp. Repeated exports reuse that same snapshot and append export events. A human operator may then copy or download the recorded text and send it manually outside the system.
+
+Future live email sending should add a separate `sent` state or delivery event with provider metadata. It should not overload `exported`.
+
+**Why this shape**: The system needs a durable audit trail for what was prepared before it can safely send email. Separating "exported" from "sent" avoids claiming delivery that the current application cannot prove.
+
+---
+
+## D-14 — Operator UI is Next.js + Supabase, not Streamlit
+
+**Decision**: The final operator interface is a Next.js 16 (App Router) + TypeScript app in `web/`, backed by Supabase Auth and the existing PostgreSQL schema. The Streamlit MVPs (`app/menu_setup_mvp.py`, `app/order_review_mvp.py`) become legacy verification harnesses and will be removed once `web/` reaches parity.
+
+**Stack**:
+
+- Next.js 16 App Router, TypeScript, React Server Components, Server Actions
+- shadcn/ui (Radix primitives) + Tailwind CSS
+- `@supabase/ssr` server client and `@supabase/supabase-js` browser client
+- Supabase Auth (cookie session, SSR)
+- TanStack Query for client-side caching where required; TanStack Table for data grids
+- React Hook Form + Zod for forms and server-action input validation
+- Sonner for toasts; Lucide for icons; Geist or Inter typography
+
+Supabase SSR helpers should be isolated behind `web/lib/supabase/*` and package versions should be pinned, because the auth helper surface can change.
+
+**Why not Streamlit**:
+
+- Streamlit's reactive model and rendering ceiling produce a "data tool" feel; the submission target is a polished operator product.
+- Composing dense workflows (variant editor, dietary review, allocation grid, export drawer, audit trail) inside Streamlit forces awkward state passing and a flat layout.
+- shadcn/ui + Tailwind give pixel-level control without bespoke design work, and Supabase's TypeScript SDK exposes RLS, real-time, and auth more cleanly than the Python client.
+- Auth, RLS-aware reads, and cookie-based SSR are first-class in `@supabase/ssr`; replicating them in Streamlit is friction.
+
+**Boundary with Python**:
+
+- Python in `src/padea_catering/` remains the authority on ingestion, deterministic ordering, validation, order generation, and Python-owned audited operations.
+- Batch operations stay CLI-driven by default: ingestion, order generation, and validation preflight.
+- Simple operator-triggered writes from Next.js, such as approve/reopen/export metadata, may go through Server Actions that call explicit audited database contracts.
+- The Next.js layer must not re-implement allocation, dietary safety, quantity logic, ingestion parsing, or validation rules.
+- If the UI needs to trigger Python jobs live, add a small HTTP/queue bridge such as FastAPI or a job runner endpoint. Do not import or shell into Python from the Next.js request path as the normal architecture.
+
+**Migration plan**:
+
+1. Scaffold `web/` (Next.js, Tailwind, shadcn/ui, Supabase clients, generated types) with auth shell and mocked/static or server-only dev data.
+2. Phase 4 RLS policies and `security_invoker` views land before real browser-facing Supabase reads.
+3. Port menu setup, order review, approval, and export workflows from the Streamlit MVPs into `web/`.
+4. Once parity is verified end-to-end on the existing approved run, the Streamlit MVPs in `app/` are removed.
+
+**Why this shape**: the competition target is a finished, taste-forward catering product. Next.js + Supabase is the natural pairing for that level of polish without abandoning the deterministic Python core, the audit model, or the existing migrations.

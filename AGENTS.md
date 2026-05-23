@@ -8,17 +8,27 @@ This is not just an email automation project. The system must make catering bett
 
 ## Core Tech Stack
 
-- UI Frontend: Streamlit
-- Database & State: Supabase/PostgreSQL
-- Orchestration Engine: Native Python
-- LLM: To be decided after testing
-- Package Layout: `src/padea_catering/`
+- **Operator UI (final)**: Next.js 16 (App Router) + TypeScript in `web/`
+  - shadcn/ui + Radix primitives
+  - Tailwind CSS
+  - `@supabase/ssr` and `@supabase/supabase-js`
+  - React Server Components + Server Actions
+  - TanStack Query (client state) and TanStack Table (data grids)
+  - React Hook Form + Zod for forms and validation
+  - Sonner for toasts; Lucide for icons; Geist or Inter typography
+- **Auth**: Supabase Auth (cookie-based SSR)
+- **Database & State**: Supabase / PostgreSQL (source of truth)
+- **Business Logic / Orchestration**: Native Python in `src/padea_catering/`
+  - Batch CLI commands for ingestion, ordering generation, and validation
+  - Reads/writes Supabase via the service-role key in backend-only contexts; never expose this key to `web/`
+- **LLM**: provider-neutral adapter; advisory only. See `docs/LLM_INTEGRATION_PLAN.md`.
+- **Legacy MVP UI**: Streamlit apps under `app/` are retained only as internal verification harnesses while `web/` is built. They are not the final product and will be retired once `web/` reaches parity.
 
 ## Non-Negotiables
 
 - Raw source files in `data/raw/` are immutable.
-- Supabase/PostgreSQL is the operational source of truth.
-- Streamlit is only the operator interface; business logic belongs in `src/padea_catering/`.
+- Supabase / PostgreSQL is the operational source of truth.
+- The Next.js app in `web/` is the operator interface; all safety-critical business logic lives in `src/padea_catering/`. Next.js server actions and route handlers may orchestrate UI reads and explicit audited database writes, but they must not duplicate ordering, dietary, validation, ingestion, or allocation rules.
 - Do not silently patch around messy data.
 - Record unresolved ambiguity in `docs/EDGE_CASES.md`.
 - Prefer deterministic Python rules over LLM judgement for quantities, absences, exclusions, and order generation.
@@ -28,33 +38,37 @@ This is not just an email automation project. The system must make catering bett
 
 ## Common Commands
 
-Install dependencies:
+### Python backend (`src/padea_catering/`)
+
+Install Python dependencies:
 
 ```bash
 uv sync
-````
-
-Run Streamlit:
-
-```bash
-uv run streamlit run app/streamlit_app.py
 ```
 
-Run tests:
+Run ingestion (one-shot, idempotent):
+
+```bash
+uv run python -m padea_catering.ingestion
+```
+
+Run validation preflight:
+
+```bash
+uv run python -m padea_catering.validation
+```
+
+Generate weekly orders (dry-run shown):
+
+```bash
+uv run python -m padea_catering.ordering --week-start 2026-05-01 --dry-run
+```
+
+Run Python tests / lint / format:
 
 ```bash
 uv run pytest
-```
-
-Lint:
-
-```bash
 uv run ruff check .
-```
-
-Format:
-
-```bash
 uv run ruff format .
 ```
 
@@ -64,13 +78,64 @@ Sync skills:
 uv run python scripts/sync_skills.py
 ```
 
+### Next.js operator UI (`web/`)
+
+Install web dependencies:
+
+```bash
+pnpm --dir web install
+```
+
+Run dev server:
+
+```bash
+pnpm --dir web dev
+```
+
+Production build / start:
+
+```bash
+pnpm --dir web build
+pnpm --dir web start
+```
+
+Lint and typecheck:
+
+```bash
+pnpm --dir web lint
+pnpm --dir web typecheck
+```
+
+Generate Supabase TypeScript types:
+
+```bash
+pnpm --dir web supabase:types
+```
+
+### Legacy MVP (do not extend)
+
+```bash
+uv run streamlit run app/menu_setup_mvp.py
+uv run streamlit run app/order_review_mvp.py
+```
+
+These are retained for internal verification only; new operator-facing functionality should land in `web/`.
+
 ## Repository Boundaries
 
-* `app/`: Streamlit UI only.
-* `src/padea_catering/`: core application logic.
-* `src/padea_catering/ingestion/`: parse and normalise source files.
-* `src/padea_catering/ordering/`: attendance resolution, menu filtering, meal allocation, and order generation.
-* `src/padea_catering/validation/`: preflight checks and system invariants.
+* `web/`: Next.js 16 operator UI (App Router, TypeScript). The final product surface. See `web/README.md` once scaffolded.
+  * `web/app/`: route segments and server components.
+  * `web/components/`: presentational components (shadcn/ui-derived).
+  * `web/lib/`: Supabase clients (`server.ts`, `client.ts`), shared utilities.
+  * `web/actions/`: server actions that wrap deterministic backend operations.
+  * `web/types/supabase.ts`: generated database types (do not edit by hand).
+* `app/`: legacy Streamlit MVPs (`menu_setup_mvp.py`, `order_review_mvp.py`) — retained for internal verification only, replaced by `web/`.
+* `src/padea_catering/`: core Python application logic (batch and shared rules).
+  * `src/padea_catering/ingestion/`: parse and normalise source files.
+  * `src/padea_catering/ordering/`: attendance resolution, menu filtering, meal allocation, and order generation.
+  * `src/padea_catering/validation/`: preflight checks and system invariants.
+  * `src/padea_catering/operations/`: audited backend actions (approve/reopen, export, override recording).
+  * `src/padea_catering/llm/`: provider-neutral LLM adapters (advisory features only).
 * `supabase/migrations/`: database schema changes.
 * `data/raw/`: original source files; do not mutate.
 * `data/interim/`: parsed intermediate outputs.
@@ -87,13 +152,19 @@ Before creating a new table, check whether it is a true entity, a relationship, 
 
 Before using an LLM, ask whether the same decision can be made deterministically.
 
+Keep `docs/current_stage.md` up to date. Update it whenever:
+- A significant phase completes (inventory, schema, ingestion, validation, UI, etc.)
+- The active focus shifts to a new area
+- A major edge case is resolved or a decision is recorded
+
 Before declaring work complete:
 
 1. Update relevant docs.
-2. Add or update tests.
-3. Run formatting.
-4. Run tests.
-5. Record unresolved edge cases.
+2. Update `docs/current_stage.md` if the phase has changed.
+3. Add or update tests.
+4. Run formatting.
+5. Run tests.
+6. Record unresolved edge cases.
 
 ## Data Safety Rules
 
@@ -137,7 +208,7 @@ Implementation: Structured form inputs first; LLM extraction only for free-text 
 
 Responsibility: Let operators inspect order status, resolve validation issues, and make manual overrides.
 
-Implementation: Streamlit UI backed by Supabase queries and explicit action functions.
+Implementation: Next.js 16 App Router UI in `web/`. Server components and server actions call Supabase directly for RLS-protected reads, and use explicit audited database contracts for simple operator writes. Deterministic jobs such as ingestion, validation, and order generation stay in `src/padea_catering/`; if the UI needs to trigger them live, add a small HTTP/queue bridge rather than importing Python from Next.js.
 
 ## Skills
 
@@ -159,22 +230,20 @@ Recommended skills:
 * `validate-catering-run`
 * `prepare-submission-artifacts`
 
-````
+## Frontend Conventions (`web/`)
 
-## Verdict
+* Default to **React Server Components**. Drop into client components only for interactivity, forms, optimistic UI, or hooks.
+* All writes go through **Server Actions**. Simple operator actions may use typed TypeScript wrappers around audited SQL contracts; Python-owned jobs (ingestion, validation, order generation) remain CLI/service operations unless a deliberate HTTP/queue bridge is added. Server actions must record actor and reason where the domain requires it (approval, override, export).
+* Use `@supabase/ssr` for the server Supabase client and `@supabase/supabase-js` only inside client components.
+* Keep Supabase SSR setup isolated behind `web/lib/supabase/*` and pin package versions; auth helper APIs can change.
+* RLS is the security boundary, not React state. Anonymous reads are forbidden until Phase 4 RLS policies land.
+* Use **shadcn/ui** components as the base layer; do not pull in additional component libraries (Material UI, Chakra, Mantine, etc.).
+* Style with **Tailwind**. No CSS-in-JS, no inline `style` props except for dynamic values that cannot be expressed as classes.
+* Forms use **React Hook Form + Zod**; the same Zod schema validates the server action body.
+* Data grids use **TanStack Table**. Long lists virtualise.
+* Generated Supabase types live at `web/types/supabase.ts`. Regenerate after every migration.
+* Loading and empty states are first-class. Never ship a route without `loading.tsx` and a deliberate empty state.
 
-Your version is fine to keep as `docs/LLM_ARCHITECTURE.md`.
+## Git workflow
 
-For `AGENTS.md`, use the version above or merge its repo-operating sections into yours. The main missing pieces were:
-
-```text
-commands
-repo boundaries
-raw-data immutability
-deterministic-vs-LLM rules
-testing expectations
-edge-case recording rules
-````
-
-Git workflow:
 See @GIT_WORKFLOW.md

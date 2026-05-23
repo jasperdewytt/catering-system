@@ -10,6 +10,8 @@ __pycache__/
 .env.*
 !.env.example
 .streamlit/secrets.toml
+web/.env
+web/.env.*
 
 # Generated data
 data/interim/*
@@ -17,6 +19,20 @@ data/processed/*
 data/snapshots/*
 artifacts/exports/*
 tmp/
+
+# Web
+web/node_modules/
+web/.next/
+web/.turbo/
+web/.vercel/
+web/out/
+
+# Local agent/tooling state
+.mcp.json
+.claude/
+.agents/
+.antigravitycli/
+skills-lock.json
 
 # OS/editor
 .DS_Store
