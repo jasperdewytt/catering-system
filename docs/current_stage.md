@@ -2,7 +2,7 @@
 
 _Update this file whenever a significant phase completes or the active focus shifts._
 
-## Status: Phase 3 Communications Persistence Implemented — Live Sending Deferred
+## Status: Phase 3 Communications Persistence Implemented — Operator UI Pivoting to Next.js
 
 **Last updated**: 2026-05-23
 
@@ -22,7 +22,7 @@ _Update this file whenever a significant phase completes or the active focus shi
   - `data/raw/absences.pdf` — 10 individual student absences across 6 school/date groups
 - [x] `docs/DATA_INVENTORY.md` written — field names, types, row counts, samples, cross-file reference map
 - [x] `docs/EDGE_CASES.md` written — 24 edge cases (E-01..E-24): E-09 and E-16 now resolved by D-11/D-12, E-23 updates D-03, E-02 resolved on inspection, E-06 deferred, remaining cases open
-- [x] `docs/DECISIONS.md` written — D-01..D-13 decided (student PK, exclusion model, day column, null dietary, multi-session, opt-out, menu-item count, deterministic dietary matching, customisable dish variants, approval/audit, synthetic contact anomalies, delivery-location granularity, export-vs-send semantics)
+- [x] `docs/DECISIONS.md` written — D-01..D-14 decided (student PK, exclusion model, day column, null dietary, multi-session, opt-out, menu-item count, deterministic dietary matching, customisable dish variants, approval/audit, synthetic contact anomalies, delivery-location granularity, export-vs-send semantics, Next.js operator UI)
 - [x] Supabase project connected (`fogxaakhlpqnjmznyurm`) and MCP authenticated
 - [x] **Phase 1 schema applied** — 14 source/validation tables across 7 migrations in `supabase/migrations/`:
   - `20260522120000_extensions_and_helpers.sql` — pgcrypto, citext, trigger fn, 3 enum types
@@ -76,41 +76,50 @@ _Update this file whenever a significant phase completes or the active focus shi
   - downloading draft text files
 - [x] **Phase 3 approval/audit implemented** — order runs can be approved/reopened through audited backend actions. `audit_log` and `manual_overrides` provide the durable record path required before live sending or manual correction logic.
 - [x] **Phase 3 communications persistence/export tracking implemented** — approved, issue-free runs can record caterer export events before any live sending. The first export per `(order_run_id, caterer_id)` creates an immutable communication snapshot with subject/body/rendered text, delivery notes, recipient snapshots, template version, actor/timestamps, and an audit-log row. Repeated exports reuse the snapshot and append export events. Export semantics are recorded in D-13: exported means prepared for manual sending, not sent.
+- [x] **Approved-run export workflow verified** — the approved zero-issue run has persisted export snapshots for all four caterers, with recipient snapshots, export events, and matching `communication_exported` audit-log rows.
 - [x] **LLM integration plan written** — `docs/LLM_INTEGRATION_PLAN.md` defines advisory-only LLM use cases, forbidden safety-critical uses, provider boundaries, and the recommended order after communications persistence.
+- [x] **Operator UI direction decided** — see [D-14](DECISIONS.md#d-14--operator-ui-is-nextjs--supabase-not-streamlit). The final operator interface is Next.js 16 + TypeScript in `web/`, using shadcn/ui, Tailwind, and `@supabase/ssr`. Streamlit MVPs in `app/` become legacy verification harnesses and are scheduled for removal once `web/` reaches parity.
 
 ## Active Focus
 
-**Final operator workflow and submission artefacts** after communications persistence.
+**Scaffold the Next.js operator UI in `web/` and land Phase 4 (RLS + views) so it can authenticate operators against Supabase.**
 
-The backend can write generated order runs, and the temporary order review MVP can inspect and approve those runs with an audit trail. Customisable parent dishes are split into concrete orderable variants before they are offered to restricted students. The implemented algorithm:
+The deterministic Python backend can write generated order runs end-to-end, and communications persistence captures recipient snapshots and export events. The Streamlit MVPs have proven the workflow against the live DB; the polished surface is now the priority. The implemented allocation algorithm remains:
 
 1. For each non-cancelled session, walk the enrolled students minus opted-out, year-excluded, and absent.
 2. For each student, pick a safe offered variant given their dietary tags.
 3. Aggregate per-session into variant-aware `order_lines`, per-student into `order_allocations`.
 4. Reproducibility: the same DB state should always produce the same order_run output.
 
-The current generated run has no allocation issues. Building-only delivery locations and suspicious/free-webmail caterer addresses are documented as expected competition-data artefacts, not blockers. Communications now preserve recipient snapshots and delivery-note content for audit before any live email sending is added.
+The current approved run has no allocation issues. Building-only delivery locations and suspicious/free-webmail caterer addresses are documented as expected competition-data artefacts, not blockers. Communications preserve recipient snapshots and delivery-note content for audit before any live email sending is added. The manual export workflow has been tested and verified against the database.
 
 ## Up Next (in order)
 
-1. Review/record exports for the approved run in the Order Review MVP
-2. Streamlit final operator UI → `app/streamlit_app.py` (requires Phase 4 migrations: RLS policies + views)
-3. Add email sending only after the operator confirms the persisted export workflow
-4. (Optional Phase 3) `session_validation_findings` table to persist validation output
-5. Submission artefacts
+1. **Scaffold `web/`** — Next.js 16 (App Router) + TypeScript, Tailwind, shadcn/ui, `@supabase/ssr`, generated `web/types/supabase.ts`. Bootstrap auth shell and a single read-only route. Use mocked/static data or server-only dev access until Phase 4 policies are available.
+2. **Phase 4 migrations** — RLS policies for operator role + `security_invoker` views for the Next.js read paths. Real browser-facing Supabase reads should wait for this step.
+3. **Port menu setup workflow** — variant creation, weekly menu offer selection, operator review metadata.
+4. **Port order review and approval** — run picker, allocation/line tables, contacts/delivery notes, approve/reopen actions calling existing audited backend operations.
+5. **Port export workflow** — render the deterministic draft, surface recipient snapshots, record export events; reuse the existing `communication_exported` action.
+6. **Retire Streamlit MVPs** once parity is verified.
+7. Live email sending only after the persisted export workflow is operator-confirmed in `web/`.
+8. (Optional Phase 3) `session_validation_findings` table to persist validation output.
+9. Submission artefacts.
 
 ## Known schema follow-ups (Phase 2+)
 
-- final UI replacement for `app/menu_setup_mvp.py` and `app/order_review_mvp.py` — the MVPs are intentionally separate from the future full app
+- final UI replacement for `app/menu_setup_mvp.py` and `app/order_review_mvp.py` — these are now classified as legacy under D-14 and tracked for removal once `web/` ships parity
 - manual override application logic — Phase 3 records overrides but does not yet mutate generated allocations/order lines
-- live email sending — intentionally deferred until persisted export snapshots have been operator-reviewed
+- live email sending — intentionally deferred until persisted export snapshots have been operator-reviewed in `web/`
 - contact verification workflow is no longer a priority for the competition dataset; suspicious addresses should remain visible and auditable, but not block communications persistence
 - LLM integration is planned but intentionally deferred until communications persistence exists; first likely LLM feature is advisory order-review storage
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
 - `session_validation_findings` — preflight warning queue for E-04 and multi-session date conflicts (Phase 3)
-- RLS policies + `security_invoker` views — once Streamlit auth shape is decided (Phase 4)
+- RLS policies + `security_invoker` views — required before `web/` is used outside dev (Phase 4, [D-14](DECISIONS.md#d-14--operator-ui-is-nextjs--supabase-not-streamlit))
 
 ## Parking Lot
 
 - Skills under `skills/` have not been written yet.
 - Test suite covers `ingestion.normalisation`, pure `ordering.rules`, and menu setup helper rules; ingestion `pipeline.py`, Supabase-backed `ordering.generator`, UI actions, and `validation/` modules have no unit tests yet (they read/write the live DB; integration tests would be the natural fit).
+- `web/` will need its own test strategy — Playwright for end-to-end, Vitest for unit/component, and a shared fixture seed against a Supabase branch DB. Defer wiring until the scaffold lands.
+- Decide whether `web/` lives at the repository root or under a `web/` directory of a future pnpm workspace. Current direction: single Next.js project at `web/` for now; promote to a workspace only if a shared TypeScript package emerges.
+- Keep the Python/Next.js boundary narrow: Next.js may perform explicit audited database writes through Server Actions, but Python-owned jobs should stay CLI/service-triggered unless a deliberate HTTP/queue bridge is added.

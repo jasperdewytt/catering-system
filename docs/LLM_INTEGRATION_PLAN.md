@@ -21,7 +21,7 @@ The system already has deterministic support for:
 - manual override recording via `manual_overrides`
 - deterministic copy-ready caterer email drafts
 
-The active backend gap is communications persistence: exported/sent caterer messages need database records and recipient snapshots before live sending is added. LLM integration should come after, or sit beside, that work. It should not block communications tracking.
+Communications persistence is now implemented: approved, issue-free runs can record immutable communication snapshots, recipient snapshots, and export events before any live sending. LLM integration should remain optional and should build on those persisted records rather than generating ephemeral UI-only output.
 
 ---
 
@@ -327,13 +327,13 @@ Only add provider dependencies when a feature is actually wired:
 - `anthropic` only if using Anthropic
 - `openai` only if using OpenAI
 
-API keys belong in `.env` or Streamlit secrets and must never be committed.
+API keys belong in `.env` (Python) or `web/.env.local` (Next.js, server-only — never `NEXT_PUBLIC_*`) and must never be committed. Provider calls happen exclusively in Server Actions or Python operations; the browser bundle must never see provider keys.
 
 ---
 
 ## Recommended Implementation Order
 
-1. **Communications persistence first**
+1. **Communications persistence first** — complete
    - `communications`
    - `communication_recipients`
    - deterministic export action
@@ -348,10 +348,10 @@ API keys belong in `.env` or Streamlit secrets and must never be committed.
    - `record_llm_review`
    - prompt builder/parser tests
 
-4. **Optional Order Review MVP hook**
-   - hidden/explicit "Run LLM review" button
-   - writes `llm_reviews`
-   - displays summary/findings next to human approval history
+4. **Optional Order Review hook in `web/`**
+   - "Run AI review" action on the order-run detail route
+   - Server Action writes `llm_reviews` through an audited recording contract shared with the Python `record_llm_review` operation
+   - displays summary/findings next to human approval history; never gates approval
 
 5. **LLM email polish**
    - after communication records exist
@@ -386,7 +386,11 @@ Integration tests with real LLM providers are optional and should not run in the
 
 ## UI Expectations
 
-The final app should present LLM output as advisory, not authoritative.
+The final app (Next.js, `web/`) should present LLM output as advisory, not authoritative.
+
+- Advisory output renders in a clearly separated panel (e.g. a "Review suggestions" card alongside the human approval section), never inline with the deterministic order data.
+- Actions that accept LLM output must be explicit Server Actions, gated by operator confirmation, and produce an `audit_log` row.
+- The deterministic draft and any polished variant should both be visible side-by-side before the operator accepts one.
 
 Good labels:
 

@@ -117,7 +117,7 @@ If no safe offered option remains for a student after all filters run, the order
 
 Every ingested dish receives one default `Standard` variant that inherits the source and keyword-inferred flags. Customisable items such as `Cali Burrito` must be split by the operator into concrete variants such as `Vegetarian`, `Chicken`, `Beef`, or any other caterer-confirmed option. Menu offers, allocation, and order lines operate on `dish_variants`, while retaining the parent `dish_id` for traceability to the raw menu item.
 
-The Streamlit MVP supports creating variants and reviewing their GF/DF/NF/VO/halal and ingredient-exclusion flags. A generic customisable parent item should not be marked as safe for restricted students unless the specific orderable variant is safe.
+The Streamlit MVP currently supports creating variants and reviewing their GF/DF/NF/VO/halal and ingredient-exclusion flags; the equivalent workflow will be ported into the Next.js operator UI in `web/` under D-14. A generic customisable parent item should not be marked as safe for restricted students unless the specific orderable variant is safe.
 
 **Why this shape**: A single boolean set on `dishes` cannot correctly represent a meal that may contain beef, chicken, or no meat depending on how it is ordered. Variants let the operator describe the exact option being offered without LLM guessing, and the generated caterer order can name the concrete option rather than a vague parent dish.
 
@@ -164,3 +164,45 @@ The first export for each `(order_run_id, caterer_id)` stores the immutable comm
 Future live email sending should add a separate `sent` state or delivery event with provider metadata. It should not overload `exported`.
 
 **Why this shape**: The system needs a durable audit trail for what was prepared before it can safely send email. Separating "exported" from "sent" avoids claiming delivery that the current application cannot prove.
+
+---
+
+## D-14 — Operator UI is Next.js + Supabase, not Streamlit
+
+**Decision**: The final operator interface is a Next.js 16 (App Router) + TypeScript app in `web/`, backed by Supabase Auth and the existing PostgreSQL schema. The Streamlit MVPs (`app/menu_setup_mvp.py`, `app/order_review_mvp.py`) become legacy verification harnesses and will be removed once `web/` reaches parity.
+
+**Stack**:
+
+- Next.js 16 App Router, TypeScript, React Server Components, Server Actions
+- shadcn/ui (Radix primitives) + Tailwind CSS
+- `@supabase/ssr` server client and `@supabase/supabase-js` browser client
+- Supabase Auth (cookie session, SSR)
+- TanStack Query for client-side caching where required; TanStack Table for data grids
+- React Hook Form + Zod for forms and server-action input validation
+- Sonner for toasts; Lucide for icons; Geist or Inter typography
+
+Supabase SSR helpers should be isolated behind `web/lib/supabase/*` and package versions should be pinned, because the auth helper surface can change.
+
+**Why not Streamlit**:
+
+- Streamlit's reactive model and rendering ceiling produce a "data tool" feel; the submission target is a polished operator product.
+- Composing dense workflows (variant editor, dietary review, allocation grid, export drawer, audit trail) inside Streamlit forces awkward state passing and a flat layout.
+- shadcn/ui + Tailwind give pixel-level control without bespoke design work, and Supabase's TypeScript SDK exposes RLS, real-time, and auth more cleanly than the Python client.
+- Auth, RLS-aware reads, and cookie-based SSR are first-class in `@supabase/ssr`; replicating them in Streamlit is friction.
+
+**Boundary with Python**:
+
+- Python in `src/padea_catering/` remains the authority on ingestion, deterministic ordering, validation, order generation, and Python-owned audited operations.
+- Batch operations stay CLI-driven by default: ingestion, order generation, and validation preflight.
+- Simple operator-triggered writes from Next.js, such as approve/reopen/export metadata, may go through Server Actions that call explicit audited database contracts.
+- The Next.js layer must not re-implement allocation, dietary safety, quantity logic, ingestion parsing, or validation rules.
+- If the UI needs to trigger Python jobs live, add a small HTTP/queue bridge such as FastAPI or a job runner endpoint. Do not import or shell into Python from the Next.js request path as the normal architecture.
+
+**Migration plan**:
+
+1. Scaffold `web/` (Next.js, Tailwind, shadcn/ui, Supabase clients, generated types) with auth shell and mocked/static or server-only dev data.
+2. Phase 4 RLS policies and `security_invoker` views land before real browser-facing Supabase reads.
+3. Port menu setup, order review, approval, and export workflows from the Streamlit MVPs into `web/`.
+4. Once parity is verified end-to-end on the existing approved run, the Streamlit MVPs in `app/` are removed.
+
+**Why this shape**: the competition target is a finished, taste-forward catering product. Next.js + Supabase is the natural pairing for that level of polish without abandoning the deterministic Python core, the audit model, or the existing migrations.

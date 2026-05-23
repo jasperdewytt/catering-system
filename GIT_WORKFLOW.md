@@ -10,7 +10,7 @@ Use Git deliberately. The commit history should show clear engineering progress:
 - Check `git status` before every commit.
 - Check `git diff` before staging large changes.
 - Never commit secrets, virtual environments, caches, or local generated files.
-- Never commit `.env`, `.venv/`, `__pycache__/`, `.streamlit/secrets.toml`, or Supabase service-role keys.
+- Never commit `.env`, `.env.local`, `web/.env*`, `.venv/`, `__pycache__/`, `.streamlit/secrets.toml`, `web/node_modules/`, `web/.next/`, `web/.vercel/`, or Supabase service-role keys.
 - Do not rewrite Git history unless explicitly requested by the human operator.
 
 ### Normal Solo Workflow
@@ -38,7 +38,7 @@ git commit -m "Add validation checks for dietary exclusions"
 
 ### Branch Workflow
 
-Use a branch for non-trivial changes, especially schema changes, ingestion rewrites, ordering logic, or Streamlit UI pages.
+Use a branch for non-trivial changes, especially schema changes, ingestion rewrites, ordering logic, or Next.js UI work.
 
 ```bash
 git checkout -b short-descriptive-branch-name
@@ -51,7 +51,9 @@ git checkout -b schema-design
 git checkout -b ingestion-pipeline
 git checkout -b order-generation
 git checkout -b validation-preflight
-git checkout -b streamlit-dashboard
+git checkout -b web-scaffold
+git checkout -b web-order-review
+git checkout -b rls-policies
 ```
 
 After changes:
@@ -74,7 +76,9 @@ git branch -d short-descriptive-branch-name
 
 ### Before Committing
 
-Run the relevant checks:
+Run the relevant checks for the part of the system you touched.
+
+Python (`src/padea_catering/`, ingestion, ordering, validation):
 
 ```bash
 uv run ruff format .
@@ -82,7 +86,15 @@ uv run ruff check .
 uv run pytest
 ```
 
-If tests are not yet available, say so in the commit message or update `docs/DECISIONS.md`.
+Next.js (`web/`):
+
+```bash
+pnpm --dir web lint
+pnpm --dir web typecheck
+pnpm --dir web test       # once a test suite exists
+```
+
+If tests are not yet available for the area you changed, say so in the commit message or update `docs/DECISIONS.md`.
 
 Before committing, verify that generated or local-only files are not staged:
 
@@ -105,6 +117,15 @@ data/processed/
 data/snapshots/
 artifacts/exports/
 tmp/
+
+web/node_modules/
+web/.next/
+web/.turbo/
+web/.vercel/
+web/out/
+web/.env
+web/.env.*
+web/types/supabase.generated.ts
 ```
 
 ### Raw Data Rule
@@ -131,7 +152,8 @@ A good commit should usually do one thing:
 * Add a schema migration.
 * Add one ingestion parser.
 * Add one validation rule.
-* Add one Streamlit page.
+* Add one Next.js route, server action, or component.
+* Add one Python operations action.
 * Update one piece of documentation.
 * Add tests for one edge case.
 
