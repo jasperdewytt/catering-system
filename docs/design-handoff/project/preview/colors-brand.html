@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 20px; background: var(--surface-card); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .sw { display: flex; flex-direction: column; gap: 6px; }
+  .chip { height: 56px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05); }
+  .meta { display: flex; justify-content: space-between; align-items: baseline; }
+  .name { font: 500 12px/1 var(--font-sans); color: var(--fg-2); }
+  .hex { font: 500 11px/1 var(--font-mono); color: var(--fg-4); }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="sw">
+      <div class="chip" style="background:var(--padea-crimson)"></div>
+      <div class="meta"><span class="name">Crimson</span><span class="hex">#A51C30</span></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background:var(--padea-crimson-hover)"></div>
+      <div class="meta"><span class="name">Hover</span><span class="hex">#B82236</span></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background:var(--padea-crimson-press)"></div>
+      <div class="meta"><span class="name">Press</span><span class="hex">#871726</span></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background:var(--padea-ink)"></div>
+      <div class="meta"><span class="name">Ink</span><span class="hex">#1A1416</span></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background:var(--padea-crimson-tint)"></div>
+      <div class="meta"><span class="name">Tint</span><span class="hex">#FBEDEF</span></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background:var(--padea-crimson-border)"></div>
+      <div class="meta"><span class="name">Border</span><span class="hex">#F0CFD4</span></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background:#fff; border:1px solid var(--border-1)"></div>
+      <div class="meta"><span class="name">Surface</span><span class="hex">#FFFFFF</span></div>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background:var(--surface-app)"></div>
+      <div class="meta"><span class="name">App bg</span><span class="hex">#F4F4F2</span></div>
+    </div>
+  </div>
+</body>
+</html>

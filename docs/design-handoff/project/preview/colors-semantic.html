@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 20px; background: var(--surface-card); }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .col { display: flex; flex-direction: column; gap: 6px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 500 11px/1 var(--font-sans);
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 5px 8px; border-radius: 7px;
+    border: 1px solid;
+    align-self: flex-start;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 999px; }
+  .row { display: flex; gap: 4px; }
+  .swatch { flex: 1; height: 22px; border-radius: 5px; }
+  .name { font: 500 11px/1 var(--font-sans); color: var(--fg-3); }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="col">
+      <span class="badge" style="background:var(--ok-bg);color:var(--ok-fg);border-color:var(--ok-border)"><span class="dot" style="background:var(--ok-solid)"></span>Approved</span>
+      <div class="row">
+        <div class="swatch" style="background:var(--ok-bg)"></div>
+        <div class="swatch" style="background:var(--ok-border)"></div>
+        <div class="swatch" style="background:var(--ok-solid)"></div>
+      </div>
+      <div class="name">Success</div>
+    </div>
+    <div class="col">
+      <span class="badge" style="background:var(--warn-bg);color:var(--warn-fg);border-color:var(--warn-border)"><span class="dot" style="background:var(--warn-solid)"></span>Unreviewed</span>
+      <div class="row">
+        <div class="swatch" style="background:var(--warn-bg)"></div>
+        <div class="swatch" style="background:var(--warn-border)"></div>
+        <div class="swatch" style="background:var(--warn-solid)"></div>
+      </div>
+      <div class="name">Warning</div>
+    </div>
+    <div class="col">
+      <span class="badge" style="background:var(--err-bg);color:var(--err-fg);border-color:var(--err-border)"><span class="dot" style="background:var(--err-solid)"></span>Blocked</span>
+      <div class="row">
+        <div class="swatch" style="background:var(--err-bg)"></div>
+        <div class="swatch" style="background:var(--err-border)"></div>
+        <div class="swatch" style="background:var(--err-solid)"></div>
+      </div>
+      <div class="name">Danger</div>
+    </div>
+    <div class="col">
+      <span class="badge" style="background:var(--info-bg);color:var(--info-fg);border-color:var(--info-border)"><span class="dot" style="background:var(--info-solid)"></span>Generated</span>
+      <div class="row">
+        <div class="swatch" style="background:var(--info-bg)"></div>
+        <div class="swatch" style="background:var(--info-border)"></div>
+        <div class="swatch" style="background:var(--info-solid)"></div>
+      </div>
+      <div class="name">Info</div>
+    </div>
+    <div class="col">
+      <span class="badge" style="background:var(--muted-bg);color:var(--muted-fg);border-color:var(--muted-border)"><span class="dot" style="background:var(--muted-solid)"></span>Superseded</span>
+      <div class="row">
+        <div class="swatch" style="background:var(--muted-bg)"></div>
+        <div class="swatch" style="background:var(--muted-border)"></div>
+        <div class="swatch" style="background:var(--muted-solid)"></div>
+      </div>
+      <div class="name">Neutral</div>
+    </div>
+  </div>
+</body>
+</html>

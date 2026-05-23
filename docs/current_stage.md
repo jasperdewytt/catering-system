@@ -2,7 +2,7 @@
 
 _Update this file whenever a significant phase completes or the active focus shifts._
 
-## Status: Phase 3 Communications Persistence Implemented — Operator UI Pivoting to Next.js
+## Status: Stage 1 Next.js Operator Shell Implemented — Phase 4 Read Models Next
 
 **Last updated**: 2026-05-23
 
@@ -78,11 +78,13 @@ _Update this file whenever a significant phase completes or the active focus shi
 - [x] **Phase 3 communications persistence/export tracking implemented** — approved, issue-free runs can record caterer export events before any live sending. The first export per `(order_run_id, caterer_id)` creates an immutable communication snapshot with subject/body/rendered text, delivery notes, recipient snapshots, template version, actor/timestamps, and an audit-log row. Repeated exports reuse the snapshot and append export events. Export semantics are recorded in D-13: exported means prepared for manual sending, not sent.
 - [x] **Approved-run export workflow verified** — the approved zero-issue run has persisted export snapshots for all four caterers, with recipient snapshots, export events, and matching `communication_exported` audit-log rows.
 - [x] **LLM integration plan written** — `docs/LLM_INTEGRATION_PLAN.md` defines advisory-only LLM use cases, forbidden safety-critical uses, provider boundaries, and the recommended order after communications persistence.
-- [x] **Operator UI direction decided** — see [D-14](DECISIONS.md#d-14--operator-ui-is-nextjs--supabase-not-streamlit). The final operator interface is Next.js 16 + TypeScript in `web/`, using shadcn/ui, Tailwind, and `@supabase/ssr`. Streamlit MVPs in `app/` become legacy verification harnesses and are scheduled for removal once `web/` reaches parity.
+- [x] **Operator UI direction decided** — see [D-14](DECISIONS.md#d-14---operator-ui-is-nextjs--supabase-not-streamlit). The final operator interface is Next.js 16 + TypeScript in `web/`, using shadcn/ui, Tailwind, and `@supabase/ssr`. Streamlit MVPs in `app/` become legacy verification harnesses and are scheduled for removal once `web/` reaches parity.
+- [x] **Operator UI planning tightened after architecture review** — `docs/WEBSITE_IMPLEMENTATION_STAGES.md` now stages the build, `docs/WEBSITE_DATA_CONTRACTS.md` maps screens to views/write contracts, and D-15..D-17 decide operator identity, active-week derivation, and audited website write boundaries.
+- [x] **Stage 1 operator website foundation scaffolded** — `web/` now contains a Next.js 16 App Router TypeScript app with Tailwind, shadcn-compatible primitives, Supabase SSR auth helpers, `/login`, protected operator shell routes, and Phase 4 read-model placeholders. The shell has no operational browser reads and no domain writes beyond Supabase Auth sign-in/sign-out.
 
 ## Active Focus
 
-**Scaffold the Next.js operator UI in `web/` and land Phase 4 (RLS + views) so it can authenticate operators against Supabase.**
+**Land Phase 4 RLS policies, operator identity table, and browser-safe read models so the Next.js operator shell can show real authenticated operational data.**
 
 The deterministic Python backend can write generated order runs end-to-end, and communications persistence captures recipient snapshots and export events. The Streamlit MVPs have proven the workflow against the live DB; the polished surface is now the priority. The implemented allocation algorithm remains:
 
@@ -95,26 +97,29 @@ The current approved run has no allocation issues. Building-only delivery locati
 
 ## Up Next (in order)
 
-1. **Scaffold `web/`** — Next.js 16 (App Router) + TypeScript, Tailwind, shadcn/ui, `@supabase/ssr`, generated `web/types/supabase.ts`. Bootstrap auth shell and a single read-only route. Use mocked/static data or server-only dev access until Phase 4 policies are available.
-2. **Phase 4 migrations** — RLS policies for operator role + `security_invoker` views for the Next.js read paths. Real browser-facing Supabase reads should wait for this step.
-3. **Port menu setup workflow** — variant creation, weekly menu offer selection, operator review metadata.
-4. **Port order review and approval** — run picker, allocation/line tables, contacts/delivery notes, approve/reopen actions calling existing audited backend operations.
-5. **Port export workflow** — render the deterministic draft, surface recipient snapshots, record export events; reuse the existing `communication_exported` action.
-6. **Retire Streamlit MVPs** once parity is verified.
-7. Live email sending only after the persisted export workflow is operator-confirmed in `web/`.
-8. (Optional Phase 3) `session_validation_findings` table to persist validation output.
-9. Submission artefacts.
+1. **Phase 4 migrations** — `public.operators`, RLS policies for authenticated operators, `security_invoker` views for Next.js read paths, active-week read model, and audit-log action expansion for menu setup writes. Real browser-facing Supabase reads should wait for this step.
+2. **Seed a demo operator account** — create a Supabase Auth user and matching `public.operators` row as part of Phase 4; the password should be documented outside source control.
+3. **Regenerate complete `web/types/supabase.ts` after Phase 4** — the scaffold command is present, but local CLI typegen currently needs Supabase CLI auth or direct Postgres connectivity.
+4. **Port menu setup workflow** — variant creation, weekly menu offer selection, operator review metadata through audited RPC/backend contracts.
+5. **Port order review and approval** — run picker, allocation/line tables, contacts/delivery notes, approve/reopen actions calling audited contracts.
+6. **Port export workflow** — display persisted communication snapshots, surface recipient snapshots, record export events; do not render communication templates in TypeScript.
+7. **Retire Streamlit MVPs** once parity is verified.
+8. Live email sending only after the persisted export workflow is operator-confirmed in `web/`.
+9. `session_validation_findings` table to persist full Python validation output before live validation-history UI, if needed beyond the submission readiness summary.
+10. Submission artefacts.
 
 ## Known schema follow-ups (Phase 2+)
 
-- final UI replacement for `app/menu_setup_mvp.py` and `app/order_review_mvp.py` — these are now classified as legacy under D-14 and tracked for removal once `web/` ships parity
+- final UI replacement for `app/menu_setup_mvp.py`, `app/order_review_mvp.py`, and `app/streamlit_app.py` — these are now classified as legacy under D-14 and tracked for removal once `web/` ships parity
 - manual override application logic — Phase 3 records overrides but does not yet mutate generated allocations/order lines
 - live email sending — intentionally deferred until persisted export snapshots have been operator-reviewed in `web/`
+- web-callable audited RPC/write contracts for menu setup, approval/reopen, manual override intent, and communication export recording
+- `public.operators` profile table and RLS policies for the single-operator-class auth model
 - contact verification workflow is no longer a priority for the competition dataset; suspicious addresses should remain visible and auditable, but not block communications persistence
 - LLM integration is planned but intentionally deferred until communications persistence exists; first likely LLM feature is advisory order-review storage
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
-- `session_validation_findings` — preflight warning queue for E-04 and multi-session date conflicts (Phase 3)
-- RLS policies + `security_invoker` views — required before `web/` is used outside dev (Phase 4, [D-14](DECISIONS.md#d-14--operator-ui-is-nextjs--supabase-not-streamlit))
+- `session_validation_findings` — persisted Python validation output for full validation-history UI; not required before Stage 1 scaffold
+- RLS policies + `security_invoker` views — required before `web/` is used outside dev (Phase 4, [D-14](DECISIONS.md#d-14---operator-ui-is-nextjs--supabase-not-streamlit))
 
 ## Parking Lot
 

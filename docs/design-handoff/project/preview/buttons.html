@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 22px; background: var(--surface-card); }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .btn {
+    font: 500 14px/1 var(--font-sans);
+    padding: 8px 14px;
+    border-radius: 7px;
+    border: 1px solid transparent;
+    display: inline-flex; align-items: center; gap: 6px;
+    cursor: pointer;
+    transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
+  }
+  .btn-primary { background: var(--padea-crimson); color: white; }
+  .btn-primary:hover { background: var(--padea-crimson-hover); }
+  .btn-secondary { background: white; color: var(--fg-1); border-color: var(--border-1); }
+  .btn-secondary:hover { background: var(--n-50); }
+  .btn-ghost { background: transparent; color: var(--fg-2); }
+  .btn-ghost:hover { background: var(--n-100); color: var(--fg-1); }
+  .btn-danger { background: white; color: var(--err-fg); border-color: var(--err-border); }
+  .btn-danger:hover { background: var(--err-bg); }
+  .btn-disabled { background: var(--padea-crimson); color: white; opacity: 0.45; cursor: not-allowed; }
+  .small { font-size: 13px; padding: 6px 10px; }
+  .lbl { font: 500 11px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-4); display: block; margin-bottom: 8px; }
+  .group { margin-bottom: 14px; }
+  .icon { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+</style>
+</head>
+<body>
+  <div class="group">
+    <span class="lbl">Primary actions</span>
+    <div class="row">
+      <button class="btn btn-primary">Approve run</button>
+      <button class="btn btn-primary"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>Save offers</button>
+      <button class="btn btn-disabled">Approve run</button>
+    </div>
+  </div>
+  <div class="group">
+    <span class="lbl">Secondary / ghost</span>
+    <div class="row">
+      <button class="btn btn-secondary">Open run</button>
+      <button class="btn btn-secondary small">Filter</button>
+      <button class="btn btn-ghost">Cancel</button>
+      <button class="btn btn-danger">Reopen run</button>
+    </div>
+  </div>
+</body>
+</html>

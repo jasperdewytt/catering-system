@@ -1,0 +1,215 @@
+/* =============================================================
+   Padea Catering Ops — Design Tokens
+   Internal operator console. Restrained, dense, calm.
+   ============================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap');
+
+:root {
+  /* ---------- Brand ----------------------------------------- */
+  --padea-crimson:        #A51C30;  /* sampled from logo */
+  --padea-crimson-press:  #871726;
+  --padea-crimson-hover:  #B82236;
+  --padea-crimson-tint:   #FBEDEF;  /* very light bg for badges, hovers */
+  --padea-crimson-border: #F0CFD4;
+  --padea-ink:            #1A1416;  /* warm near-black, used for headings */
+
+  /* ---------- Neutrals (warm slate) -------------------------
+     Operations UIs read all day. We use a slightly warm slate so
+     the crimson sits in family. Numeric scale, 50–950. */
+  --n-50:  #FAFAF9;
+  --n-100: #F4F4F2;
+  --n-150: #ECECE9;
+  --n-200: #E2E2DE;
+  --n-300: #CCCCC6;
+  --n-400: #A8A8A1;
+  --n-500: #82827B;
+  --n-600: #5F5F58;
+  --n-700: #44443F;
+  --n-800: #2D2D2A;
+  --n-900: #1C1C1A;
+  --n-950: #111110;
+
+  /* ---------- Semantic — status labels --------------------- */
+  /* Each status has: fg (text on tint), bg tint, border, solid. */
+  /* success / Approved / Exported */
+  --ok-fg:     #1F6B3A;
+  --ok-bg:     #E8F4EC;
+  --ok-border: #BFE0CB;
+  --ok-solid:  #2F8C52;
+
+  /* warning / Unreviewed / Needs attention */
+  --warn-fg:     #7A4A06;
+  --warn-bg:     #FDF1DC;
+  --warn-border: #F2D89C;
+  --warn-solid:  #C7860C;
+
+  /* danger / Blocked / Error */
+  --err-fg:     #8A1F1F;
+  --err-bg:     #FBE9E9;
+  --err-border: #F2C3C3;
+  --err-solid:  #C12B2B;
+
+  /* info / Generated / Draft */
+  --info-fg:     #1F4B7A;
+  --info-bg:     #E7EFFA;
+  --info-border: #BCD2EE;
+  --info-solid:  #2E6BB8;
+
+  /* neutral / Superseded / Archived */
+  --muted-fg:     #5F5F58;
+  --muted-bg:     #F0F0EC;
+  --muted-border: #DFDFDA;
+  --muted-solid:  #82827B;
+
+  /* ---------- Surfaces ------------------------------------- */
+  --surface-app:    var(--n-100);  /* page background */
+  --surface-card:   #FFFFFF;       /* card / table background */
+  --surface-sunken: var(--n-50);   /* inset wells, code blocks */
+  --surface-rail:   #FFFFFF;       /* sidebar */
+  --surface-row-hover: var(--n-50);
+
+  /* ---------- Foreground ----------------------------------- */
+  --fg-1: var(--n-900);   /* primary text, headings */
+  --fg-2: var(--n-700);   /* body text */
+  --fg-3: var(--n-600);   /* secondary text, labels */
+  --fg-4: var(--n-500);   /* tertiary, captions, helper */
+  --fg-5: var(--n-400);   /* disabled, placeholder */
+  --fg-link: var(--padea-crimson);
+
+  /* ---------- Borders & dividers --------------------------- */
+  --border-1: var(--n-200);  /* default border */
+  --border-2: var(--n-150);  /* light divider, between rows */
+  --border-strong: var(--n-300);
+  --border-focus:  var(--padea-crimson);
+
+  /* ---------- Radii ---------------------------------------- */
+  --r-xs: 3px;
+  --r-sm: 5px;
+  --r-md: 7px;   /* default for buttons, badges */
+  --r-lg: 10px;  /* cards, dialogs */
+  --r-xl: 14px;
+  --r-pill: 999px;
+
+  /* ---------- Shadows -------------------------------------- */
+  /* Subtle. Ops UI, not marketing. */
+  --shadow-xs: 0 1px 0 0 rgba(17, 17, 16, 0.04);
+  --shadow-sm: 0 1px 2px 0 rgba(17, 17, 16, 0.05), 0 1px 1px 0 rgba(17, 17, 16, 0.03);
+  --shadow-md: 0 2px 4px -1px rgba(17, 17, 16, 0.06), 0 4px 8px -2px rgba(17, 17, 16, 0.05);
+  --shadow-lg: 0 8px 24px -6px rgba(17, 17, 16, 0.12), 0 4px 8px -4px rgba(17, 17, 16, 0.06);
+  --shadow-pop: 0 10px 32px -8px rgba(17, 17, 16, 0.18), 0 2px 6px -2px rgba(17, 17, 16, 0.08);
+  --shadow-focus: 0 0 0 3px rgba(165, 28, 48, 0.18);
+  --shadow-focus-danger: 0 0 0 3px rgba(193, 43, 43, 0.20);
+
+  /* ---------- Spacing scale (4px base) --------------------- */
+  --s-0: 0;
+  --s-px: 1px;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+
+  /* ---------- Layout --------------------------------------- */
+  --rail-w: 240px;
+  --rail-w-collapsed: 56px;
+  --topbar-h: 52px;
+  --content-max: 1440px;
+
+  /* ---------- Typography ----------------------------------- */
+  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-serif: 'Instrument Serif', 'Iowan Old Style', 'Apple Garamond', serif;
+  /* Serif is used VERY sparingly — only the brand wordmark / lockup. */
+
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;   /* table body, dense reading */
+  --fs-15: 15px;   /* default body */
+  --fs-16: 16px;
+  --fs-18: 18px;
+  --fs-20: 20px;
+  --fs-22: 22px;
+  --fs-26: 26px;
+  --fs-32: 32px;
+
+  --lh-tight: 1.15;
+  --lh-snug:  1.3;
+  --lh-base:  1.45;
+  --lh-relaxed: 1.6;
+
+  --ls-tight: -0.012em;
+  --ls-normal: 0;
+  --ls-wide:  0.04em;
+  --ls-caps:  0.08em;
+
+  /* ---------- Motion --------------------------------------- */
+  /* This is an ops console. Animation is functional, not decorative. */
+  --ease-out:  cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 260ms;
+}
+
+/* =============================================================
+   Base elements
+   ============================================================= */
+html, body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-15);
+  line-height: var(--lh-base);
+  color: var(--fg-1);
+  background: var(--surface-app);
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Semantic type roles */
+h1, .h1 {
+  font: 600 var(--fs-26)/var(--lh-tight) var(--font-sans);
+  letter-spacing: var(--ls-tight);
+  color: var(--fg-1);
+}
+h2, .h2 {
+  font: 600 var(--fs-20)/var(--lh-tight) var(--font-sans);
+  letter-spacing: var(--ls-tight);
+  color: var(--fg-1);
+}
+h3, .h3 {
+  font: 600 var(--fs-16)/var(--lh-snug) var(--font-sans);
+  color: var(--fg-1);
+}
+h4, .h4 {
+  font: 600 var(--fs-14)/var(--lh-snug) var(--font-sans);
+  color: var(--fg-1);
+}
+p {
+  font: 400 var(--fs-15)/var(--lh-base) var(--font-sans);
+  color: var(--fg-2);
+}
+small, .caption {
+  font: 400 var(--fs-12)/var(--lh-snug) var(--font-sans);
+  color: var(--fg-4);
+}
+code, kbd, .mono {
+  font: 500 0.95em/1.4 var(--font-mono);
+  font-feature-settings: 'ss02', 'zero';
+}
+.label, .eyebrow {
+  font: 500 var(--fs-12)/1.2 var(--font-sans);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--fg-4);
+}
+.wordmark {
+  font: 400 1em/1 var(--font-serif);
+  font-style: italic;
+  letter-spacing: -0.01em;
+}

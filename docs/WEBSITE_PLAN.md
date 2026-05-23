@@ -1,0 +1,501 @@
+# Operator Website Plan
+
+**Status**: Draft for Next.js operator UI design; Stage 1 shell scaffolded  
+**Last updated**: 2026-05-23  
+**Related decisions**:
+- [D-14 - Operator UI is Next.js + Supabase, not Streamlit](DECISIONS.md#d-14---operator-ui-is-nextjs--supabase-not-streamlit)
+- [D-15 - Operator identity and Supabase Auth model](DECISIONS.md#d-15---operator-identity-and-supabase-auth-model)
+- [D-16 - Active week derivation for the operator UI](DECISIONS.md#d-16---active-week-derivation-for-the-operator-ui)
+- [D-17 - Website write contracts and audit coverage](DECISIONS.md#d-17---website-write-contracts-and-audit-coverage)
+
+## Purpose
+
+The website is the final operator surface for Padea catering operations. It should let a coordinator move from source data readiness through weekly menu setup, order review, approval, export, and audit review without needing to inspect raw database tables or run Streamlit tools.
+
+The UI must present the system as an operations product, not a marketing site and not a generic admin panel. It should make the weekly catering run easy to scan, hard to misuse, and explicit about unresolved safety or data issues.
+
+## Product Principles
+
+- **Operational first**: the first screen should show the next task and a short task list for the current catering week.
+- **Audit visible by default**: approvals, exports, overrides, and actor/reason metadata should be surfaced near the action they explain.
+- **Deterministic core respected**: the UI may trigger or display Python-owned outcomes, but must not duplicate allocation, dietary, validation, ingestion, or ordering rules.
+- **No silent fixes**: ambiguous data appears as findings or review states, not hidden UI smoothing.
+- **Dense but calm**: tables, status summaries, filters, and detail drawers should support repeat operator work without decorative clutter.
+- **Safety language is concrete**: labels should say what is blocked, unreviewed, approved, exported, or safe for restricted students.
+
+## Primary Users
+
+- **Operations coordinator**: prepares weekly menu offers, reviews generated orders, approves runs, exports caterer drafts, and records override reasons.
+- **Reviewer/manager**: checks order readiness, export history, audit trail, and exceptions before the submission is considered complete.
+
+Future roles can be added later, but Phase 4 starts with one operator class backed by Supabase Auth, RLS, and the `public.operators` profile table from D-15.
+
+## Information Architecture
+
+The app should use a persistent shell with:
+
+- left sidebar or compact top-level navigation for core work areas
+- current service week selector
+- global status indicator for validation/run readiness
+- signed-in operator menu
+- page-level actions grouped on the right side of headers
+
+Recommended top-level routes:
+
+```text
+/login
+/dashboard
+/weeks
+/weeks/[weekStart]
+/weeks/[weekStart]/menu
+/weeks/[weekStart]/validation
+/weeks/[weekStart]/orders
+/weeks/[weekStart]/orders/[orderRunId]
+/weeks/[weekStart]/exports
+/caterers
+/caterers/[catererId]
+/students
+/students/[studentId]
+/audit
+/settings
+```
+
+The default authenticated route should be `/dashboard`, which points operators to the active week and its next required action.
+
+## Page Plan
+
+### Login
+
+Purpose: authenticate operators through Supabase Auth.
+
+Key content:
+
+- email/password form for the submission environment
+- simple unauthenticated layout
+- clear error state for failed login
+
+Notes:
+
+- Do not allow anonymous reads.
+- Keep auth code isolated behind `web/lib/supabase/*`.
+- Use email/password auth for the submission environment with a seeded demo operator account.
+- Resolve the audit display name from `public.operators.display_name`, not editable user metadata.
+
+### Dashboard
+
+Purpose: give the coordinator one current view of the weekly operation.
+
+Key content:
+
+- next task card with the highest-priority operator action
+- "Tasks to complete" list for menu setup, decision review, approval, and caterer email preparation
+- "Needs a decision" queue for blocking errors, unreviewed variants, missing offers, allocation issues, and unexported approved caterer drafts
+- upcoming sessions grouped by date/school/caterer
+- latest audit activity
+
+Primary actions:
+
+- open active week
+- continue menu setup
+- review latest order run
+- open export workflow
+
+Empty/loading states:
+
+- no active week configured
+- no order run generated yet
+- RLS/view unavailable in dev
+
+Data note:
+
+- Active week comes from the Phase 4 week read model described in D-16. The React app should not independently infer it.
+
+### Weeks Index
+
+Purpose: browse service weeks and historical run state.
+
+Key content:
+
+- table of service weeks with generated/approved/exported status
+- counts for sessions, students, caterers, menu offers, order lines, allocation issues
+- filters for status and date range
+
+Primary actions:
+
+- open week
+- compare previous runs for the same week if superseded runs exist
+
+### Week Overview
+
+Purpose: show the full operational state for one week.
+
+Key content:
+
+- week header with dates and latest run status
+- readiness checklist:
+  - source data ingested
+  - menu offers selected
+  - dish variants reviewed
+  - validation passed
+  - order run generated
+  - order approved
+  - caterer exports recorded
+- session summary table grouped by school/caterer/date
+- caterer summary: offer count, forecast quantity, minimum status, order line count, export state
+- recent audit events scoped to the week
+
+Primary actions:
+
+- set up menu
+- view validation
+- open latest order
+- open exports
+
+### Menu Setup
+
+Purpose: replace `app/menu_setup_mvp.py`.
+
+Key content:
+
+- caterer tabs or segmented control
+- dish/variant table with dietary flags, ingredient flags, review status, availability, and offered state
+- selected weekly offers panel with count and minimum-order implications
+- variant editor drawer for customisable dishes
+- review form for GF/DF/NF/VO/halal and ingredient-exclusion flags
+
+Primary actions:
+
+- create variant
+- mark variant unavailable
+- review/update dietary and ingredient flags with reason
+- select/deselect weekly menu offers
+- save offers for the week
+- run validation or open validation page
+
+Safety requirements:
+
+- unreviewed customisable variants must be visually distinct
+- any review-changing write must capture actor, timestamp, and reason where the schema requires it
+- the UI must not infer safety beyond stored reviewed fields
+
+### Validation
+
+Purpose: show preflight findings before order generation or approval.
+
+Key content:
+
+- severity summary: errors, warnings, info
+- findings table grouped by category
+- filters for severity, category, caterer, school, session
+- detail drawer showing affected records and recommended operator action
+
+Primary actions:
+
+- re-run validation if a bridge exists; otherwise show latest available validation/readiness state
+- jump to menu setup, student, caterer, or order detail for the affected record
+
+Phase note:
+
+- For the first web build, this page may use view-backed readiness summaries. Those summaries may count stored facts such as menu-offer presence, unreviewed offered variants, order run status, and `order_allocation_issues`.
+- Do not recompute caterer minimums, dietary safety, absence/exclusion handling, or allocation rules in SQL or TypeScript.
+- A future `session_validation_findings` table can persist Python validation output for a fuller findings table. That is not required before Stage 1, but it is required before the UI claims to show full validation preflight history.
+
+### Orders Index
+
+Purpose: browse order runs for a week.
+
+Key content:
+
+- table of runs with status, generated timestamp, generation metadata, allocation count, issue count, approved/exported state
+- clear superseded vs active run state
+
+Primary actions:
+
+- open run
+- generate run only after a deliberate Python job bridge exists
+
+Empty/loading states:
+
+- no run yet: show the CLI command needed for the current submission, `uv run python -m padea_catering.ordering --week-start 2026-05-01`, rather than exposing a fake Generate button.
+
+### Order Run Detail
+
+Purpose: replace the review portions of `app/order_review_mvp.py`.
+
+Key content:
+
+- run header: status, generated/approved metadata, issue count, latest export state
+- order lines table grouped by caterer/session/variant
+- allocation table with student, school, session, variant, dietary tags, absence/exclusion context
+- allocation issue panel
+- contacts and delivery notes by caterer
+- approval and reopen history
+- manual override history
+- audit timeline scoped to the run
+
+Primary actions:
+
+- approve generated, issue-free run with note/reason
+- reopen approved run with reason
+- record manual override intent with reason
+- open export workflow
+
+Safety requirements:
+
+- approval must be disabled for blocked/issue-bearing runs
+- approval/reopen actions must use audited backend contracts
+- manual overrides should not imply allocation mutation until override application logic exists
+- manual override intent may use the existing override types: `allocation`, `order_line`, `student_attendance`, `dietary_resolution`, `contact`, `other`
+
+### Exports
+
+Purpose: replace the communication export portions of `app/order_review_mvp.py`.
+
+Key content:
+
+- caterer list for the selected approved run
+- recipient snapshots: to/cc/name/contact role
+- deterministic subject/body/rendered text preview
+- persisted communication snapshot state
+- export events timeline
+- delivery notes
+
+Primary actions:
+
+- record export for a caterer
+- download or copy persisted rendered text
+- view previous export events
+
+Safety requirements:
+
+- label the state as "exported", not "sent"
+- display persisted communication snapshots and recipient snapshots; do not render caterer email templates in TypeScript
+- first export creates or displays the immutable communication snapshot through a Python/backend or database contract
+- repeated exports append events without mutating the original snapshot
+- live email sending is out of scope until a separate sent/delivery model exists
+
+### Caterers
+
+Purpose: manage and inspect caterer readiness.
+
+Key content:
+
+- caterer table with contacts, assigned schools, weekly minimums, menu item counts, latest review/export state
+- detail page with contacts, menus, variants, minimums, historical order lines, and communications
+
+Primary actions:
+
+- open caterer detail
+- jump to menu setup filtered to caterer
+
+Phase note:
+
+- Contact anomalies are expected in this dataset; surface contacts verbatim and rely on communication snapshots rather than building a dedicated verification workflow now.
+
+### Students
+
+Purpose: inspect student records and dietary/order allocation context.
+
+Key content:
+
+- searchable student table with school, year level, opted-out state, dietary tags, enrolments
+- student detail showing source facts, session enrolments, absences, allocations, and relevant audit/override records
+
+Primary actions:
+
+- inspect student context from validation or order allocation pages
+
+Phase note:
+
+- Manual edits to students should stay out of scope until explicit audited contracts exist.
+
+### Audit
+
+Purpose: make the operational record inspectable.
+
+Key content:
+
+- append-only audit table with action, actor, timestamp, entity, reason, before/after availability
+- filters for week, order run, action, actor, entity type
+- detail drawer for before/after JSON snapshots
+
+Primary actions:
+
+- inspect audit event
+- jump to related order run, communication, or override
+
+Display note:
+
+- The stored `order_run_unapproved` action is displayed as "Reopen run" in operator-facing copy.
+
+### Settings
+
+Purpose: house low-frequency operator/admin configuration.
+
+Initial content:
+
+- signed-in operator profile
+- environment/project label
+- app version/build metadata
+- links to docs or operational runbooks if needed
+
+For this submission, Settings is a read-only placeholder for signed-in operator identity and build/environment metadata. Do not put core workflows or write functionality in Settings.
+
+## Route Build Order
+
+1. **Stage 0 readiness inventory**: finish the screen-to-data and write-contract map in `docs/WEBSITE_DATA_CONTRACTS.md`.
+2. **Auth shell and dashboard skeleton**: login, authenticated layout, active week placeholder, static/mock readiness cards.
+3. **Read-only week overview**: Supabase SSR read path after Phase 4 views/RLS; no writes.
+4. **Menu setup parity**: variant review and weekly offer selection through Server Actions and audited contracts where required.
+5. **Order review parity**: run list, order run detail, allocation/order-line tables, approval/reopen actions.
+6. **Export parity**: communication previews, recipient snapshots, export event recording, persisted snapshot display.
+7. **Audit and drilldowns**: audit page, caterer detail, student detail, richer cross-links.
+8. **Streamlit retirement**: remove legacy MVPs only after the Next.js workflows are verified against the existing approved run.
+
+## Data Access Shape
+
+Browser-facing reads should prefer Phase 4 `security_invoker` views that are shaped for UI screens. The app should avoid large table joins in React components and avoid exposing service-role credentials to `web/`.
+
+The initial screen-to-data map, write status, and view sketches live in [Website Data Contracts](WEBSITE_DATA_CONTRACTS.md). Keep that file updated before changing a screen's data source or adding a write.
+
+Recommended view/API groups:
+
+- `operator_current_week`
+- `operator_weeks`
+- `operator_week_status`
+- `operator_week_sessions`
+- `operator_menu_setup`
+- `operator_validation_summary`
+- `operator_order_runs`
+- `operator_order_run_lines`
+- `operator_order_run_allocations`
+- `operator_order_run_issues`
+- `operator_order_run_contacts`
+- `operator_communications`
+- `operator_audit_events`
+- `operator_caterers`
+- `operator_caterer_detail`
+- `operator_students`
+- `operator_student_detail`
+
+Writes should go through Server Actions with Zod validation that call audited database/backend contracts, preferably Postgres RPCs for browser-triggered domain writes:
+
+- save menu offers
+- create/update dish variant review
+- update dish variant availability
+- approve order run
+- reopen order run
+- record manual override intent
+- record communication export
+
+Python-owned jobs should remain outside the request path unless a deliberate job bridge is added:
+
+- ingestion
+- validation preflight
+- order generation
+- future live email sending job, if implemented
+
+Server Actions may shape form data, enforce user-interface validation, call `supabase.rpc(...)`, trigger route revalidation, and map database errors into user-facing messages. They must not independently decide safety, allocation, order quantities, caterer minimum compliance, or communication template contents.
+
+## Component Plan
+
+Reusable app components:
+
+- `AppShell`
+- `WeekSwitcher`
+- `StatusBadge`
+- `ReadinessChecklist`
+- `FindingSeverityBadge`
+- `AuditTimeline`
+- `ReasonDialog`
+- `DataTable`
+- `EmptyState`
+- `PageHeader`
+- `CatererTabs`
+- `DietaryFlagGrid`
+- `VariantReviewDrawer`
+- `OrderRunStatusHeader`
+- `CommunicationPreview`
+
+Use shadcn/ui primitives for buttons, dialogs, drawers/sheets, tabs, forms, popovers, tables, badges, tooltips, and toasts. Use Lucide icons for actions and status hints where the icon improves scanning.
+
+`ReasonDialog` is a shared pattern for approve, reopen, manual override intent, export recording, and review-changing writes. It uses one required reason text field with a minimum of 10 trimmed characters. Dialog titles and secondary fields are action-specific, but reason validation is shared.
+
+## Visual Direction
+
+The UI should feel like a precise operations console:
+
+- restrained neutral base with clear semantic color for success/warning/error/blocked/exported
+- compact page headers and dense tables
+- no marketing hero sections
+- no decorative cards nested inside cards
+- cards only for repeated summary widgets or framed tools
+- clear page-level empty states rather than vague "no data" messages
+- status text should be explicit: `Generated`, `Approved`, `Exported`, `Blocked`, `Unreviewed`, `Superseded`
+
+Initial navigation labels:
+
+- Dashboard
+- Weeks
+- Menu
+- Validation
+- Orders
+- Exports
+- Caterers
+- Students
+- Audit
+
+## Key Workflows
+
+### Weekly Happy Path
+
+1. Operator logs in.
+2. Dashboard shows the active week.
+3. Operator reviews menu variants and selects weekly offers.
+4. Validation shows no blocking errors.
+5. Python order generation produces a generated run. For the current submission, this remains CLI-triggered with `uv run python -m padea_catering.ordering --week-start 2026-05-01`; UI-triggered generation is a later job-bridge stage.
+6. Operator reviews order lines, allocations, contacts, and delivery notes.
+7. Operator approves the run with a note.
+8. Operator records exports for each caterer.
+9. Audit page shows approval and export events.
+
+### Blocked Menu Path
+
+1. Dashboard shows unreviewed variants or missing offers.
+2. Operator opens Menu Setup.
+3. Operator creates concrete variants for customisable dishes.
+4. Operator reviews dietary and ingredient flags with a reason.
+5. Operator saves offers.
+6. Validation readiness updates.
+
+### Blocked Order Path
+
+1. Order run contains allocation issues or validation errors.
+2. Approval controls are disabled.
+3. Operator inspects issue detail and affected student/session.
+4. Operator records manual override intent if appropriate.
+5. Actual allocation mutation remains deferred until override application logic exists.
+
+### Export Path
+
+1. Operator opens Exports for an approved, issue-free run.
+2. UI shows deterministic draft and recipient list.
+3. Operator records export with reason.
+4. First export stores immutable communication and recipients.
+5. Later exports append event history and reuse the original snapshot.
+
+## Initial Design Targets
+
+For the first design pass, create mockups for:
+
+1. `/dashboard`
+2. `/weeks/[weekStart]/menu`
+3. `/weeks/[weekStart]/orders/[orderRunId]`
+4. `/weeks/[weekStart]/exports`
+5. `/audit`
+
+These five screens cover the core product feel: readiness, setup, review, communication, and traceability.
+
+## Remaining Planning Questions
+
+- Before live operations, decide whether full Python validation output should be persisted to `session_validation_findings`, or whether submission readiness summaries plus generated-run issues are enough.

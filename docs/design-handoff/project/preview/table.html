@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 18px; background: var(--surface-app); }
+  table {
+    width: 100%; background: white; border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--border-1); border-collapse: separate; border-spacing: 0;
+    font: 400 13px/1.4 var(--font-sans);
+    box-shadow: var(--shadow-sm);
+  }
+  thead th {
+    background: var(--n-50); color: var(--fg-3);
+    font: 500 11px/1 var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase;
+    text-align: left; padding: 8px 12px;
+    border-bottom: 1px solid var(--border-1);
+  }
+  tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-2);
+    color: var(--fg-1);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-row-hover); }
+  .mono { font-family: var(--font-mono); font-size: 12px; color: var(--fg-3); }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font: 500 10px/1 var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 4px 7px; border-radius: 6px; border: 1px solid;
+  }
+  .dot { width: 5px; height: 5px; border-radius: 999px; }
+  .b-ok    { background: var(--ok-bg);   color: var(--ok-fg);   border-color: var(--ok-border); }
+  .b-warn  { background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-border); }
+  .b-err   { background: var(--err-bg);  color: var(--err-fg);  border-color: var(--err-border); }
+  .b-info  { background: var(--info-bg); color: var(--info-fg); border-color: var(--info-border); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 12px; }
+  .row-err { background: var(--err-bg); }
+  .row-err:hover { background: #f6dada; }
+</style>
+</head>
+<body>
+  <table>
+    <thead>
+      <tr>
+        <th>Run</th><th>Caterer</th><th>Status</th><th class="num">Lines</th><th class="num">Issues</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="mono">24-W18-03</span></td><td>Padea Kitchen Co.</td><td><span class="badge b-ok"><span class="dot" style="background:var(--ok-solid)"></span>Approved</span></td><td class="num">14</td><td class="num">0</td></tr>
+      <tr><td><span class="mono">24-W18-02</span></td><td>Greenleaf Catering</td><td><span class="badge b-info"><span class="dot" style="background:var(--info-solid)"></span>Generated</span></td><td class="num">9</td><td class="num">2</td></tr>
+      <tr class="row-err"><td><span class="mono">24-W18-01</span></td><td>Atlas Foods</td><td><span class="badge b-err"><span class="dot" style="background:var(--err-solid)"></span>Blocked</span></td><td class="num">11</td><td class="num">3</td></tr>
+      <tr><td><span class="mono">24-W17-04</span></td><td>Padea Kitchen Co.</td><td><span class="badge b-warn"><span class="dot" style="background:var(--warn-solid)"></span>Unreviewed</span></td><td class="num">7</td><td class="num">1</td></tr>
+    </tbody>
+  </table>
+</body>
+</html>

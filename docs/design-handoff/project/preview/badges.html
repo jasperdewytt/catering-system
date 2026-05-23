@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 22px; background: var(--surface-card); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 500 11px/1 var(--font-sans);
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 5px 8px; border-radius: 7px;
+    border: 1px solid;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 999px; }
+  .b-ok    { background: var(--ok-bg);   color: var(--ok-fg);   border-color: var(--ok-border); }
+  .b-warn  { background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-border); }
+  .b-err   { background: var(--err-bg);  color: var(--err-fg);  border-color: var(--err-border); }
+  .b-info  { background: var(--info-bg); color: var(--info-fg); border-color: var(--info-border); }
+  .b-muted { background: var(--muted-bg);color: var(--muted-fg);border-color: var(--muted-border); }
+  .lbl { font: 500 11px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-4); display: block; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+  <span class="lbl">Status badges</span>
+  <div class="row">
+    <span class="badge b-ok"><span class="dot" style="background:var(--ok-solid)"></span>Approved</span>
+    <span class="badge b-ok"><span class="dot" style="background:var(--ok-solid)"></span>Exported</span>
+    <span class="badge b-ok"><span class="dot" style="background:var(--ok-solid)"></span>Ready</span>
+    <span class="badge b-warn"><span class="dot" style="background:var(--warn-solid)"></span>Unreviewed</span>
+    <span class="badge b-info"><span class="dot" style="background:var(--info-solid)"></span>Generated</span>
+    <span class="badge b-err"><span class="dot" style="background:var(--err-solid)"></span>Blocked</span>
+    <span class="badge b-muted"><span class="dot" style="background:var(--muted-solid)"></span>Superseded</span>
+  </div>
+  <span class="lbl">Counts</span>
+  <div class="row">
+    <span class="badge b-err" style="text-transform:none; letter-spacing:0">3 errors</span>
+    <span class="badge b-warn" style="text-transform:none; letter-spacing:0">7 warnings</span>
+    <span class="badge b-info" style="text-transform:none; letter-spacing:0">14 lines</span>
+    <span class="badge b-muted" style="text-transform:none; letter-spacing:0">42 allocations</span>
+  </div>
+</body>
+</html>

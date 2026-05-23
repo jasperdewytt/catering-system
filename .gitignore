@@ -12,6 +12,7 @@ __pycache__/
 .streamlit/secrets.toml
 web/.env
 web/.env.*
+!web/.env.example
 
 # Generated data
 data/interim/*

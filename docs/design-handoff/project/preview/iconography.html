@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 22px; background: var(--surface-card); }
+  .grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 16px 18px; align-items: center; justify-items: center; }
+  .icon { width: 22px; height: 22px; stroke: var(--fg-1); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .name { font: 500 10px/1 var(--font-mono); color: var(--fg-4); margin-top: 6px; }
+  .cell { display: flex; flex-direction: column; align-items: center; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg><span class="name">Dashboard</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="name">Weeks</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24"><path d="M3 11l3-8 3 8M6 21V11M21 15a2 2 0 0 1-4 0V3M14 8l4-4 4 4"/></svg><span class="name">Menu</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg><span class="name">Validation</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 9h7M9 13h5M9 17h7"/></svg><span class="name">Orders</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg><span class="name">Exports</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l4-4h6l4 4v13M9 21V12h6v9"/></svg><span class="name">Caterers</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2M16 14h2a3 3 0 0 1 3 3v2"/></svg><span class="name">Students</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 7v5l3 2"/></svg><span class="name">Audit</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="name">Settings</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24" style="stroke:var(--ok-solid)"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg><span class="name">Approve</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24" style="stroke:var(--err-solid)"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><path d="M12 8v4M12 16h.01"/></svg><span class="name">Blocked</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24" style="stroke:var(--warn-solid)"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span class="name">Unreviewed</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24"><path d="M3 7h13M3 12h13M3 17h13"/><path d="M21 4v6M18 7h6"/></svg><span class="name">New variant</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h11a5 5 0 0 1 5 5v6"/></svg><span class="name">Reopen</span></div>
+    <div class="cell"><svg class="icon" viewBox="0 0 24 24"><path d="M11 4H4v16h16v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span class="name">Override</span></div>
+  </div>
+</body>
+</html>

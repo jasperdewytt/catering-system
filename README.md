@@ -2,7 +2,7 @@
 
 Operational catering system for weekly school tutoring meal ordering.
 
-Current stage: **Phase 3 approval/audit and communications persistence implemented; operator UI pivoting from Streamlit MVP to Next.js + Supabase.**
+Current stage: **Stage 1 Next.js operator website scaffolded; Phase 4 RLS-safe read models are next.**
 
 ## Architecture
 
@@ -12,14 +12,14 @@ Current stage: **Phase 3 approval/audit and communications persistence implement
 - **LLM**: provider-neutral, advisory only (see `docs/LLM_INTEGRATION_PLAN.md`).
 - **Legacy MVP** (`app/`): Streamlit verification harnesses, retained until the Next.js app reaches parity.
 
-## Run the Next.js operator UI (target)
+## Run the Next.js operator UI
 
 ```bash
 pnpm --dir web install
 pnpm --dir web dev
 ```
 
-The Next.js app authenticates operators with Supabase Auth and renders order runs, menu setup, validation findings, and the export workflow against the live database.
+The Next.js app currently provides the authenticated operator shell, login screen, planned routes, and polished placeholder pages. It does **not** read operational data yet; real dashboard, week, order, export, audit, caterer, and student data should wait for Phase 4 RLS-safe read models.
 
 ## Run the Python backend
 
@@ -44,7 +44,11 @@ These pages are intentionally minimal and will be retired once `web/` reaches fe
 - `AGENTS.md` — project rules, tech stack, repository boundaries, agent roles.
 - `GIT_WORKFLOW.md` — branch, commit, and ignore conventions.
 - `docs/current_stage.md` — authoritative project status and next steps.
-- `docs/DECISIONS.md` — resolved design decisions (D-01 .. D-14).
+- `docs/DECISIONS.md` — resolved design decisions (D-01 .. D-17).
 - `docs/EDGE_CASES.md` — observed data edge cases (E-01 .. E-24).
 - `docs/DATA_INVENTORY.md` — raw source field map.
 - `docs/LLM_INTEGRATION_PLAN.md` — where LLMs may fit; what they must never decide.
+- `docs/WEBSITE_PLAN.md` — planned Next.js operator information architecture and page plan.
+- `docs/WEBSITE_IMPLEMENTATION_STAGES.md` — staged website build plan and boundaries.
+- `docs/WEBSITE_DATA_CONTRACTS.md` — browser-safe read model and write contract map.
+- `docs/design.md` — design handoff index and production implementation notes.

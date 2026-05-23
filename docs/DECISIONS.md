@@ -1,10 +1,10 @@
 # Decisions
 
-Resolved edge cases with rationale. Each entry links back to the corresponding `E-NN` in `docs/EDGE_CASES.md`.
+Resolved edge cases and architecture decisions with rationale. Data edge-case decisions link back to the corresponding `E-NN` in `docs/EDGE_CASES.md`; architecture decisions may link to planning docs instead.
 
 ---
 
-## D-01 — Student primary key strategy (E-01)
+## D-01 - Student primary key strategy (E-01)
 
 **Decision**: Surrogate UUID primary key on the `students` table.
 
@@ -16,7 +16,7 @@ Absence rows that match zero students, or more than one student after operator r
 
 ---
 
-## D-02 — Partial year-level exclusion model (E-03)
+## D-02 - Partial year-level exclusion model (E-03)
 
 **Decision**: Model exclusions as `(session_id, excluded_year_levels[])` on an `exclusions` table.
 
@@ -30,7 +30,7 @@ The order generator filters out any student whose year level appears in the excl
 
 ---
 
-## D-03 — Drop `day` column (E-11)
+## D-03 - Drop `day` column (E-11)
 
 **Decision**: `day` is not stored in the schema. `date` is the authoritative column for delivery scheduling.
 
@@ -40,7 +40,7 @@ The order generator filters out any student whose year level appears in the excl
 
 ---
 
-## D-04 — Null `Dietary` cell meaning (E-12)
+## D-04 - Null `Dietary` cell meaning (E-12)
 
 **Decision**: Three-way interpretation at ingestion:
 
@@ -52,7 +52,7 @@ The order generator filters out any student whose year level appears in the excl
 
 ---
 
-## D-05 — Multi-session enrolment model (E-14)
+## D-05 - Multi-session enrolment model (E-14)
 
 **Decision**: `session_enrolment` is a many-to-many join table between `students` and `sessions`. A validation rule flags any student UUID appearing in more than one session on the same date for operator review before the order runs.
 
@@ -62,7 +62,7 @@ The order generator filters out any student whose year level appears in the excl
 
 ---
 
-## D-06 — Opted-out students (E-15)
+## D-06 - Opted-out students (E-15)
 
 **Decision**: `opted_out boolean` lives on the `students` table, not `session_enrolment`.
 
@@ -74,7 +74,7 @@ Opted-out students are excluded from meal counts and do not appear in generated 
 
 ---
 
-## D-07 — Meaning of "menu item count" (E-17)
+## D-07 - Meaning of "menu item count" (E-17)
 
 **Decision**: "Menu items" = number of distinct orderable options on the offered menu for that week, selected by the operator before the order is generated. The applicable minimum order quantity is determined by that count.
 
@@ -86,7 +86,7 @@ Opted-out students are excluded from meal counts and do not appear in generated 
 
 ---
 
-## D-08 — Deterministic dietary matching and dish ingredient review (E-05, E-13, E-19)
+## D-08 - Deterministic dietary matching and dish ingredient review (E-05, E-13, E-19)
 
 **Decision**: Meal allocation is deterministic and must never rely on LLM judgement for dietary safety.
 
@@ -111,7 +111,7 @@ If no safe offered option remains for a student after all filters run, the order
 
 ---
 
-## D-09 — Customisable dishes are split into orderable variants (E-24)
+## D-09 - Customisable dishes are split into orderable variants (E-24)
 
 **Decision**: A source menu `dish` is the parent item from the caterer menu; an orderable choice is a `dish_variant`.
 
@@ -123,7 +123,7 @@ The Streamlit MVP currently supports creating variants and reviewing their GF/DF
 
 ---
 
-## D-10 — Approval and override audit model
+## D-10 - Approval and override audit model
 
 **Decision**: Order-run approval and manual overrides are explicit audited operator actions.
 
@@ -135,7 +135,7 @@ Manual overrides are recorded in `manual_overrides` before any future override-a
 
 ---
 
-## D-11 — Synthetic caterer contact anomalies (E-09)
+## D-11 - Synthetic caterer contact anomalies (E-09)
 
 **Decision**: Treat suspicious, pseudonymous, and free-webmail caterer contacts as expected artefacts of the competition/synthetic dataset.
 
@@ -145,7 +145,7 @@ The system should still surface recipient names and addresses verbatim in the or
 
 ---
 
-## D-12 — Delivery location granularity (E-16)
+## D-12 - Delivery location granularity (E-16)
 
 **Decision**: Building/block is the delivery-location granularity for current school sessions.
 
@@ -155,11 +155,13 @@ Room numbers are expected to be missing most of the time. Delivery notes and cat
 
 ---
 
-## D-13 — Communication export is not email delivery
+## D-13 - Communication export is not email delivery
 
 **Decision**: `exported` means an operator produced and recorded a send-ready communication snapshot from an approved, issue-free order run. It does not mean the email was sent or delivered.
 
 The first export for each `(order_run_id, caterer_id)` stores the immutable communication snapshot: exact recipients, subject, body, rendered text, delivery notes, template version, actor, reason, and timestamp. Repeated exports reuse that same snapshot and append export events. A human operator may then copy or download the recorded text and send it manually outside the system.
+
+The Next.js UI must not render caterer communication templates itself. It may display persisted communication snapshots and may call an explicit audited export-recording contract. If a communication snapshot does not exist yet, the UI should show that a Python-owned communication preparation/export action is required rather than assembling the draft in TypeScript.
 
 Future live email sending should add a separate `sent` state or delivery event with provider metadata. It should not overload `exported`.
 
@@ -167,7 +169,7 @@ Future live email sending should add a separate `sent` state or delivery event w
 
 ---
 
-## D-14 — Operator UI is Next.js + Supabase, not Streamlit
+## D-14 - Operator UI is Next.js + Supabase, not Streamlit
 
 **Decision**: The final operator interface is a Next.js 16 (App Router) + TypeScript app in `web/`, backed by Supabase Auth and the existing PostgreSQL schema. The Streamlit MVPs (`app/menu_setup_mvp.py`, `app/order_review_mvp.py`) become legacy verification harnesses and will be removed once `web/` reaches parity.
 
@@ -206,3 +208,67 @@ Supabase SSR helpers should be isolated behind `web/lib/supabase/*` and package 
 4. Once parity is verified end-to-end on the existing approved run, the Streamlit MVPs in `app/` are removed.
 
 **Why this shape**: the competition target is a finished, taste-forward catering product. Next.js + Supabase is the natural pairing for that level of polish without abandoning the deterministic Python core, the audit model, or the existing migrations.
+
+---
+
+## D-15 - Operator identity and Supabase Auth model
+
+**Decision**: For the submission, the operator UI uses Supabase Auth with a single operator class. There is no custom Postgres role and no JWT role claim in this phase.
+
+Authenticated users are treated as operators only if they have a row in a new `public.operators` profile table keyed to `auth.users.id`. The table stores the durable audit display name used by the UI and audited write contracts:
+
+- `id uuid primary key references auth.users(id) on delete cascade`
+- `display_name text not null`
+- `created_at timestamptz not null default now()`
+
+The app should use email/password auth for the submission environment, with a seeded demo operator account documented outside source control. RLS policies and write contracts should use the authenticated user id plus the `operators` row for operator membership and display-name lookup.
+
+Do not use `raw_user_meta_data` or other user-editable metadata for authorization or audit names. If multiple roles are needed later, add an explicit role model through `operators` or a related role table rather than changing UI assumptions ad hoc.
+
+**Why this shape**: The UI needs reliable actor identity for audit rows, but a full multi-role authorization model would add unnecessary complexity for the submission. A profile table keeps audit names database-owned while avoiding unsafe JWT/user-metadata authorization.
+
+---
+
+## D-16 - Active week derivation for the operator UI
+
+**Decision**: For the current submission dataset, the active week is derived from source `sessions` data rather than stored in a separate configuration table.
+
+The Phase 4 read model should expose an active-week value based on the earliest available session date in the operational dataset, grouped into a service-week range. The current fixture data has one service week, `2026-05-01` through `2026-05-04`, so this avoids adding configuration state before it is needed.
+
+The UI week switcher should read from the same browser-safe week view used by Dashboard and Weeks. It should not infer the active week independently in React.
+
+If future production data contains multiple active or upcoming weeks, add an explicit `service_weeks` or operator-configured active-week table and record that as a new decision.
+
+**Why this shape**: Nearly every operator screen needs a week anchor, but this dataset has only one week. A deterministic read model is enough for the submission and avoids premature configuration tables.
+
+---
+
+## D-17 - Website write contracts and audit coverage
+
+**Decision**: Browser-triggered domain writes must go through explicit audited database/backend contracts. Next.js Server Actions may validate form shape and call those contracts, but they must not implement multi-step catering business rules directly against raw tables.
+
+For Phase 4 and later, prefer Postgres RPC functions for website writes that need transactional validation and audit rows, including:
+
+- menu offer updates
+- dish variant creation
+- dish variant dietary/ingredient review
+- dish variant availability changes
+- order run approval
+- order run reopen
+- manual override intent recording
+- communication export event recording
+
+The existing Python audited actions can remain as verification harnesses and backend operations, but the website should not duplicate their internal rules in TypeScript. If a Python-owned operation has no RPC or HTTP/queue bridge yet, the UI should show the operation as unavailable or CLI-backed rather than recreating it.
+
+The Phase 4 schema work should extend `audit_log.action` so menu setup writes can be recorded centrally. Required action tokens include at least:
+
+- `dish_variant_created`
+- `dish_variant_reviewed`
+- `dish_variant_availability_updated`
+- `menu_offers_updated`
+
+For the existing stored token `order_run_unapproved`, the operator UI should display the event as "Reopen run" unless a later migration renames the action token.
+
+Menu-offer updates should normally be logged as one audit row per caterer-week save with before/after JSON arrays of selected `dish_variant_id` values. That is easier to read than one audit row per checkbox toggle and still preserves reproducibility.
+
+**Why this shape**: The website needs audited writes without moving safety-critical logic into TypeScript. RPC/write contracts keep validation, mutation, and audit insertion transactionally close to the data source.
