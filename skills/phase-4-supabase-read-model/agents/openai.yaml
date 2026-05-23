@@ -1,0 +1,4 @@
+interface:
+  display_name: "Phase 4 Supabase Read Model"
+  short_description: "Safe operator RLS and read views"
+  default_prompt: "Use this skill to implement the next Phase 4 Supabase read model slice for the Padea operator website."

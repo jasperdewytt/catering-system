@@ -123,7 +123,7 @@ The current approved run has no allocation issues. Building-only delivery locati
 
 ## Parking Lot
 
-- Skills under `skills/` have not been written yet.
+- Canonical website implementation skills now exist under `skills/`: `phase-4-supabase-read-model`, `build-operator-read-page`, and `audited-web-action`.
 - Test suite covers `ingestion.normalisation`, pure `ordering.rules`, and menu setup helper rules; ingestion `pipeline.py`, Supabase-backed `ordering.generator`, UI actions, and `validation/` modules have no unit tests yet (they read/write the live DB; integration tests would be the natural fit).
 - `web/` will need its own test strategy — Playwright for end-to-end, Vitest for unit/component, and a shared fixture seed against a Supabase branch DB. Defer wiring until the scaffold lands.
 - Decide whether `web/` lives at the repository root or under a `web/` directory of a future pnpm workspace. Current direction: single Next.js project at `web/` for now; promote to a workspace only if a shared TypeScript package emerges.

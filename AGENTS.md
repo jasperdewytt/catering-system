@@ -229,6 +229,9 @@ Recommended skills:
 * `generate-weekly-orders`
 * `validate-catering-run`
 * `prepare-submission-artifacts`
+* `phase-4-supabase-read-model`
+* `build-operator-read-page`
+* `audited-web-action`
 
 ## Frontend Conventions (`web/`)
 

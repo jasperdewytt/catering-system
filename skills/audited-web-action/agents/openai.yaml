@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audited Web Action"
+  short_description: "Contract-backed audited web writes"
+  default_prompt: "Use this skill to implement an audited Padea website action without duplicating backend business rules."

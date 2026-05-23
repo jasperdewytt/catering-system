@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build Operator Read Page"
+  short_description: "Typed read-only operator pages"
+  default_prompt: "Use this skill to turn a Padea operator read model into a Next.js read-only page."
