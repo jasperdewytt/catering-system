@@ -1,27 +1,129 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, ClipboardCheck, Clock3 } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarDays,
+  ClipboardCheck,
+  Clock3,
+  DatabaseZap,
+} from "lucide-react";
 
+import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
-import { ReadinessPlaceholder } from "@/components/placeholders/readiness";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { CompactTable, Td, Th } from "@/components/ui/table";
+import {
+  formatDate,
+  formatDateTime,
+  formatStatus,
+  statusToken,
+} from "@/lib/operator-display";
+import { getDashboardReadModel } from "@/lib/operator-read-models";
+import { createClient } from "@/lib/supabase/server";
 
-const needsDecision = [
-  "Menu choices for the week have not been reviewed in the website yet.",
-  "Student and caterer details will appear after the secure read views are added.",
-  "Caterer email drafts are waiting for the approved order workflow.",
-];
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const result = await getDashboardReadModel(supabase);
 
-export default function DashboardPage() {
+  if (result.error) {
+    return (
+      <>
+        <PageHeader
+          eyebrow="This week"
+          title="Catering Dashboard"
+          description="The dashboard reads from the authenticated Phase 4 operator views."
+        />
+        <EmptyState
+          icon={DatabaseZap}
+          title="Dashboard data is unavailable"
+          description={result.error}
+        />
+      </>
+    );
+  }
+
+  if (!result.data) {
+    return (
+      <>
+        <PageHeader
+          eyebrow="This week"
+          title="Catering Dashboard"
+          description="The dashboard reads from the authenticated Phase 4 operator views."
+        />
+        <EmptyState
+          icon={DatabaseZap}
+          title="Dashboard data is unavailable"
+          description="The dashboard read model returned no data."
+        />
+      </>
+    );
+  }
+
+  const { currentWeek, weekStatus, sessions, latestOrderRun, auditEvents } =
+    result.data;
+
+  if (!currentWeek?.week_start) {
+    return (
+      <>
+        <PageHeader
+          eyebrow="This week"
+          title="Catering Dashboard"
+          description="No service week was found in the operational dataset."
+        />
+        <EmptyState
+          icon={CalendarDays}
+          title="No active week"
+          description="Ingest sessions before the website can show weekly readiness, deliveries, and order activity."
+        />
+      </>
+    );
+  }
+
+  const activeWeekLabel = `${formatDate(currentWeek.week_start)} to ${formatDate(
+    currentWeek.week_end,
+  )}`;
+
+  const decisionItems = [
+    {
+      label: "Menu offers",
+      value: weekStatus?.menu_offers_ready ?? false,
+      detail:
+        (weekStatus?.missing_offer_caterer_count ?? 0) > 0
+          ? `${weekStatus?.missing_offer_caterer_count} caterer offer set missing`
+          : "Offer sets are present for active caterers",
+    },
+    {
+      label: "Variant review",
+      value: weekStatus?.variant_review_ready ?? false,
+      detail:
+        (weekStatus?.unreviewed_variant_count ?? 0) > 0
+          ? `${weekStatus?.unreviewed_variant_count} offered variant(s) need review`
+          : "Offered variants are reviewed",
+    },
+    {
+      label: "Validation",
+      value: weekStatus?.validation_state ?? null,
+      detail: `${weekStatus?.blocking_issue_count ?? 0} blocking, ${
+        weekStatus?.warning_count ?? 0
+      } warning`,
+    },
+    {
+      label: "Export",
+      value: weekStatus?.export_state ?? null,
+      detail: `${latestOrderRun?.exported_caterer_count ?? 0} persisted caterer snapshot(s)`,
+    },
+  ];
+
   return (
     <>
       <PageHeader
         eyebrow="This week"
         title="Catering Dashboard"
-        description="A simple work queue for preparing the weekly school meals. The first live version will replace these placeholders with the current week."
+        description={activeWeekLabel}
         actions={
           <Button asChild variant="primary">
-            <Link href="/weeks/2026-05-01">
+            <Link href={`/weeks/${currentWeek.week_start}`}>
               View week
               <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
@@ -30,23 +132,67 @@ export default function DashboardPage() {
       />
 
       <div className="grid gap-4 lg:grid-cols-[1.35fr_0.85fr]">
-        <ReadinessPlaceholder />
+        <Card>
+          <CardHeader>
+            <CardTitle>Readiness</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-md border border-border bg-muted p-3">
+              <div className="text-sm text-muted-foreground">Latest order</div>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <div className="font-medium">
+                  {latestOrderRun
+                    ? formatStatus(latestOrderRun.status)
+                    : "No run generated"}
+                </div>
+                <StatusBadge
+                  status={statusToken(latestOrderRun?.status ?? null)}
+                />
+              </div>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                {latestOrderRun
+                  ? `${latestOrderRun.line_count ?? 0} lines, ${
+                      latestOrderRun.issue_count ?? 0
+                    } issues`
+                  : "Run generation remains a backend/CLI operation."}
+              </p>
+            </div>
+
+            <div className="rounded-md border border-border bg-muted p-3">
+              <div className="text-sm text-muted-foreground">Sessions</div>
+              <div className="mt-2 text-2xl font-semibold">
+                {currentWeek.session_count ?? 0}
+              </div>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                Active sessions in the current service week.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>Needs A Decision</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {needsDecision.map((item) => (
+            {decisionItems.map((item) => (
               <div
-                className="flex gap-3 rounded-md border border-[var(--warn-border)] bg-[var(--warn-bg)] p-3 text-sm text-[var(--warn-fg)]"
-                key={item}
+                className="flex items-start justify-between gap-3 rounded-md border border-border bg-muted p-3"
+                key={item.label}
               >
-                <ClipboardCheck
-                  className="mt-0.5 size-4 shrink-0"
-                  aria-hidden="true"
-                />
-                <p>{item}</p>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <ClipboardCheck
+                      className="size-4 text-brand"
+                      aria-hidden="true"
+                    />
+                    {item.label}
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {item.detail}
+                  </p>
+                </div>
+                <StatusBadge status={statusToken(item.value)} />
               </div>
             ))}
           </CardContent>
@@ -59,20 +205,44 @@ export default function DashboardPage() {
             <CardTitle>Upcoming Deliveries</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border border-dashed border-border bg-muted p-6 text-center">
-              <CalendarDays
-                className="mx-auto size-8 text-muted-foreground"
-                aria-hidden="true"
+            {sessions.length ? (
+              <CompactTable>
+                <thead>
+                  <tr>
+                    <Th>Date</Th>
+                    <Th>School</Th>
+                    <Th>Caterer</Th>
+                    <Th className="text-right">Students</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sessions.map((session) => (
+                    <tr key={session.session_id}>
+                      <Td>{formatDate(session.session_date)}</Td>
+                      <Td>
+                        <div className="font-medium">
+                          {session.school_name ?? "Unknown school"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {session.building ?? "Building not recorded"}
+                        </div>
+                      </Td>
+                      <Td>{session.caterer_name ?? "Unassigned"}</Td>
+                      <Td className="text-right">
+                        {session.orderable_student_count ?? 0}/
+                        {session.enrolled_count ?? 0}
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </CompactTable>
+            ) : (
+              <EmptyState
+                icon={CalendarDays}
+                title="No sessions in this week"
+                description="The current week exists, but no session rows are visible to this operator."
               />
-              <h2 className="mt-3 text-base font-semibold text-foreground">
-                Delivery schedule will show here
-              </h2>
-              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-                Once the secure week view is available, this space will list
-                each school, caterer, delivery day, and contact in the order
-                they need attention.
-              </p>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -81,19 +251,35 @@ export default function DashboardPage() {
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border border-dashed border-border bg-muted p-6 text-center">
-              <Clock3
-                className="mx-auto size-8 text-muted-foreground"
-                aria-hidden="true"
+            {auditEvents.length ? (
+              <div className="space-y-3">
+                {auditEvents.map((event) => (
+                  <div
+                    className="rounded-md border border-border bg-muted p-3"
+                    key={event.audit_id}
+                  >
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="font-medium">
+                        {event.display_action ?? formatStatus(event.action)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDateTime(event.created_at)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      {event.actor_name ?? "Unknown operator"}:{" "}
+                      {event.reason ?? "No reason recorded"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Clock3}
+                title="No audited activity yet"
+                description="Approvals, exports, and manual notes will appear here after audited workflows run."
               />
-              <h2 className="mt-3 text-base font-semibold text-foreground">
-                No website activity yet
-              </h2>
-              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-                Approvals, exports, and manual notes will appear here after the
-                audited website workflows are connected.
-              </p>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

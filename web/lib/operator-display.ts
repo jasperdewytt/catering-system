@@ -1,0 +1,65 @@
+import type { StatusToken } from "@/components/ui/status-badge";
+
+export function formatDate(value: string | null): string {
+  if (!value) {
+    return "Not available";
+  }
+
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${value}T00:00:00`));
+}
+
+export function formatDateTime(value: string | null): string {
+  if (!value) {
+    return "Not recorded";
+  }
+
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+export function formatStatus(value: string | null): string {
+  if (!value) {
+    return "Not available";
+  }
+
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+export function statusToken(value: string | boolean | null): StatusToken {
+  if (value === true || value === "ready") {
+    return "Ready";
+  }
+
+  if (value === "approved") {
+    return "Approved";
+  }
+
+  if (value === "exported") {
+    return "Exported";
+  }
+
+  if (value === "generated" || value === "pending_approval") {
+    return "Generated";
+  }
+
+  if (value === "superseded") {
+    return "Superseded";
+  }
+
+  if (value === false || value === "blocked") {
+    return "Blocked";
+  }
+
+  return "Unreviewed";
+}

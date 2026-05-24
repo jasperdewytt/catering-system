@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { OperatorShell } from "@/components/shell/operator-shell";
+import { getOperatorProfile } from "@/lib/operator-read-models";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -25,9 +26,8 @@ export default async function OperatorLayout({
     redirect("/login");
   }
 
-  return (
-    <OperatorShell userEmail={user.email ?? "Authenticated operator"}>
-      {children}
-    </OperatorShell>
-  );
+  const profile = await getOperatorProfile(supabase, user.id);
+  const displayName = profile.data?.display_name ?? user.email ?? "Operator";
+
+  return <OperatorShell userEmail={displayName}>{children}</OperatorShell>;
 }

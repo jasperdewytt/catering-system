@@ -113,7 +113,10 @@ export async function getDashboardReadModel(
   }
 
   if (orderRunsResult.error) {
-    return { data: null, error: readError("Order runs", orderRunsResult.error) };
+    return {
+      data: null,
+      error: readError("Order runs", orderRunsResult.error),
+    };
   }
 
   if (auditResult.error) {
@@ -195,7 +198,10 @@ export async function getWeekOverviewReadModel(
   }
 
   if (orderRunsResult.error) {
-    return { data: null, error: readError("Order runs", orderRunsResult.error) };
+    return {
+      data: null,
+      error: readError("Order runs", orderRunsResult.error),
+    };
   }
 
   if (auditResult.error) {
