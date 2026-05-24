@@ -90,6 +90,7 @@ export default async function DashboardPage() {
     {
       label: "Menu offers",
       value: weekStatus?.menu_offers_ready ?? false,
+      href: `/weeks/${currentWeek.week_start}/menu`,
       detail:
         (weekStatus?.missing_offer_caterer_count ?? 0) > 0
           ? `${weekStatus?.missing_offer_caterer_count} caterer offer set missing`
@@ -98,6 +99,7 @@ export default async function DashboardPage() {
     {
       label: "Variant review",
       value: weekStatus?.variant_review_ready ?? false,
+      href: `/weeks/${currentWeek.week_start}/menu`,
       detail:
         (weekStatus?.unreviewed_variant_count ?? 0) > 0
           ? `${weekStatus?.unreviewed_variant_count} offered variant(s) need review`
@@ -179,26 +181,50 @@ export default async function DashboardPage() {
             <CardTitle>Needs A Decision</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {decisionItems.map((item) => (
-              <div
-                className="flex items-start justify-between gap-3 rounded-md border border-border bg-muted p-3"
-                key={item.label}
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <ClipboardCheck
-                      className="size-4 text-brand"
-                      aria-hidden="true"
-                    />
-                    {item.label}
+            {decisionItems.map((item) => {
+              const row = (
+                <>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <ClipboardCheck
+                        className="size-4 text-brand"
+                        aria-hidden="true"
+                      />
+                      {item.label}
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      {item.detail}
+                    </p>
                   </div>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    {item.detail}
-                  </p>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <StatusBadge status={statusToken(item.value)} />
+                    {item.href ? (
+                      <ArrowRight
+                        className="size-4 text-brand"
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                  </div>
+                </>
+              );
+
+              return item.href ? (
+                <Link
+                  className="flex items-start justify-between gap-3 rounded-md border border-border bg-muted p-3 transition-colors hover:border-brand hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  href={item.href}
+                  key={item.label}
+                >
+                  {row}
+                </Link>
+              ) : (
+                <div
+                  className="flex items-start justify-between gap-3 rounded-md border border-border bg-muted p-3"
+                  key={item.label}
+                >
+                  {row}
                 </div>
-                <StatusBadge status={statusToken(item.value)} />
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       </div>

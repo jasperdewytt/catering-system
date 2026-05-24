@@ -61,6 +61,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      operator_menu_setup: {
+        Row: {
+          week_start: string | null;
+          week_end: string | null;
+          caterer_id: string | null;
+          caterer_name: string | null;
+          dish_id: string | null;
+          dish_name: string | null;
+          dish_name_raw: string | null;
+          variant_id: string | null;
+          variant_name: string | null;
+          display_name: string | null;
+          is_default: boolean | null;
+          is_available: boolean | null;
+          is_offered: boolean | null;
+          menu_offer_id: string | null;
+          selected_by: string | null;
+          selected_at: string | null;
+          offer_notes: string | null;
+          is_gluten_free: boolean | null;
+          is_dairy_free: boolean | null;
+          is_nut_free: boolean | null;
+          is_vegetarian_option: boolean | null;
+          is_halal_inferred: boolean | null;
+          has_no_declared_tags: boolean | null;
+          contains_beef: boolean | null;
+          contains_pork: boolean | null;
+          contains_red_meat: boolean | null;
+          contains_fish: boolean | null;
+          contains_shellfish: boolean | null;
+          ingredient_notes: string | null;
+          ingredient_flags_source: string | null;
+          operator_reviewed: boolean | null;
+          tags_reviewed_at: string | null;
+          tags_reviewed_by: string | null;
+          tags_review_reason: string | null;
+          valid_offer_counts: number[] | null;
+          current_selected_count: number | null;
+          selected_minimum_meals: number | null;
+        };
+        Relationships: [];
+      };
       operator_order_runs: {
         Row: {
           order_run_id: string | null;
@@ -76,6 +118,19 @@ export type Database = {
           issue_count: number | null;
           exported_caterer_count: number | null;
           is_latest: boolean | null;
+        };
+        Relationships: [];
+      };
+      operator_validation_summary: {
+        Row: {
+          week_start: string | null;
+          severity: string | null;
+          category: string | null;
+          finding_count: number | null;
+          summary: string | null;
+          target_route: string | null;
+          caterer_id: string | null;
+          caterer_name: string | null;
         };
         Relationships: [];
       };
@@ -134,7 +189,60 @@ export type Database = {
       };
     };
     Functions: {
-      [_ in never]: never;
+      operator_create_dish_variant: {
+        Args: {
+          p_dish_id: string;
+          p_variant_name: string;
+          p_is_gluten_free: boolean;
+          p_is_dairy_free: boolean;
+          p_is_nut_free: boolean;
+          p_is_vegetarian_option: boolean;
+          p_is_halal_inferred: boolean;
+          p_contains_beef: boolean;
+          p_contains_pork: boolean;
+          p_contains_red_meat: boolean;
+          p_contains_fish: boolean;
+          p_contains_shellfish: boolean;
+          p_ingredient_notes: string;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      operator_review_dish_variant: {
+        Args: {
+          p_dish_variant_id: string;
+          p_is_gluten_free: boolean;
+          p_is_dairy_free: boolean;
+          p_is_nut_free: boolean;
+          p_is_vegetarian_option: boolean;
+          p_is_halal_inferred: boolean;
+          p_contains_beef: boolean;
+          p_contains_pork: boolean;
+          p_contains_red_meat: boolean;
+          p_contains_fish: boolean;
+          p_contains_shellfish: boolean;
+          p_ingredient_notes: string;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      operator_update_dish_variant_availability: {
+        Args: {
+          p_dish_variant_id: string;
+          p_is_available: boolean;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      operator_save_menu_offers: {
+        Args: {
+          p_week_start: string;
+          p_caterer_id: string;
+          p_dish_variant_ids: string[];
+          p_reason: string;
+        };
+        Returns: number;
+      };
     };
     Enums: {
       cc_preference: "cc" | "do_not_cc" | "unspecified";

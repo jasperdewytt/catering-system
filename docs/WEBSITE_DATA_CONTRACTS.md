@@ -1,6 +1,6 @@
 # Website Data Contracts
 
-**Status**: Phase 4 first read-model slice implemented for Dashboard and Weeks  
+**Status**: Phase 4 menu setup read/write slice implemented
 **Last updated**: 2026-05-24  
 **Related docs**:
 
@@ -34,7 +34,7 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 | `/dashboard`                             | `operator_current_week`, `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                 | none                                                         | Stage 5 first slice implemented |
 | `/weeks`                                 | `operator_weeks`                                                                                                                          | none                                                         | Stage 5 first slice implemented |
 | `/weeks/[weekStart]`                     | `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                                          | none                                                         | Stage 5 first slice implemented |
-| `/weeks/[weekStart]/menu`                | `operator_menu_setup`, `operator_validation_summary`                                                                                      | menu offers, variant create/review/availability through RPCs | Stage 6 writes                  |
+| `/weeks/[weekStart]/menu`                | `operator_menu_setup`, `operator_validation_summary`                                                                                      | menu offers, variant create/review/availability through RPCs | Stage 6 implemented             |
 | `/weeks/[weekStart]/validation`          | `operator_validation_summary`, `operator_order_run_issues`; future `session_validation_findings`                                          | rerun validation only after job bridge                       | Stage 5 read, Stage 9 trigger   |
 | `/weeks/[weekStart]/orders`              | `operator_order_runs`                                                                                                                     | generate run only after job bridge                           | Stage 5 read, Stage 9 trigger   |
 | `/weeks/[weekStart]/orders/[orderRunId]` | `operator_order_runs`, `operator_order_run_lines`, `operator_order_run_allocations`, `operator_order_run_issues`, `operator_audit_events` | approve, reopen, manual override intent through RPCs         | Stage 7 writes                  |
@@ -48,9 +48,9 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 
 ## Implemented Phase 4 Read Models
 
-The first group below is implemented in `supabase/migrations/20260524130454_phase_4_operator_read_models.sql`. These views use `WITH (security_invoker = true)` and are granted only to `authenticated`; underlying table access is guarded by RLS policies requiring a row in `public.operators`.
+The first Dashboard/Weeks group below is implemented in `supabase/migrations/20260524130454_phase_4_operator_read_models.sql`. The menu setup group is implemented in `supabase/migrations/20260524154500_menu_setup_read_models_and_rpcs.sql`. These views use `WITH (security_invoker = true)` and are granted only to `authenticated`; underlying table access is guarded by RLS policies requiring a row in `public.operators`.
 
-`web/types/supabase.ts` was updated for the implemented Phase 4 table and views. Local CLI typegen by project id is blocked without `SUPABASE_ACCESS_TOKEN`, and direct DB typegen hit IPv6/pooler connectivity from this environment, so the file currently contains the verified Phase 4 surface needed by the website slice rather than a full database type dump.
+`web/types/supabase.ts` was updated for the implemented Phase 4 table, views, and menu RPCs. Local CLI typegen by project id is blocked without `SUPABASE_ACCESS_TOKEN`, so the file currently contains the verified website surface needed by the implemented slices rather than a full database type dump.
 
 ### `operator_current_week`
 
@@ -113,26 +113,47 @@ The view may summarize stored facts. It must not reimplement Python validation r
 
 `orderable_student_count` and `cancelled_count` are derived from the latest persisted `order_allocations` statuses when a run exists. They are not a TypeScript or SQL reimplementation of absence, exclusion, dietary, or allocation logic.
 
-## Deferred Read Models
-
-The following contracts remain planned and should be added only when the corresponding page slice or audited write contract is ready.
-
 ### `operator_menu_setup`
 
 - `week_start date`
+- `week_end date`
 - `caterer_id uuid`
 - `caterer_name text`
 - `dish_id uuid`
 - `dish_name text`
+- `dish_name_raw text`
 - `variant_id uuid`
 - `variant_name text`
+- `display_name text`
+- `is_default boolean`
 - `is_available boolean`
 - `is_offered boolean`
+- `menu_offer_id uuid null`
+- `selected_by text null`
+- `selected_at timestamptz null`
+- `offer_notes text null`
+- `is_gluten_free boolean`
+- `is_dairy_free boolean`
+- `is_nut_free boolean`
+- `is_vegetarian_option boolean`
+- `is_halal_inferred boolean`
+- `has_no_declared_tags boolean`
+- `contains_beef boolean`
+- `contains_pork boolean`
+- `contains_red_meat boolean`
+- `contains_fish boolean`
+- `contains_shellfish boolean`
+- `ingredient_notes text null`
+- `ingredient_flags_source text`
 - `operator_reviewed boolean`
 - `tags_reviewed_at timestamptz null`
 - `tags_reviewed_by text null`
-- dietary and ingredient flags already stored on `dish_variants`
-- `minimum_order_quantity integer null`
+- `tags_review_reason text null`
+- `valid_offer_counts smallint[]`
+- `current_selected_count integer`
+- `selected_minimum_meals integer null`
+
+One row per visible `dish_variant` for an active caterer/week. The view exposes stored variant flags, offer selection metadata, and configured caterer menu-item count tiers. It does not allocate students, calculate quantities, resolve absences, or infer dietary safety.
 
 ### `operator_validation_summary`
 
@@ -142,16 +163,23 @@ The following contracts remain planned and should be added only when the corresp
 - `finding_count integer`
 - `summary text`
 - `target_route text null`
+- `caterer_id uuid null`
+- `caterer_name text null`
 
-Allowed sources for the first web build:
+Implemented menu-readiness categories:
 
-- missing `menu_offers` by active caterer
-- offered `dish_variants.operator_reviewed = false`
-- latest `order_runs.status`
-- latest `order_allocation_issues`
-- missing communication snapshots or email preparation events for approved runs
+- `missing_caterer_offer_set`
+- `invalid_offer_count`
+- `offered_unavailable_variant`
+- `offered_unreviewed_variant`
+- `latest_order_status`
+- `allocation_issue_summary`
 
-Do not recompute caterer minimums, dietary safety, absence/exclusion handling, allocation decisions, or order quantities in this view.
+Allowed sources are stored menu offers, stored variant review/availability fields, configured caterer menu-item count tiers, latest persisted order status, and latest persisted allocation issues. The view does not recompute caterer minimum compliance, dietary safety, absence/exclusion handling, allocation decisions, or order quantities.
+
+## Deferred Read Models
+
+The following contracts remain planned and should be added only when the corresponding page slice or audited write contract is ready.
 
 ### `operator_order_runs`
 
@@ -271,10 +299,10 @@ All website writes are called from Server Actions. The Server Action validates r
 
 | Operation                     | Contract owner                                             | Required audit                                             | Status before build         |
 | ----------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------- | --------------------------- |
-| Create dish variant           | Postgres RPC or existing backend action adapted for web    | `dish_variant_created`                                     | Needs Phase 4/6 contract    |
-| Review dish variant flags     | Postgres RPC or existing backend action adapted for web    | `dish_variant_reviewed`                                    | Needs Phase 4/6 contract    |
-| Change variant availability   | Postgres RPC or existing backend action adapted for web    | `dish_variant_availability_updated`                        | Needs Phase 4/6 contract    |
-| Save menu offers              | Postgres RPC                                               | `menu_offers_updated` with before/after variant id arrays  | Needs Phase 4/6 contract    |
+| Create dish variant           | `operator_create_dish_variant` RPC                         | `dish_variant_created`                                     | Implemented                 |
+| Review dish variant flags     | `operator_review_dish_variant` RPC                         | `dish_variant_reviewed`                                    | Implemented                 |
+| Change variant availability   | `operator_update_dish_variant_availability` RPC            | `dish_variant_availability_updated`                        | Implemented                 |
+| Save menu offers              | `operator_save_menu_offers` RPC                            | `menu_offers_updated` with before/after variant id arrays  | Implemented                 |
 | Approve order run             | Postgres RPC or existing audited operation adapted for web | `order_run_approved`                                       | Needs web-callable contract |
 | Reopen order run              | Postgres RPC or existing audited operation adapted for web | stored `order_run_unapproved`, displayed as "Reopen run"   | Needs web-callable contract |
 | Record manual override intent | Postgres RPC or existing audited operation adapted for web | `manual_override_created`                                  | Needs web-callable contract |

@@ -93,6 +93,7 @@ export default async function WeekOverviewPage({
     {
       label: "Menu offers",
       value: weekStatus.menu_offers_ready,
+      href: `/weeks/${weekStart}/menu`,
       detail:
         (weekStatus.missing_offer_caterer_count ?? 0) > 0
           ? `${weekStatus.missing_offer_caterer_count} caterer offer set missing`
@@ -101,6 +102,7 @@ export default async function WeekOverviewPage({
     {
       label: "Variant review",
       value: weekStatus.variant_review_ready,
+      href: `/weeks/${weekStart}/menu`,
       detail:
         (weekStatus.unreviewed_variant_count ?? 0) > 0
           ? `${weekStatus.unreviewed_variant_count} offered variant(s) pending`
@@ -124,26 +126,62 @@ export default async function WeekOverviewPage({
           weekStatus.validation_state,
         )} validation, ${formatEmailState(weekStatus.export_state)}`}
         actions={
-          <Button asChild variant="secondary">
-            <Link href="/weeks">Back to weeks</Link>
-          </Button>
+          <>
+            <Button asChild variant="primary">
+              <Link href={`/weeks/${weekStart}/menu`}>
+                Open menu setup
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/weeks">Back to weeks</Link>
+            </Button>
+          </>
         }
       />
 
       <div className="grid gap-4 lg:grid-cols-4">
-        {readiness.map((item) => (
-          <Card key={item.label}>
-            <CardHeader>
-              <CardTitle>{item.label}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <StatusBadge status={statusToken(item.value)} />
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                {item.detail}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        {readiness.map((item) => {
+          const card = (
+            <Card
+              className={
+                item.href
+                  ? "h-full transition-colors hover:border-brand hover:bg-brand-tint"
+                  : undefined
+              }
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between gap-3">
+                  {item.label}
+                  {item.href ? (
+                    <ArrowRight
+                      className="size-4 text-brand"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StatusBadge status={statusToken(item.value)} />
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  {item.detail}
+                </p>
+              </CardContent>
+            </Card>
+          );
+
+          return item.href ? (
+            <Link
+              className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              href={item.href}
+              key={item.label}
+            >
+              {card}
+            </Link>
+          ) : (
+            <div key={item.label}>{card}</div>
+          );
+        })}
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">

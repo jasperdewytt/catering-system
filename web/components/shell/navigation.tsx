@@ -23,15 +23,6 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
-export const plannedWeekRoutes = [
-  "/weeks/[weekStart]",
-  "/weeks/[weekStart]/menu",
-  "/weeks/[weekStart]/validation",
-  "/weeks/[weekStart]/orders",
-  "/weeks/[weekStart]/orders/[orderRunId]",
-  "/weeks/[weekStart]/exports",
-] as const;
-
 export function ShellNavigation() {
   const pathname = usePathname();
 
@@ -64,14 +55,12 @@ export function ShellNavigation() {
       <div className="rounded-md border border-border bg-muted p-2">
         <div className="flex items-center gap-2 text-xs font-medium text-foreground">
           <ClipboardCheck className="size-4 text-brand" aria-hidden="true" />
-          Planned routes
+          Current workflow
         </div>
-        <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-          {plannedWeekRoutes.map((route) => (
-            <li className="font-mono" key={route}>
-              {route}
-            </li>
-          ))}
+        <ul className="mt-2 space-y-1 text-xs leading-5 text-muted-foreground">
+          <li>Choose a week from Weeks or Dashboard.</li>
+          <li>Menu setup is available from the week view.</li>
+          <li>Validation, orders, and exports remain status-only.</li>
         </ul>
       </div>
     </nav>

@@ -11,6 +11,8 @@ export type OperatorWeekStatus = Tables<"operator_week_status">;
 export type OperatorWeekSession = Tables<"operator_week_sessions">;
 export type OperatorOrderRun = Tables<"operator_order_runs">;
 export type OperatorAuditEvent = Tables<"operator_audit_events">;
+export type OperatorMenuSetupRow = Tables<"operator_menu_setup">;
+export type OperatorValidationSummary = Tables<"operator_validation_summary">;
 
 export type ReadModelResult<T> =
   | { data: T; error: null }
@@ -224,6 +226,50 @@ export async function getWeekOverviewReadModel(
           !event.order_run_id ||
           (event.order_run_id ? orderRunIds.has(event.order_run_id) : false),
       ),
+    },
+    error: null,
+  };
+}
+
+export async function getMenuSetupReadModel(
+  supabase: OperatorSupabaseClient,
+  weekStart: string,
+): Promise<
+  ReadModelResult<{
+    menuRows: OperatorMenuSetupRow[];
+    validationSummary: OperatorValidationSummary[];
+  }>
+> {
+  const [menuResult, validationResult] = await Promise.all([
+    supabase
+      .from("operator_menu_setup")
+      .select("*")
+      .eq("week_start", weekStart)
+      .order("caterer_name", { ascending: true })
+      .order("display_name", { ascending: true }),
+    supabase
+      .from("operator_validation_summary")
+      .select("*")
+      .eq("week_start", weekStart)
+      .order("severity", { ascending: true })
+      .order("category", { ascending: true }),
+  ]);
+
+  if (menuResult.error) {
+    return { data: null, error: readError("Menu setup", menuResult.error) };
+  }
+
+  if (validationResult.error) {
+    return {
+      data: null,
+      error: readError("Menu validation summary", validationResult.error),
+    };
+  }
+
+  return {
+    data: {
+      menuRows: menuResult.data ?? [],
+      validationSummary: validationResult.data ?? [],
     },
     error: null,
   };

@@ -32,9 +32,11 @@ pnpm --dir web supabase:types
 
 ## Current Scope
 
-This is Stage 1 with a narrow static Stage 2/3 shell. The app authenticates
-with Supabase Auth, renders `/dashboard` and the planned route structure, and
-shows explicit Phase 4 placeholders for data-backed pages.
+This app has the Stage 1 foundation, authenticated operator shell, and the
+first Phase 4 read-model slice. `/dashboard`, `/weeks`, and
+`/weeks/[weekStart]` read real authenticated operational data through Supabase
+SSR helpers and RLS-safe operator views.
 
-No operational tables or views are queried from the shell. No domain write
-Server Actions exist beyond sign-in and sign-out.
+Other operational routes remain deliberate placeholders until their read models
+or audited write contracts land. No domain write Server Actions exist beyond
+sign-in and sign-out.

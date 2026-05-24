@@ -1,7 +1,7 @@
 # Operator Website Plan
 
-**Status**: Draft for Next.js operator UI design; Stage 1 shell scaffolded  
-**Last updated**: 2026-05-23  
+**Status**: Draft for Next.js operator UI design; Stage 1 shell and first Phase 4 Dashboard/Weeks reads implemented
+**Last updated**: 2026-05-24
 **Related decisions**:
 
 - [D-14 - Operator UI is Next.js + Supabase, not Streamlit](DECISIONS.md#d-14---operator-ui-is-nextjs--supabase-not-streamlit)

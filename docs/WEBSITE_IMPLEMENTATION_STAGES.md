@@ -1,7 +1,7 @@
 # Website Implementation Stages
 
-**Status**: Planning guide; Stage 1 scaffold complete and Phase 4 is next  
-**Last updated**: 2026-05-23  
+**Status**: Planning guide; Stage 1 scaffold and first Phase 4 read slice complete; audited writes/read-only route expansion next
+**Last updated**: 2026-05-24
 **Related docs**:
 
 - [Operator Website Plan](WEBSITE_PLAN.md)
