@@ -18,7 +18,6 @@ import {
   formatAuditAction,
   formatDate,
   formatDateTime,
-  formatMoney,
   formatStatus,
   statusToken,
 } from "@/lib/operator-display";
@@ -30,6 +29,10 @@ import {
 import { createClient } from "@/lib/supabase/server";
 
 import { OrderReviewActionsClient } from "./order-review-actions-client";
+import {
+  AllocationsTableClient,
+  OrderLinesTableClient,
+} from "./order-review-tables-client";
 
 function countBy<T extends string | null>(values: T[]): Record<string, number> {
   return values.reduce<Record<string, number>>((counts, value) => {
@@ -186,9 +189,12 @@ export default async function OrderRunDetailPage({
       </div>
 
       <OrderReviewActionsClient
+        allocations={data.allocations}
         canApprove={canApprove}
         canReopen={canReopen}
+        contacts={data.contacts}
         issueCount={issueCount}
+        lines={data.lines}
         orderRunId={orderRunId}
         status={run.status}
         weekStart={weekStart}
@@ -200,39 +206,7 @@ export default async function OrderRunDetailPage({
         </CardHeader>
         <CardContent>
           {data.lines.length ? (
-            <CompactTable>
-              <thead>
-                <tr>
-                  <Th>Caterer</Th>
-                  <Th>Session</Th>
-                  <Th>Dish</Th>
-                  <Th className="text-right">Qty</Th>
-                  <Th className="text-right">Unit</Th>
-                  <Th className="text-right">Total</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.lines.map((line) => (
-                  <tr key={line.order_line_id}>
-                    <Td>{line.caterer_name ?? "Unknown caterer"}</Td>
-                    <Td>
-                      <div>{formatDate(line.session_date)}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {line.school_name ?? "Unknown school"}
-                      </div>
-                    </Td>
-                    <Td>{line.display_name ?? "Unknown dish"}</Td>
-                    <Td className="text-right">{line.quantity ?? 0}</Td>
-                    <Td className="text-right">
-                      {formatMoney(line.unit_price)}
-                    </Td>
-                    <Td className="text-right">
-                      {formatMoney(line.line_total)}
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </CompactTable>
+            <OrderLinesTableClient lines={data.lines} />
           ) : (
             <EmptyState
               icon={ClipboardCheck}
@@ -260,42 +234,7 @@ export default async function OrderRunDetailPage({
               ))}
             </div>
             {data.allocations.length ? (
-              <CompactTable>
-                <thead>
-                  <tr>
-                    <Th>Student</Th>
-                    <Th>Session</Th>
-                    <Th>Dish</Th>
-                    <Th>Status</Th>
-                    <Th className="text-right">Issues</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.allocations.map((allocation) => (
-                    <tr key={allocation.allocation_id}>
-                      <Td>
-                        <div>
-                          {allocation.student_name ?? "Unknown student"}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Year {allocation.year_level ?? "not recorded"}
-                        </div>
-                      </Td>
-                      <Td>
-                        <div>{formatDate(allocation.session_date)}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {allocation.school_name ?? "Unknown school"}
-                        </div>
-                      </Td>
-                      <Td>{allocation.display_name ?? "No allocated dish"}</Td>
-                      <Td>{formatStatus(allocation.allocation_status)}</Td>
-                      <Td className="text-right">
-                        {allocation.issue_count ?? 0}
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </CompactTable>
+              <AllocationsTableClient allocations={data.allocations} />
             ) : (
               <EmptyState
                 icon={Users}

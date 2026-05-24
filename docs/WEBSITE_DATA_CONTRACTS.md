@@ -1,6 +1,6 @@
 # Website Data Contracts
 
-**Status**: Phase 4 order review and approval slice implemented
+**Status**: Phase 4 order review usability slice implemented
 **Last updated**: 2026-05-24
 **Related docs**:
 
@@ -37,7 +37,7 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 | `/weeks/[weekStart]/menu`                | `operator_menu_setup`, `operator_validation_summary`                                                                                                                                                  | menu offers, variant create/review/availability through RPCs | Stage 6 implemented             |
 | `/weeks/[weekStart]/validation`          | `operator_validation_summary`, `operator_order_run_issues`; future `session_validation_findings`                                                                                                      | rerun validation only after job bridge                       | Stage 5 read, Stage 9 trigger   |
 | `/weeks/[weekStart]/orders`              | `operator_order_runs`                                                                                                                                                                                 | generate run only after job bridge                           | Stage 7 read implemented        |
-| `/weeks/[weekStart]/orders/[orderRunId]` | `operator_order_runs`, `operator_order_run_lines`, `operator_order_run_allocations`, `operator_order_run_issues`, `operator_order_run_contacts`, `operator_manual_overrides`, `operator_audit_events` | approve, reopen, manual override intent through RPCs         | Stage 7 implemented             |
+| `/weeks/[weekStart]/orders/[orderRunId]` | `operator_order_runs`, `operator_order_run_lines`, `operator_order_run_allocations`, `operator_order_run_issues`, `operator_order_run_contacts`, `operator_manual_overrides`, `operator_audit_events` | approve, reopen, follow-up/override notes through RPCs       | Stage 7 implemented             |
 | `/weeks/[weekStart]/exports`             | `operator_communications`, `operator_order_run_contacts`, `operator_audit_events`                                                                                                                     | record prepared caterer email through RPC/backend contract   | Stage 8 writes                  |
 | `/caterers`                              | `operator_caterers`                                                                                                                                                                                   | none for submission                                          | Stage 5                         |
 | `/caterers/[catererId]`                  | `operator_caterer_detail`, `operator_menu_setup`, `operator_communications`                                                                                                                           | none for submission                                          | Stage 5                         |
@@ -260,7 +260,7 @@ Allowed sources are stored menu offers, stored variant review/availability field
 - `after_state jsonb`
 - `created_at timestamptz`
 
-This view exposes manual override intent records only. It does not apply manual corrections or mutate generated allocation/order facts.
+This view exposes follow-up/override note records only. The UI should let operators choose affected allocations, order lines, contacts, or the whole run with human-readable labels, then submit the selected row UUID internally. It does not apply manual corrections or mutate generated allocation/order facts.
 
 ## Deferred Read Models
 
@@ -312,18 +312,18 @@ Expose student identity, school, year level, opted-out state, dietary tags, enro
 
 All website writes are called from Server Actions. The Server Action validates request shape with Zod, resolves the signed-in operator, calls an audited backend/database contract, and revalidates affected routes.
 
-| Operation                     | Contract owner                                  | Required audit                                             | Status before build         |
-| ----------------------------- | ----------------------------------------------- | ---------------------------------------------------------- | --------------------------- |
-| Create dish variant           | `operator_create_dish_variant` RPC              | `dish_variant_created`                                     | Implemented                 |
-| Review dish variant flags     | `operator_review_dish_variant` RPC              | `dish_variant_reviewed`                                    | Implemented                 |
-| Change variant availability   | `operator_update_dish_variant_availability` RPC | `dish_variant_availability_updated`                        | Implemented                 |
-| Save menu offers              | `operator_save_menu_offers` RPC                 | `menu_offers_updated` with before/after variant id arrays  | Implemented                 |
-| Approve order run             | `operator_approve_order_run` RPC                | `order_run_approved`                                       | Implemented                 |
-| Reopen order run              | `operator_reopen_order_run` RPC                 | stored `order_run_unapproved`, displayed as "Reopen run"   | Implemented                 |
-| Record manual override intent | `operator_record_manual_override` RPC           | `manual_override_created`                                  | Implemented                 |
-| Record prepared caterer email | Postgres RPC/backend contract                   | `communication_exported`                                   | Needs web-callable contract |
-| Trigger order generation      | Python job bridge                               | job audit/status row                                       | Deferred to Stage 9         |
-| Trigger validation preflight  | Python job bridge                               | job audit/status row; future `session_validation_findings` | Deferred to Stage 9         |
+| Operation                      | Contract owner                                  | Required audit                                             | Status before build         |
+| ------------------------------ | ----------------------------------------------- | ---------------------------------------------------------- | --------------------------- |
+| Create dish variant            | `operator_create_dish_variant` RPC              | `dish_variant_created`                                     | Implemented                 |
+| Review dish variant flags      | `operator_review_dish_variant` RPC              | `dish_variant_reviewed`                                    | Implemented                 |
+| Change variant availability    | `operator_update_dish_variant_availability` RPC | `dish_variant_availability_updated`                        | Implemented                 |
+| Save menu offers               | `operator_save_menu_offers` RPC                 | `menu_offers_updated` with before/after variant id arrays  | Implemented                 |
+| Approve order run              | `operator_approve_order_run` RPC                | `order_run_approved`                                       | Implemented                 |
+| Reopen order run               | `operator_reopen_order_run` RPC                 | stored `order_run_unapproved`, displayed as "Reopen run"   | Implemented                 |
+| Record follow-up/override note | `operator_record_manual_override` RPC           | `manual_override_created`                                  | Implemented                 |
+| Record prepared caterer email  | Postgres RPC/backend contract                   | `communication_exported`                                   | Needs web-callable contract |
+| Trigger order generation       | Python job bridge                               | job audit/status row                                       | Deferred to Stage 9         |
+| Trigger validation preflight   | Python job bridge                               | job audit/status row; future `session_validation_findings` | Deferred to Stage 9         |
 
 ## Deferred Data Contracts
 
@@ -344,6 +344,8 @@ The UI should handle both cases:
 
 ### Manual override application
 
-The website can record override intent, but it must not mutate generated allocations or order lines until override application logic is designed and implemented.
+The website can record follow-up/override notes, but it must not mutate generated allocations or order lines until override application logic is designed and implemented.
 
 The UI may expose the existing override intent types: `allocation`, `order_line`, `student_attendance`, `dietary_resolution`, `contact`, and `other`.
+
+Future individual meal editing must be a separate audited backend contract. It should validate eligible replacement variants, update the affected allocation and order-line totals transactionally, preserve before/after state, and make clear that the run has diverged from the deterministic generator output.

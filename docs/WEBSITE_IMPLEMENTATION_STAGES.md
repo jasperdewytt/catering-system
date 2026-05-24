@@ -238,7 +238,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 ## Stage 7 - Order Review And Approval Writes
 
-**Status**: Implemented for order-run list/detail, approval, reopen, and manual-override intent. Caterer email preparation remains Stage 8.
+**Status**: Implemented for order-run list/detail, searchable review tables, approval, reopen, and audited follow-up/override notes. Caterer email preparation remains Stage 8.
 
 **Goal**: Port order review, approval, reopen, and manual-override intent workflows.
 
@@ -249,6 +249,8 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Add reopen action with required reason capture.
 - Add manual override intent recording without implying allocation mutation.
 - Surface approval history, reopen history, manual override history, and scoped audit timeline near the relevant action.
+- Add search, filters, and sorting to order-line and allocation tables so operators can find rows before recording follow-up notes.
+- Use human-readable selectors for affected allocation, order-line, contact, or whole-run notes; do not expose raw UUID entry to operators.
 
 **Exit criteria**
 
@@ -261,6 +263,23 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Mutate generated allocations or order lines until override application logic exists.
 - Approve runs based only on client-side checks.
 - Display `order_run_unapproved` verbatim; map it to "Reopen run" in UI copy.
+
+## Future Stage - Audited Individual Meal Editing
+
+**Goal**: Let operators change a student's assigned meal only through a backend-owned audited contract.
+
+**Tasks**
+
+- Design an `operator_apply_allocation_override`-style contract that validates the order run, selected allocation, eligible replacement variant, dietary safety, and affected order-line totals.
+- Require actor, reason, timestamp, before/after state, and central audit-log rows.
+- Recalculate only the affected persisted allocation/order-line facts transactionally; do not implement dietary or quantity rules in TypeScript.
+- Make the UI clearly distinguish applied meal edits from follow-up notes that do not mutate order facts.
+
+**Do not**
+
+- Add direct table updates from the UI.
+- Let operators choose unsafe variants.
+- Hide that an edited run has diverged from the deterministic generator output.
 
 ## Stage 8 - Caterer Email Workflow Writes
 

@@ -4,9 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, FilePenLine, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   useForm,
+  useWatch,
   type FieldValues,
   type Path,
   type UseFormReturn,
@@ -33,6 +34,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDate, formatStatus } from "@/lib/operator-display";
+import type {
+  OperatorOrderRunAllocation,
+  OperatorOrderRunContact,
+  OperatorOrderRunLine,
+} from "@/lib/operator-read-models";
 
 const reasonSchema = z.string().trim().min(10, "Enter at least 10 characters.");
 
@@ -84,6 +91,23 @@ function FieldMessage({ message }: { message?: string }) {
   }
 
   return <p className="text-xs text-[var(--err-fg)]">{message}</p>;
+}
+
+type ConcernType =
+  | "order_run"
+  | "allocation"
+  | "order_line"
+  | "contact"
+  | "other";
+
+type ConcernOption = {
+  id: string;
+  label: string;
+  searchText: string;
+};
+
+function normalize(value: string) {
+  return value.toLowerCase().trim();
 }
 
 function ReasonForm({
@@ -170,15 +194,21 @@ function ReasonForm({
 }
 
 export function OrderReviewActionsClient({
+  allocations,
   canApprove,
   canReopen,
+  contacts,
+  lines,
   orderRunId,
   status,
   issueCount,
   weekStart,
 }: {
+  allocations: OperatorOrderRunAllocation[];
   canApprove: boolean;
   canReopen: boolean;
+  contacts: OperatorOrderRunContact[];
+  lines: OperatorOrderRunLine[];
   orderRunId: string;
   status: string | null;
   issueCount: number;
@@ -186,6 +216,8 @@ export function OrderReviewActionsClient({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [concernType, setConcernType] = useState<ConcernType>("order_run");
+  const [entitySearch, setEntitySearch] = useState("");
   const overrideForm = useForm<ManualOverrideInput>({
     resolver: zodResolver(overrideFormSchema),
     defaultValues: {
@@ -197,6 +229,156 @@ export function OrderReviewActionsClient({
       reason: "",
     },
   });
+  const selectedEntityId = useWatch({
+    control: overrideForm.control,
+    name: "entityId",
+  });
+
+  const allocationOptions = useMemo<ConcernOption[]>(
+    () =>
+      allocations
+        .filter((allocation) => allocation.allocation_id)
+        .map((allocation) => {
+          const label = [
+            allocation.student_name ?? "Unknown student",
+            allocation.school_name ?? "Unknown school",
+            formatDate(allocation.session_date),
+            allocation.display_name ?? "No allocated dish",
+            formatStatus(allocation.allocation_status),
+          ].join(" · ");
+
+          return {
+            id: allocation.allocation_id as string,
+            label,
+            searchText: normalize(label),
+          };
+        }),
+    [allocations],
+  );
+  const lineOptions = useMemo<ConcernOption[]>(
+    () =>
+      lines
+        .filter((line) => line.order_line_id)
+        .map((line) => {
+          const label = [
+            line.caterer_name ?? "Unknown caterer",
+            line.school_name ?? "Unknown school",
+            formatDate(line.session_date),
+            line.display_name ?? "Unknown dish",
+            `${line.quantity ?? 0} meal(s)`,
+          ].join(" · ");
+
+          return {
+            id: line.order_line_id as string,
+            label,
+            searchText: normalize(label),
+          };
+        }),
+    [lines],
+  );
+  const contactOptions = useMemo<ConcernOption[]>(
+    () =>
+      contacts
+        .filter((contact) => contact.contact_id)
+        .map((contact) => {
+          const label = [
+            contact.caterer_name ?? "Unknown caterer",
+            contact.contact_name ?? "Unnamed contact",
+            contact.email ?? "No email",
+          ].join(" · ");
+
+          return {
+            id: contact.contact_id as string,
+            label,
+            searchText: normalize(label),
+          };
+        }),
+    [contacts],
+  );
+
+  const visibleEntityOptions = useMemo(() => {
+    const source =
+      concernType === "allocation"
+        ? allocationOptions
+        : concernType === "order_line"
+          ? lineOptions
+          : concernType === "contact"
+            ? contactOptions
+            : [];
+    const query = normalize(entitySearch);
+
+    if (!query) {
+      return source;
+    }
+
+    return source.filter((option) => option.searchText.includes(query));
+  }, [
+    allocationOptions,
+    concernType,
+    contactOptions,
+    entitySearch,
+    lineOptions,
+  ]);
+
+  useEffect(() => {
+    if (
+      concernType !== "allocation" &&
+      concernType !== "order_line" &&
+      concernType !== "contact"
+    ) {
+      return;
+    }
+
+    if (
+      selectedEntityId &&
+      visibleEntityOptions.some((option) => option.id === selectedEntityId)
+    ) {
+      return;
+    }
+
+    overrideForm.setValue("entityId", visibleEntityOptions[0]?.id ?? "");
+  }, [concernType, overrideForm, selectedEntityId, visibleEntityOptions]);
+
+  function setOverrideConcern(nextConcern: ConcernType) {
+    setConcernType(nextConcern);
+    setEntitySearch("");
+
+    if (nextConcern === "order_run") {
+      overrideForm.setValue("overrideType", "other");
+      overrideForm.setValue("entityType", "order_run");
+      overrideForm.setValue("entityId", orderRunId);
+      return;
+    }
+
+    if (nextConcern === "other") {
+      overrideForm.setValue("overrideType", "other");
+      overrideForm.setValue("entityType", "other");
+      overrideForm.setValue("entityId", "");
+      return;
+    }
+
+    const source =
+      nextConcern === "allocation"
+        ? allocationOptions
+        : nextConcern === "order_line"
+          ? lineOptions
+          : contactOptions;
+    const firstEntityId = source[0]?.id ?? "";
+
+    overrideForm.setValue(
+      "overrideType",
+      nextConcern === "contact" ? "contact" : nextConcern,
+    );
+    overrideForm.setValue(
+      "entityType",
+      nextConcern === "allocation"
+        ? "order_allocation"
+        : nextConcern === "order_line"
+          ? "order_line"
+          : "caterer_contact",
+    );
+    overrideForm.setValue("entityId", firstEntityId);
+  }
 
   function submitOverride(values: ManualOverrideInput) {
     startTransition(async () => {
@@ -211,6 +393,7 @@ export function OrderReviewActionsClient({
           entityId: orderRunId,
           reason: "",
         });
+        setOverrideConcern("order_run");
         router.refresh();
       }
     });
@@ -251,10 +434,10 @@ export function OrderReviewActionsClient({
       />
       <Card>
         <CardHeader>
-          <CardTitle>Manual Override Intent</CardTitle>
+          <CardTitle>Record Follow-Up Note</CardTitle>
           <CardDescription>
-            Records intent only. It does not change generated allocations or
-            order lines.
+            Audits a note for follow-up. It does not change meals, allocations,
+            or order quantities.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -262,54 +445,72 @@ export function OrderReviewActionsClient({
             className="space-y-3"
             onSubmit={overrideForm.handleSubmit(submitOverride)}
           >
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="override-type">Type</Label>
-                <select
-                  className="h-10 w-full rounded-[var(--radius)] border border-input bg-card px-3 text-sm text-foreground shadow-sm outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-ring/20"
-                  id="override-type"
-                  {...overrideForm.register("overrideType")}
-                >
-                  <option value="allocation">Allocation</option>
-                  <option value="order_line">Order line</option>
-                  <option value="student_attendance">Student attendance</option>
-                  <option value="dietary_resolution">Dietary resolution</option>
-                  <option value="contact">Contact</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="entity-type">Entity</Label>
-                <select
-                  className="h-10 w-full rounded-[var(--radius)] border border-input bg-card px-3 text-sm text-foreground shadow-sm outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-ring/20"
-                  id="entity-type"
-                  {...overrideForm.register("entityType")}
-                >
-                  <option value="order_run">Order run</option>
-                  <option value="order_allocation">Allocation</option>
-                  <option value="order_line">Order line</option>
-                  <option value="student">Student</option>
-                  <option value="caterer_contact">Contact</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-            </div>
+            <input type="hidden" {...overrideForm.register("overrideType")} />
+            <input type="hidden" {...overrideForm.register("entityType")} />
+            <input type="hidden" {...overrideForm.register("entityId")} />
             <div className="space-y-1">
-              <Label htmlFor="entity-id">Entity UUID</Label>
-              <Input
-                id="entity-id"
-                placeholder="Optional UUID for the affected row"
-                {...overrideForm.register("entityId")}
-              />
-              <FieldMessage
-                message={overrideForm.formState.errors.entityId?.message}
-              />
+              <Label htmlFor="override-concern">This concerns</Label>
+              <select
+                className="h-10 w-full rounded-[var(--radius)] border border-input bg-card px-3 text-sm text-foreground shadow-sm outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-ring/20"
+                id="override-concern"
+                onChange={(event) =>
+                  setOverrideConcern(event.target.value as ConcernType)
+                }
+                value={concernType}
+              >
+                <option value="order_run">Whole order run</option>
+                <option value="allocation">Student allocation</option>
+                <option value="order_line">Order line</option>
+                <option value="contact">Caterer contact</option>
+                <option value="other">Other</option>
+              </select>
             </div>
+            {concernType === "allocation" ||
+            concernType === "order_line" ||
+            concernType === "contact" ? (
+              <div className="space-y-1">
+                <Label htmlFor="entity-search">Find row</Label>
+                <Input
+                  id="entity-search"
+                  onChange={(event) => setEntitySearch(event.target.value)}
+                  placeholder="Search by student, caterer, school, meal, or email"
+                  value={entitySearch}
+                />
+              </div>
+            ) : null}
+            {concernType === "allocation" ||
+            concernType === "order_line" ||
+            concernType === "contact" ? (
+              <div className="space-y-1">
+                <Label htmlFor="entity-choice">Affected row</Label>
+                <select
+                  className="h-10 w-full rounded-[var(--radius)] border border-input bg-card px-3 text-sm text-foreground shadow-sm outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-ring/20"
+                  id="entity-choice"
+                  onChange={(event) =>
+                    overrideForm.setValue("entityId", event.target.value)
+                  }
+                  value={selectedEntityId ?? ""}
+                >
+                  {visibleEntityOptions.length ? (
+                    visibleEntityOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No matching rows</option>
+                  )}
+                </select>
+                <FieldMessage
+                  message={overrideForm.formState.errors.entityId?.message}
+                />
+              </div>
+            ) : null}
             <div className="space-y-1">
               <Label htmlFor="override-reason">Reason</Label>
               <Textarea
                 id="override-reason"
-                placeholder="Describe the intended manual correction."
+                placeholder="Describe what needs follow-up and why."
                 {...overrideForm.register("reason")}
               />
               <FieldMessage
@@ -321,7 +522,7 @@ export function OrderReviewActionsClient({
             />
             <Button disabled={isPending} type="submit" variant="secondary">
               <FilePenLine className="size-4" aria-hidden="true" />
-              {isPending ? "Recording" : "Record intent"}
+              {isPending ? "Recording" : "Record follow-up note"}
             </Button>
           </form>
         </CardContent>

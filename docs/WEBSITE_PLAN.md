@@ -1,6 +1,6 @@
 # Operator Website Plan
 
-**Status**: Draft for Next.js operator UI design; menu setup and order review/approval slices implemented
+**Status**: Draft for Next.js operator UI design; menu setup and order review usability slices implemented
 **Last updated**: 2026-05-24
 **Related decisions**:
 
@@ -23,6 +23,7 @@ The UI must present the system as an operations product, not a marketing site an
 - **No silent fixes**: ambiguous data appears as findings or review states, not hidden UI smoothing.
 - **Dense but calm**: tables, status summaries, filters, and detail drawers should support repeat operator work without decorative clutter.
 - **Safety language is concrete**: labels should say what is blocked, unreviewed, approved, email-ready, or safe for restricted students.
+- **Human-readable audit targeting**: when an operator records a follow-up or override note, the UI should show names, schools, dates, dishes, and contacts; row UUIDs are submitted internally, not pasted by operators.
 
 ## Primary Users
 
@@ -386,8 +387,11 @@ Writes should go through Server Actions with Zod validation that call audited da
 - update dish variant availability
 - approve order run
 - reopen order run
-- record manual override intent
+- record follow-up/override notes
 - record prepared caterer email
+- future audited individual meal edits through a backend-owned contract
+
+Individual meal editing is intentionally separate from follow-up notes. A future meal-edit workflow must call a backend/RPC contract that validates eligible variants, applies allocation and order-line changes transactionally, and records before/after audit state; the Next.js UI must not directly recalculate or mutate generated order facts.
 
 Python-owned jobs should remain outside the request path unless a deliberate job bridge is added:
 

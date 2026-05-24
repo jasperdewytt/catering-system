@@ -37,8 +37,9 @@ implemented Phase 4 menu setup plus order review slices. `/dashboard`,
 `/weeks`, `/weeks/[weekStart]`, `/weeks/[weekStart]/menu`,
 `/weeks/[weekStart]/orders`, and
 `/weeks/[weekStart]/orders/[orderRunId]` read real authenticated operational
-data through Supabase SSR helpers and RLS-safe operator views.
+data through Supabase SSR helpers and RLS-safe operator views. Order review
+includes searchable/sortable order-line and allocation tables.
 
 Audited domain writes currently exist for menu setup, order-run approval,
-order-run reopen, and manual override intent. Other operational routes remain
+order-run reopen, and follow-up/override notes. Other operational routes remain
 deliberate placeholders until their read models or audited write contracts land.
