@@ -2,9 +2,9 @@
 
 _Update this file whenever a significant phase completes or the active focus shifts._
 
-## Status: Stage 1 Next.js Operator Shell Implemented — Phase 4 Read Models Next
+## Status: Phase 4 Read Models + First Dashboard/Weeks Reads Implemented — Audited Writes Next
 
-**Last updated**: 2026-05-23
+**Last updated**: 2026-05-24
 
 ---
 
@@ -81,12 +81,17 @@ _Update this file whenever a significant phase completes or the active focus shi
 - [x] **Operator UI direction decided** — see [D-14](DECISIONS.md#d-14---operator-ui-is-nextjs--supabase-not-streamlit). The final operator interface is Next.js 16 + TypeScript in `web/`, using shadcn/ui, Tailwind, and `@supabase/ssr`. Streamlit MVPs in `app/` become legacy verification harnesses and are scheduled for removal once `web/` reaches parity.
 - [x] **Operator UI planning tightened after architecture review** — `docs/WEBSITE_IMPLEMENTATION_STAGES.md` now stages the build, `docs/WEBSITE_DATA_CONTRACTS.md` maps screens to views/write contracts, and D-15..D-17 decide operator identity, active-week derivation, and audited website write boundaries.
 - [x] **Stage 1 operator website foundation scaffolded** — `web/` now contains a Next.js 16 App Router TypeScript app with Tailwind, shadcn-compatible primitives, Supabase SSR auth helpers, `/login`, protected operator shell routes, and Phase 4 read-model placeholders. The shell has no operational browser reads and no domain writes beyond Supabase Auth sign-in/sign-out.
+- [x] **Phase 4 first read-model slice implemented** — `public.operators` now maps Supabase Auth users to durable operator display names; authenticated operator RLS policies guard the operational tables needed by the first website slice; `operator_current_week`, `operator_weeks`, `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, and `operator_audit_events` are `security_invoker` views for Dashboard and Weeks. `audit_log.action` now permits the future menu setup audit tokens from D-17.
+- [x] **Demo operator profile seeded for the existing Auth user** — `public.operators.display_name = 'Padea Operator'` is present for the existing Supabase Auth account. Credentials remain outside source control.
+- [x] **First real website reads wired** — `/dashboard`, `/weeks`, and `/weeks/[weekStart]` now read Supabase through SSR helpers and typed read-model wrappers. Other routes remain deliberate placeholders until their read models or audited write contracts land.
+- [x] **Phase 4 type surface updated** — `web/types/supabase.ts` includes the implemented `operators` table and first six operator views. Full CLI typegen is still blocked locally without `SUPABASE_ACCESS_TOKEN`, and direct DB typegen selected unreachable IPv6/pooler paths from this environment.
+- [x] **Phase 4 advisors reviewed** — remaining security advisor items are deferred-table `rls_enabled_no_policy` INFOs for tables not exposed in the first read slice, the deliberate `citext` in `public` warning, and the Supabase Auth leaked-password-protection warning. Performance advisor items are unused-index INFOs on the small fixture database and are not being removed.
 
 ## Active Focus
 
-**Land Phase 4 RLS policies, operator identity table, and browser-safe read models so the Next.js operator shell can show real authenticated operational data.**
+**Add audited web write contracts and continue porting read-only operator pages without moving Python-owned rules into TypeScript.**
 
-The deterministic Python backend can write generated order runs end-to-end, and communications persistence captures recipient snapshots and export events. The Streamlit MVPs have proven the workflow against the live DB; the polished surface is now the priority. The implemented allocation algorithm remains:
+The deterministic Python backend can write generated order runs end-to-end, and communications persistence captures recipient snapshots and export events. The Streamlit MVPs have proven the workflow against the live DB, and the first Next.js pages now read real authenticated operational data. The implemented allocation algorithm remains:
 
 1. For each non-cancelled session, walk the enrolled students minus opted-out, year-excluded, and absent.
 2. For each student, pick a safe offered variant given their dietary tags.
@@ -97,16 +102,15 @@ The current approved run has no allocation issues. Building-only delivery locati
 
 ## Up Next (in order)
 
-1. **Phase 4 migrations** — `public.operators`, RLS policies for authenticated operators, `security_invoker` views for Next.js read paths, active-week read model, and audit-log action expansion for menu setup writes. Real browser-facing Supabase reads should wait for this step.
-2. **Seed a demo operator account** — create a Supabase Auth user and matching `public.operators` row as part of Phase 4; the password should be documented outside source control.
-3. **Regenerate complete `web/types/supabase.ts` after Phase 4** — the scaffold command is present, but local CLI typegen currently needs Supabase CLI auth or direct Postgres connectivity.
-4. **Port menu setup workflow** — variant creation, weekly menu offer selection, operator review metadata through audited RPC/backend contracts.
-5. **Port order review and approval** — run picker, allocation/line tables, contacts/delivery notes, approve/reopen actions calling audited contracts.
-6. **Port export workflow** — display persisted communication snapshots, surface recipient snapshots, record export events; do not render communication templates in TypeScript.
-7. **Retire Streamlit MVPs** once parity is verified.
-8. Live email sending only after the persisted export workflow is operator-confirmed in `web/`.
-9. `session_validation_findings` table to persist full Python validation output before live validation-history UI, if needed beyond the submission readiness summary.
-10. Submission artefacts.
+1. **Port menu setup workflow** — variant creation, weekly menu offer selection, operator review metadata through audited RPC/backend contracts.
+2. **Port order review and approval** — run picker, allocation/line tables, contacts/delivery notes, approve/reopen actions calling audited contracts.
+3. **Port export workflow** — display persisted communication snapshots, surface recipient snapshots, record export events; do not render communication templates in TypeScript.
+4. **Add remaining read-only pages** — validation, orders, exports, audit, caterers, and students as their Phase 4 views are added.
+5. **Restore complete generated `web/types/supabase.ts`** once Supabase CLI auth or reliable direct Postgres connectivity is available.
+6. **Retire Streamlit MVPs** once parity is verified.
+7. Live email sending only after the persisted export workflow is operator-confirmed in `web/`.
+8. `session_validation_findings` table to persist full Python validation output before live validation-history UI, if needed beyond the submission readiness summary.
+9. Submission artefacts.
 
 ## Known schema follow-ups (Phase 2+)
 
@@ -114,12 +118,11 @@ The current approved run has no allocation issues. Building-only delivery locati
 - manual override application logic — Phase 3 records overrides but does not yet mutate generated allocations/order lines
 - live email sending — intentionally deferred until persisted export snapshots have been operator-reviewed in `web/`
 - web-callable audited RPC/write contracts for menu setup, approval/reopen, manual override intent, and communication export recording
-- `public.operators` profile table and RLS policies for the single-operator-class auth model
 - contact verification workflow is no longer a priority for the competition dataset; suspicious addresses should remain visible and auditable, but not block communications persistence
 - LLM integration is planned but intentionally deferred until communications persistence exists; first likely LLM feature is advisory order-review storage
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
 - `session_validation_findings` — persisted Python validation output for full validation-history UI; not required before Stage 1 scaffold
-- RLS policies + `security_invoker` views — required before `web/` is used outside dev (Phase 4, [D-14](DECISIONS.md#d-14---operator-ui-is-nextjs--supabase-not-streamlit))
+- remaining `security_invoker` views for validation, order detail, exports, audit index, caterers, and students
 
 ## Parking Lot
 

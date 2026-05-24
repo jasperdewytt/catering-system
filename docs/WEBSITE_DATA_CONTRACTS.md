@@ -1,8 +1,9 @@
 # Website Data Contracts
 
-**Status**: Stage 1 scaffold implemented; Phase 4 read contracts pending  
-**Last updated**: 2026-05-23  
+**Status**: Phase 4 first read-model slice implemented for Dashboard and Weeks  
+**Last updated**: 2026-05-24  
 **Related docs**:
+
 - [Operator Website Plan](WEBSITE_PLAN.md)
 - [Website Implementation Stages](WEBSITE_IMPLEMENTATION_STAGES.md)
 - [D-15 - Operator identity and Supabase Auth model](DECISIONS.md#d-15---operator-identity-and-supabase-auth-model)
@@ -17,37 +18,39 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 
 ## Baseline Assumptions
 
-- `web/` exists as a Next.js 16 App Router scaffold with Supabase Auth-only plumbing, protected shell routes, and no operational browser reads.
-- Existing operational tables have RLS enabled and `anon` / `authenticated` revoked.
-- Phase 4 must add browser-safe read models before real client-visible Supabase reads.
-- Phase 4 should add `public.operators` for auth-user to audit-name mapping.
+- `web/` exists as a Next.js 16 App Router scaffold with Supabase Auth plumbing, protected shell routes, and first authenticated operational reads for Dashboard and Weeks.
+- Existing operational tables have RLS enabled. `anon` remains denied. Authenticated reads are available only to users with a matching `public.operators` row.
+- Phase 4 added browser-safe `security_invoker` views for the first read-only UI slice.
+- `public.operators` maps Supabase Auth users to durable operator display names.
 - Current active week is derived from `sessions` data per D-16.
 - Order generation remains CLI-triggered until the Stage 9 job bridge.
 - Validation summaries for the first web build are read-only summaries over stored facts; full persisted Python validation findings are a later enhancement unless live operations require them sooner.
 
 ## Screen To Data Map
 
-| Screen | Initial reads | Writes | Stage status |
-| --- | --- | --- | --- |
-| `/login` | Supabase Auth session; `operators` profile after Phase 4 | sign in, sign out | Stage 3 scaffolded |
-| `/dashboard` | `operator_current_week`, `operator_week_status`, `operator_validation_summary`, `operator_audit_events` | none | Stage 5 pending |
-| `/weeks` | `operator_weeks` | none | Stage 5 |
-| `/weeks/[weekStart]` | `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events` | none | Stage 5 |
-| `/weeks/[weekStart]/menu` | `operator_menu_setup`, `operator_validation_summary` | menu offers, variant create/review/availability through RPCs | Stage 6 writes |
-| `/weeks/[weekStart]/validation` | `operator_validation_summary`, `operator_order_run_issues`; future `session_validation_findings` | rerun validation only after job bridge | Stage 5 read, Stage 9 trigger |
-| `/weeks/[weekStart]/orders` | `operator_order_runs` | generate run only after job bridge | Stage 5 read, Stage 9 trigger |
-| `/weeks/[weekStart]/orders/[orderRunId]` | `operator_order_runs`, `operator_order_run_lines`, `operator_order_run_allocations`, `operator_order_run_issues`, `operator_audit_events` | approve, reopen, manual override intent through RPCs | Stage 7 writes |
-| `/weeks/[weekStart]/exports` | `operator_communications`, `operator_order_run_contacts`, `operator_audit_events` | record export event through RPC/backend contract | Stage 8 writes |
-| `/caterers` | `operator_caterers` | none for submission | Stage 5 |
-| `/caterers/[catererId]` | `operator_caterer_detail`, `operator_menu_setup`, `operator_communications` | none for submission | Stage 5 |
-| `/students` | `operator_students` | none for submission | Stage 5 |
-| `/students/[studentId]` | `operator_student_detail`, allocation and audit slices | none for submission | Stage 5 |
-| `/audit` | `operator_audit_events` | none | Stage 5 |
-| `/settings` | session user, `operators`, build metadata | none for submission | Stage 3/5 |
+| Screen                                   | Initial reads                                                                                                                             | Writes                                                       | Stage status                    |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------- |
+| `/login`                                 | Supabase Auth session; `operators` profile for shell display                                                                              | sign in, sign out                                            | Stage 3 scaffolded              |
+| `/dashboard`                             | `operator_current_week`, `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                 | none                                                         | Stage 5 first slice implemented |
+| `/weeks`                                 | `operator_weeks`                                                                                                                          | none                                                         | Stage 5 first slice implemented |
+| `/weeks/[weekStart]`                     | `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                                          | none                                                         | Stage 5 first slice implemented |
+| `/weeks/[weekStart]/menu`                | `operator_menu_setup`, `operator_validation_summary`                                                                                      | menu offers, variant create/review/availability through RPCs | Stage 6 writes                  |
+| `/weeks/[weekStart]/validation`          | `operator_validation_summary`, `operator_order_run_issues`; future `session_validation_findings`                                          | rerun validation only after job bridge                       | Stage 5 read, Stage 9 trigger   |
+| `/weeks/[weekStart]/orders`              | `operator_order_runs`                                                                                                                     | generate run only after job bridge                           | Stage 5 read, Stage 9 trigger   |
+| `/weeks/[weekStart]/orders/[orderRunId]` | `operator_order_runs`, `operator_order_run_lines`, `operator_order_run_allocations`, `operator_order_run_issues`, `operator_audit_events` | approve, reopen, manual override intent through RPCs         | Stage 7 writes                  |
+| `/weeks/[weekStart]/exports`             | `operator_communications`, `operator_order_run_contacts`, `operator_audit_events`                                                         | record export event through RPC/backend contract             | Stage 8 writes                  |
+| `/caterers`                              | `operator_caterers`                                                                                                                       | none for submission                                          | Stage 5                         |
+| `/caterers/[catererId]`                  | `operator_caterer_detail`, `operator_menu_setup`, `operator_communications`                                                               | none for submission                                          | Stage 5                         |
+| `/students`                              | `operator_students`                                                                                                                       | none for submission                                          | Stage 5                         |
+| `/students/[studentId]`                  | `operator_student_detail`, allocation and audit slices                                                                                    | none for submission                                          | Stage 5                         |
+| `/audit`                                 | `operator_audit_events`                                                                                                                   | none                                                         | Stage 5                         |
+| `/settings`                              | session user, `operators`, build metadata                                                                                                 | none for submission                                          | Stage 3/5                       |
 
-## Initial Read Models
+## Implemented Phase 4 Read Models
 
-These are sketches, not final SQL. They define the minimum shape the UI should be built against.
+The first group below is implemented in `supabase/migrations/20260524130454_phase_4_operator_read_models.sql`. These views use `WITH (security_invoker = true)` and are granted only to `authenticated`; underlying table access is guarded by RLS policies requiring a row in `public.operators`.
+
+`web/types/supabase.ts` was updated for the implemented Phase 4 table and views. Local CLI typegen by project id is blocked without `SUPABASE_ACCESS_TOKEN`, and direct DB typegen hit IPv6/pooler connectivity from this environment, so the file currently contains the verified Phase 4 surface needed by the website slice rather than a full database type dump.
 
 ### `operator_current_week`
 
@@ -107,6 +110,12 @@ The view may summarize stored facts. It must not reimplement Python validation r
 - `cancelled_count integer`
 - `latest_order_line_count integer null`
 - `export_state text null`
+
+`orderable_student_count` and `cancelled_count` are derived from the latest persisted `order_allocations` statuses when a run exists. They are not a TypeScript or SQL reimplementation of absence, exclusion, dietary, or allocation logic.
+
+## Deferred Read Models
+
+The following contracts remain planned and should be added only when the corresponding page slice or audited write contract is ready.
 
 ### `operator_menu_setup`
 
@@ -260,18 +269,18 @@ Expose student identity, school, year level, opted-out state, dietary tags, enro
 
 All website writes are called from Server Actions. The Server Action validates request shape with Zod, resolves the signed-in operator, calls an audited backend/database contract, and revalidates affected routes.
 
-| Operation | Contract owner | Required audit | Status before build |
-| --- | --- | --- | --- |
-| Create dish variant | Postgres RPC or existing backend action adapted for web | `dish_variant_created` | Needs Phase 4/6 contract |
-| Review dish variant flags | Postgres RPC or existing backend action adapted for web | `dish_variant_reviewed` | Needs Phase 4/6 contract |
-| Change variant availability | Postgres RPC or existing backend action adapted for web | `dish_variant_availability_updated` | Needs Phase 4/6 contract |
-| Save menu offers | Postgres RPC | `menu_offers_updated` with before/after variant id arrays | Needs Phase 4/6 contract |
-| Approve order run | Postgres RPC or existing audited operation adapted for web | `order_run_approved` | Needs web-callable contract |
-| Reopen order run | Postgres RPC or existing audited operation adapted for web | stored `order_run_unapproved`, displayed as "Reopen run" | Needs web-callable contract |
-| Record manual override intent | Postgres RPC or existing audited operation adapted for web | `manual_override_created` | Needs web-callable contract |
-| Record communication export | Postgres RPC/backend contract | `communication_exported` | Needs web-callable contract |
-| Trigger order generation | Python job bridge | job audit/status row | Deferred to Stage 9 |
-| Trigger validation preflight | Python job bridge | job audit/status row; future `session_validation_findings` | Deferred to Stage 9 |
+| Operation                     | Contract owner                                             | Required audit                                             | Status before build         |
+| ----------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------- | --------------------------- |
+| Create dish variant           | Postgres RPC or existing backend action adapted for web    | `dish_variant_created`                                     | Needs Phase 4/6 contract    |
+| Review dish variant flags     | Postgres RPC or existing backend action adapted for web    | `dish_variant_reviewed`                                    | Needs Phase 4/6 contract    |
+| Change variant availability   | Postgres RPC or existing backend action adapted for web    | `dish_variant_availability_updated`                        | Needs Phase 4/6 contract    |
+| Save menu offers              | Postgres RPC                                               | `menu_offers_updated` with before/after variant id arrays  | Needs Phase 4/6 contract    |
+| Approve order run             | Postgres RPC or existing audited operation adapted for web | `order_run_approved`                                       | Needs web-callable contract |
+| Reopen order run              | Postgres RPC or existing audited operation adapted for web | stored `order_run_unapproved`, displayed as "Reopen run"   | Needs web-callable contract |
+| Record manual override intent | Postgres RPC or existing audited operation adapted for web | `manual_override_created`                                  | Needs web-callable contract |
+| Record communication export   | Postgres RPC/backend contract                              | `communication_exported`                                   | Needs web-callable contract |
+| Trigger order generation      | Python job bridge                                          | job audit/status row                                       | Deferred to Stage 9         |
+| Trigger validation preflight  | Python job bridge                                          | job audit/status row; future `session_validation_findings` | Deferred to Stage 9         |
 
 ## Deferred Data Contracts
 
