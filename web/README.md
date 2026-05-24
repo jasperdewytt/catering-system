@@ -33,10 +33,12 @@ pnpm --dir web supabase:types
 ## Current Scope
 
 This app has the Stage 1 foundation, authenticated operator shell, and the
-first Phase 4 read-model slice. `/dashboard`, `/weeks`, and
-`/weeks/[weekStart]` read real authenticated operational data through Supabase
-SSR helpers and RLS-safe operator views.
+implemented Phase 4 menu setup plus order review slices. `/dashboard`,
+`/weeks`, `/weeks/[weekStart]`, `/weeks/[weekStart]/menu`,
+`/weeks/[weekStart]/orders`, and
+`/weeks/[weekStart]/orders/[orderRunId]` read real authenticated operational
+data through Supabase SSR helpers and RLS-safe operator views.
 
-Other operational routes remain deliberate placeholders until their read models
-or audited write contracts land. No domain write Server Actions exist beyond
-sign-in and sign-out.
+Audited domain writes currently exist for menu setup, order-run approval,
+order-run reopen, and manual override intent. Other operational routes remain
+deliberate placeholders until their read models or audited write contracts land.

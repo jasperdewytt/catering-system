@@ -10,6 +10,12 @@ export type OperatorWeek = Tables<"operator_weeks">;
 export type OperatorWeekStatus = Tables<"operator_week_status">;
 export type OperatorWeekSession = Tables<"operator_week_sessions">;
 export type OperatorOrderRun = Tables<"operator_order_runs">;
+export type OperatorOrderRunLine = Tables<"operator_order_run_lines">;
+export type OperatorOrderRunAllocation =
+  Tables<"operator_order_run_allocations">;
+export type OperatorOrderRunIssue = Tables<"operator_order_run_issues">;
+export type OperatorOrderRunContact = Tables<"operator_order_run_contacts">;
+export type OperatorManualOverride = Tables<"operator_manual_overrides">;
 export type OperatorAuditEvent = Tables<"operator_audit_events">;
 export type OperatorMenuSetupRow = Tables<"operator_menu_setup">;
 export type OperatorValidationSummary = Tables<"operator_validation_summary">;
@@ -270,6 +276,146 @@ export async function getMenuSetupReadModel(
     data: {
       menuRows: menuResult.data ?? [],
       validationSummary: validationResult.data ?? [],
+    },
+    error: null,
+  };
+}
+
+export async function getOrdersIndexReadModel(
+  supabase: OperatorSupabaseClient,
+  weekStart: string,
+): Promise<ReadModelResult<{ orderRuns: OperatorOrderRun[] }>> {
+  const { data, error } = await supabase
+    .from("operator_order_runs")
+    .select("*")
+    .eq("week_start", weekStart)
+    .order("generated_at", { ascending: false });
+
+  if (error) {
+    return { data: null, error: readError("Order runs", error) };
+  }
+
+  return { data: { orderRuns: data ?? [] }, error: null };
+}
+
+export async function getOrderRunDetailReadModel(
+  supabase: OperatorSupabaseClient,
+  weekStart: string,
+  orderRunId: string,
+): Promise<
+  ReadModelResult<{
+    orderRun: OperatorOrderRun | null;
+    lines: OperatorOrderRunLine[];
+    allocations: OperatorOrderRunAllocation[];
+    issues: OperatorOrderRunIssue[];
+    contacts: OperatorOrderRunContact[];
+    manualOverrides: OperatorManualOverride[];
+    auditEvents: OperatorAuditEvent[];
+  }>
+> {
+  const [
+    runResult,
+    linesResult,
+    allocationsResult,
+    issuesResult,
+    contactsResult,
+    overridesResult,
+    auditResult,
+  ] = await Promise.all([
+    supabase
+      .from("operator_order_runs")
+      .select("*")
+      .eq("week_start", weekStart)
+      .eq("order_run_id", orderRunId)
+      .maybeSingle(),
+    supabase
+      .from("operator_order_run_lines")
+      .select("*")
+      .eq("order_run_id", orderRunId)
+      .order("caterer_name", { ascending: true })
+      .order("session_date", { ascending: true })
+      .order("school_name", { ascending: true })
+      .order("display_name", { ascending: true }),
+    supabase
+      .from("operator_order_run_allocations")
+      .select("*")
+      .eq("order_run_id", orderRunId)
+      .order("session_date", { ascending: true })
+      .order("school_name", { ascending: true })
+      .order("student_name", { ascending: true }),
+    supabase
+      .from("operator_order_run_issues")
+      .select("*")
+      .eq("order_run_id", orderRunId)
+      .order("severity", { ascending: true })
+      .order("category", { ascending: true }),
+    supabase
+      .from("operator_order_run_contacts")
+      .select("*")
+      .eq("order_run_id", orderRunId)
+      .order("caterer_name", { ascending: true })
+      .order("contact_role", { ascending: true }),
+    supabase
+      .from("operator_manual_overrides")
+      .select("*")
+      .eq("order_run_id", orderRunId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("operator_audit_events")
+      .select("*")
+      .eq("order_run_id", orderRunId)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (runResult.error) {
+    return { data: null, error: readError("Order run", runResult.error) };
+  }
+
+  if (linesResult.error) {
+    return { data: null, error: readError("Order lines", linesResult.error) };
+  }
+
+  if (allocationsResult.error) {
+    return {
+      data: null,
+      error: readError("Order allocations", allocationsResult.error),
+    };
+  }
+
+  if (issuesResult.error) {
+    return {
+      data: null,
+      error: readError("Order allocation issues", issuesResult.error),
+    };
+  }
+
+  if (contactsResult.error) {
+    return {
+      data: null,
+      error: readError("Order run contacts", contactsResult.error),
+    };
+  }
+
+  if (overridesResult.error) {
+    return {
+      data: null,
+      error: readError("Manual overrides", overridesResult.error),
+    };
+  }
+
+  if (auditResult.error) {
+    return { data: null, error: readError("Audit events", auditResult.error) };
+  }
+
+  return {
+    data: {
+      orderRun: runResult.data,
+      lines: linesResult.data ?? [],
+      allocations: allocationsResult.data ?? [],
+      issues: issuesResult.data ?? [],
+      contacts: contactsResult.data ?? [],
+      manualOverrides: overridesResult.data ?? [],
+      auditEvents: auditResult.data ?? [],
     },
     error: null,
   };

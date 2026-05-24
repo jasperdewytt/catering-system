@@ -103,6 +103,83 @@ export type Database = {
         };
         Relationships: [];
       };
+      operator_manual_overrides: {
+        Row: {
+          manual_override_id: string | null;
+          order_run_id: string | null;
+          actor_name: string | null;
+          override_type: string | null;
+          entity_type: string | null;
+          entity_id: string | null;
+          reason: string | null;
+          before_state: Json | null;
+          after_state: Json | null;
+          created_at: string | null;
+        };
+        Relationships: [];
+      };
+      operator_order_run_allocations: {
+        Row: {
+          order_run_id: string | null;
+          allocation_id: string | null;
+          student_id: string | null;
+          student_name: string | null;
+          school_name: string | null;
+          year_level: number | null;
+          session_id: string | null;
+          session_date: string | null;
+          dish_variant_id: string | null;
+          display_name: string | null;
+          dietary_tags: string[] | null;
+          allocation_status: string | null;
+          issue_count: number | null;
+        };
+        Relationships: [];
+      };
+      operator_order_run_contacts: {
+        Row: {
+          order_run_id: string | null;
+          caterer_id: string | null;
+          caterer_name: string | null;
+          contact_id: string | null;
+          contact_name: string | null;
+          contact_role: string | null;
+          email: string | null;
+          recipient_kind: string | null;
+          delivery_notes: string | null;
+        };
+        Relationships: [];
+      };
+      operator_order_run_issues: {
+        Row: {
+          issue_id: string | null;
+          order_run_id: string | null;
+          severity: string | null;
+          category: string | null;
+          message: string | null;
+          student_id: string | null;
+          session_id: string | null;
+          dish_variant_id: string | null;
+        };
+        Relationships: [];
+      };
+      operator_order_run_lines: {
+        Row: {
+          order_run_id: string | null;
+          order_line_id: string | null;
+          caterer_id: string | null;
+          caterer_name: string | null;
+          session_id: string | null;
+          school_name: string | null;
+          session_date: string | null;
+          dish_variant_id: string | null;
+          display_name: string | null;
+          quantity: number | null;
+          unit_price: number | null;
+          line_total: number | null;
+        };
+        Relationships: [];
+      };
       operator_order_runs: {
         Row: {
           order_run_id: string | null;
@@ -189,6 +266,13 @@ export type Database = {
       };
     };
     Functions: {
+      operator_approve_order_run: {
+        Args: {
+          p_order_run_id: string;
+          p_reason: string;
+        };
+        Returns: string;
+      };
       operator_create_dish_variant: {
         Args: {
           p_dish_id: string;
@@ -204,6 +288,23 @@ export type Database = {
           p_contains_fish: boolean;
           p_contains_shellfish: boolean;
           p_ingredient_notes: string;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      operator_record_manual_override: {
+        Args: {
+          p_order_run_id: string;
+          p_override_type: string;
+          p_entity_type: string;
+          p_entity_id: string | null;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      operator_reopen_order_run: {
+        Args: {
+          p_order_run_id: string;
           p_reason: string;
         };
         Returns: string;

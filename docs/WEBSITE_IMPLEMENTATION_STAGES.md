@@ -1,6 +1,6 @@
 # Website Implementation Stages
 
-**Status**: Planning guide; Stage 1 scaffold and first Phase 4 read slice complete; audited writes/read-only route expansion next
+**Status**: Planning guide; Stage 1 scaffold, menu setup, and order review/approval slices implemented
 **Last updated**: 2026-05-24
 **Related docs**:
 
@@ -237,6 +237,8 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Update `dish_variants` or `menu_offers` directly from TypeScript without an audited write contract.
 
 ## Stage 7 - Order Review And Approval Writes
+
+**Status**: Implemented for order-run list/detail, approval, reopen, and manual-override intent. Caterer email preparation remains Stage 8.
 
 **Goal**: Port order review, approval, reopen, and manual-override intent workflows.
 

@@ -1,6 +1,6 @@
 # Operator Website Plan
 
-**Status**: Draft for Next.js operator UI design; Stage 1 shell and first Phase 4 Dashboard/Weeks reads implemented
+**Status**: Draft for Next.js operator UI design; menu setup and order review/approval slices implemented
 **Last updated**: 2026-05-24
 **Related decisions**:
 
@@ -348,7 +348,7 @@ For this submission, Settings is a read-only placeholder for signed-in operator 
 2. **Auth shell and dashboard skeleton**: login, authenticated layout, active week placeholder, static/mock readiness cards.
 3. **Read-only week overview**: Supabase SSR read path after Phase 4 views/RLS; no writes.
 4. **Menu setup parity**: variant review and weekly offer selection through Server Actions and audited contracts where required.
-5. **Order review parity**: run list, order run detail, allocation/order-line tables, approval/reopen actions.
+5. **Order review parity**: run list, order run detail, allocation/order-line tables, approval/reopen actions. Implemented for order review and approval; caterer email preparation remains separate.
 6. **Caterer email parity**: communication previews, recipient snapshots, email preparation recording, persisted snapshot display.
 7. **Audit and drilldowns**: audit page, caterer detail, student detail, richer cross-links.
 8. **Streamlit retirement**: remove legacy MVPs only after the Next.js workflows are verified against the existing approved run.

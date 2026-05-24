@@ -2,7 +2,7 @@
 
 _Update this file whenever a significant phase completes or the active focus shifts._
 
-## Status: Phase 4 Menu Setup Read/Write Workflow Implemented — Order Review Writes Next
+## Status: Phase 4 Order Review And Approval Workflow Implemented — Caterer Emails Next
 
 **Last updated**: 2026-05-24
 
@@ -90,10 +90,13 @@ _Update this file whenever a significant phase completes or the active focus shi
 - [x] **Audited menu setup RPCs implemented** — `operator_create_dish_variant`, `operator_review_dish_variant`, `operator_update_dish_variant_availability`, and `operator_save_menu_offers` require Supabase Auth plus a matching `public.operators` row, enforce reason text, validate offer-set invariants transactionally, and write menu audit-log rows.
 - [x] **Next.js menu setup workflow wired** — `/weeks/[weekStart]/menu` now reads real menu setup data and supports custom variant creation, dietary/ingredient review, availability changes, and caterer offer-set saves through Zod-validated Server Actions backed by the audited RPCs.
 - [x] **Menu setup security checks reviewed** — anonymous reads/RPC calls are denied; authenticated non-operators see no menu rows and cannot write; direct `authenticated` table writes are not granted for `dish_variants` or `menu_offers`. Supabase advisor now reports the four menu RPCs as authenticated `SECURITY DEFINER` functions, which is intentional for the audited operator write boundary from D-17.
+- [x] **Order review read models implemented** — `operator_order_run_lines`, `operator_order_run_allocations`, `operator_order_run_issues`, `operator_order_run_contacts`, and `operator_manual_overrides` expose persisted order-review facts, contacts, delivery notes, and override history without recalculating allocation, dietary, absence, or quantity logic in TypeScript.
+- [x] **Audited order review RPCs implemented** — `operator_approve_order_run`, `operator_reopen_order_run`, and `operator_record_manual_override` require Supabase Auth plus a matching `public.operators` row, enforce reason text, update only permitted order-run states, record manual override intent without allocation mutation, and write central audit-log rows.
+- [x] **Next.js order review workflow wired** — `/weeks/[weekStart]/orders` and `/weeks/[weekStart]/orders/[orderRunId]` now read real order run data and support approval, reopen, and manual override intent through Zod-validated Server Actions backed by audited RPCs.
 
 ## Active Focus
 
-**Port order review, approval, and caterer-email workflows without moving Python-owned rules into TypeScript.**
+**Port the caterer-email workflow without rendering Python-owned communication templates in TypeScript.**
 
 The deterministic Python backend can write generated order runs end-to-end, and communications persistence captures recipient snapshots and email preparation events. The Streamlit MVPs have proven the workflow against the live DB, and the first Next.js pages now read real authenticated operational data. The implemented allocation algorithm remains:
 
@@ -106,26 +109,25 @@ The current approved run has no allocation issues. The menu setup view currently
 
 ## Up Next (in order)
 
-1. **Port order review and approval** — run picker, allocation/line tables, contacts/delivery notes, approve/reopen actions calling audited contracts.
-2. **Port caterer email workflow** — display persisted communication snapshots, surface recipient snapshots, record email preparation events; do not render communication templates in TypeScript.
-3. **Add remaining read-only pages** — validation, orders, caterer emails, audit, caterers, and students as their Phase 4 views are added.
-4. **Restore complete generated `web/types/supabase.ts`** once Supabase CLI auth is available; the current type file contains the verified website surface for implemented slices.
-5. **Retire Streamlit MVPs** once parity is verified.
-6. Live email sending only after the persisted caterer email workflow is operator-confirmed in `web/`.
-7. `session_validation_findings` table to persist full Python validation output before live validation-history UI, if needed beyond the submission readiness summary.
-8. Submission artefacts.
+1. **Port caterer email workflow** — display persisted communication snapshots, surface recipient snapshots, record email preparation events; do not render communication templates in TypeScript.
+2. **Add remaining read-only pages** — validation, caterer emails, audit, caterers, and students as their Phase 4 views are added.
+3. **Restore complete generated `web/types/supabase.ts`** once Supabase CLI auth is available; the current type file contains the verified website surface for implemented slices.
+4. **Retire Streamlit MVPs** once parity is verified.
+5. Live email sending only after the persisted caterer email workflow is operator-confirmed in `web/`.
+6. `session_validation_findings` table to persist full Python validation output before live validation-history UI, if needed beyond the submission readiness summary.
+7. Submission artefacts.
 
 ## Known schema follow-ups (Phase 2+)
 
-- final UI replacement for `app/order_review_mvp.py` and `app/streamlit_app.py`; `app/menu_setup_mvp.py` now has Next.js parity for its core create/review/availability/offer-save workflow, but remains as a legacy verification harness until end-to-end web parity is confirmed
+- final UI replacement for the caterer-email portions of `app/order_review_mvp.py` and `app/streamlit_app.py`; menu setup and order review/approval now have Next.js parity for their core workflows, but the Streamlit apps remain legacy verification harnesses until end-to-end web parity is confirmed
 - manual override application logic — Phase 3 records overrides but does not yet mutate generated allocations/order lines
 - live email sending — intentionally deferred until persisted email snapshots have been operator-reviewed in `web/`
-- web-callable audited RPC/write contracts for approval/reopen, manual override intent, and communication email preparation recording
+- web-callable audited RPC/write contract for communication email preparation recording
 - contact verification workflow is no longer a priority for the competition dataset; suspicious addresses should remain visible and auditable, but not block communications persistence
 - LLM integration is planned but intentionally deferred until communications persistence exists; first likely LLM feature is advisory order-review storage
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
 - `session_validation_findings` — persisted Python validation output for full validation-history UI; not required before Stage 1 scaffold
-- remaining `security_invoker` views for validation, order detail, caterer emails, audit index, caterers, and students
+- remaining `security_invoker` views for validation, caterer emails, audit index, caterers, and students
 
 ## Parking Lot
 

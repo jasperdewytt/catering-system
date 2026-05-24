@@ -2,7 +2,7 @@
 
 Operational catering system for weekly school tutoring meal ordering.
 
-Current stage: **Phase 4 read models plus the first Dashboard/Weeks website reads are implemented; audited web write contracts are next.**
+Current stage: **Phase 4 menu setup and order review/approval workflows are implemented; caterer email workflow is next.**
 
 ## Architecture
 
@@ -19,7 +19,7 @@ pnpm --dir web install
 pnpm --dir web dev
 ```
 
-The Next.js app currently provides the authenticated operator shell, login screen, planned routes, and real authenticated reads for `/dashboard`, `/weeks`, and `/weeks/[weekStart]` through Phase 4 RLS-safe read models. Remaining operational routes still show deliberate placeholders until their read models or audited write contracts land.
+The Next.js app currently provides the authenticated operator shell, real authenticated reads for `/dashboard`, `/weeks`, `/weeks/[weekStart]`, menu setup, and order review, plus audited Server Actions for menu setup, order-run approval/reopen, and manual override intent. Caterer emails and other operational routes remain deliberate placeholders until their read models or audited write contracts land.
 
 ## Run the Python backend
 

@@ -36,6 +36,17 @@ export function formatStatus(value: string | null): string {
     .join(" ");
 }
 
+export function formatMoney(value: number | null): string {
+  if (value === null) {
+    return "Not priced";
+  }
+
+  return new Intl.NumberFormat("en-AU", {
+    style: "currency",
+    currency: "AUD",
+  }).format(value);
+}
+
 export function formatEmailState(value: string | null): string {
   if (value === "exported") {
     return "Email ready";
