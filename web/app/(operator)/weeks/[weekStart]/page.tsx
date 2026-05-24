@@ -111,9 +111,10 @@ export default async function WeekOverviewPage({
     {
       label: "Approval",
       value: weekStatus.approval_state,
+      href: `/weeks/${weekStart}/orders`,
       detail: latestOrderRun?.approved_at
         ? `Approved ${formatDateTime(latestOrderRun.approved_at)}`
-        : "Approval write contract is not connected in the website yet",
+        : "Review generated order runs before approval",
     },
   ];
 
@@ -130,6 +131,12 @@ export default async function WeekOverviewPage({
             <Button asChild variant="primary">
               <Link href={`/weeks/${weekStart}/menu`}>
                 Open menu setup
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href={`/weeks/${weekStart}/orders`}>
+                View order runs
                 <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
             </Button>
@@ -238,7 +245,15 @@ export default async function WeekOverviewPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>Order Runs</CardTitle>
+            <CardTitle className="flex items-center justify-between gap-3">
+              Order Runs
+              <Button asChild size="sm" variant="ghost">
+                <Link href={`/weeks/${weekStart}/orders`}>
+                  View all
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
+              </Button>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {orderRuns.length ? (
@@ -282,7 +297,14 @@ export default async function WeekOverviewPage({
                 icon={History}
                 title="No order runs generated"
                 description="Order generation remains a backend/CLI operation until the job bridge is added."
-              />
+              >
+                <Button asChild variant="secondary">
+                  <Link href={`/weeks/${weekStart}/orders`}>
+                    Open order runs
+                    <ArrowRight className="size-4" aria-hidden="true" />
+                  </Link>
+                </Button>
+              </EmptyState>
             )}
           </CardContent>
         </Card>

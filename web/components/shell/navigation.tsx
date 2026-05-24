@@ -59,8 +59,8 @@ export function ShellNavigation() {
         </div>
         <ul className="mt-2 space-y-1 text-xs leading-5 text-muted-foreground">
           <li>Choose a week from Weeks or Dashboard.</li>
-          <li>Menu setup is available from the week view.</li>
-          <li>Validation, orders, and exports remain status-only.</li>
+          <li>Menu setup and order review are available from the week view.</li>
+          <li>Exports remain status-only until the email workflow lands.</li>
         </ul>
       </div>
     </nav>
