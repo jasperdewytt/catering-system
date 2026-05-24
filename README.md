@@ -19,7 +19,7 @@ pnpm --dir web install
 pnpm --dir web dev
 ```
 
-The Next.js app currently provides the authenticated operator shell, login screen, planned routes, and polished placeholder pages. It does **not** read operational data yet; real dashboard, week, order, export, audit, caterer, and student data should wait for Phase 4 RLS-safe read models.
+The Next.js app currently provides the authenticated operator shell, login screen, planned routes, and polished placeholder pages. It does **not** read operational data yet; real dashboard, week, order, caterer-email readiness, audit, caterer, and student data should wait for Phase 4 RLS-safe read models.
 
 ## Run the Python backend
 

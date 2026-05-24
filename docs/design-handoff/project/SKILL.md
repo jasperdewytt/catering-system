@@ -17,7 +17,7 @@ FUNDAMENTALS**, **VISUAL FOUNDATIONS**, and **ICONOGRAPHY** to internalise the
 voice and visual rules, and use the JSX components in `ui_kits/operator/` as
 visual reference — re-implement them with real Tailwind/shadcn primitives
 rather than copying directly. The status vocabulary is fixed (`Ready`,
-`Unreviewed`, `Generated`, `Approved`, `Exported`, `Blocked`, `Superseded`)
+`Unreviewed`, `Generated`, `Approved`, `Email ready`, `Blocked`, `Superseded`)
 — treat it as canon, do not invent synonyms.
 
 If the user invokes this skill without other guidance, ask them what they

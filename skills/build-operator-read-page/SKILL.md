@@ -57,7 +57,7 @@ Read before editing:
 
 6. Keep actions honest.
    - Link only to routes that exist.
-   - For unsupported generation, approval, export, or menu-write workflows, show the next backend requirement or CLI note rather than a fake button.
+   - For unsupported generation, approval, email preparation, or menu-write workflows, show the next backend requirement or CLI note rather than a fake button.
 
 7. Validate and document.
    - Run `pnpm --dir web lint`, `pnpm --dir web typecheck`, and `pnpm --dir web build`.

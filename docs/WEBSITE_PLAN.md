@@ -22,7 +22,7 @@ The UI must present the system as an operations product, not a marketing site an
 - **Deterministic core respected**: the UI may trigger or display Python-owned outcomes, but must not duplicate allocation, dietary, validation, ingestion, or ordering rules.
 - **No silent fixes**: ambiguous data appears as findings or review states, not hidden UI smoothing.
 - **Dense but calm**: tables, status summaries, filters, and detail drawers should support repeat operator work without decorative clutter.
-- **Safety language is concrete**: labels should say what is blocked, unreviewed, approved, exported, or safe for restricted students.
+- **Safety language is concrete**: labels should say what is blocked, unreviewed, approved, email-ready, or safe for restricted students.
 
 ## Primary Users
 
@@ -140,7 +140,7 @@ Key content:
   - validation passed
   - order run generated
   - order approved
-  - caterer exports recorded
+  - caterer email snapshots recorded
 - session summary table grouped by school/caterer/date
 - caterer summary: offer count, forecast quantity, minimum status, order line count, email readiness
 - recent audit events scoped to the week
@@ -207,7 +207,7 @@ Purpose: browse order runs for a week.
 
 Key content:
 
-- table of runs with status, generated timestamp, generation metadata, allocation count, issue count, approved/exported state
+- table of runs with status, generated timestamp, generation metadata, allocation count, issue count, approved/caterer-email state
 - clear superseded vs active run state
 
 Primary actions:
@@ -225,7 +225,7 @@ Purpose: replace the review portions of `app/order_review_mvp.py`.
 
 Key content:
 
-- run header: status, generated/approved metadata, issue count, latest export state
+- run header: status, generated/approved metadata, issue count, latest email readiness
 - order lines table grouped by caterer/session/variant
 - allocation table with student, school, session, variant, dietary tags, absence/exclusion context
 - allocation issue panel
@@ -239,7 +239,7 @@ Primary actions:
 - approve generated, issue-free run with note/reason
 - reopen approved run with reason
 - record manual override intent with reason
-- open export workflow
+- open caterer email workflow
 
 Safety requirements:
 
@@ -271,8 +271,8 @@ Safety requirements:
 
 - label the visible workflow as "Caterer emails", with states such as "Email ready" and "Not emailed yet"
 - display persisted communication snapshots and recipient snapshots; do not render caterer email templates in TypeScript
-- first export creates or displays the immutable communication snapshot through a Python/backend or database contract
-- repeated exports append events without mutating the original snapshot
+- first email-preparation recording creates or displays the immutable communication snapshot through a Python/backend or database contract
+- repeated email-preparation recordings append events without mutating the original snapshot
 - live email sending is out of scope until a separate sent/delivery model exists
 
 ### Caterers
@@ -281,7 +281,7 @@ Purpose: manage and inspect caterer readiness.
 
 Key content:
 
-- caterer table with contacts, assigned schools, weekly minimums, menu item counts, latest review/export state
+- caterer table with contacts, assigned schools, weekly minimums, menu item counts, latest review/email readiness
 - detail page with contacts, menus, variants, minimums, historical order lines, and communications
 
 Primary actions:
@@ -420,19 +420,19 @@ Reusable app components:
 
 Use shadcn/ui primitives for buttons, dialogs, drawers/sheets, tabs, forms, popovers, tables, badges, tooltips, and toasts. Use Lucide icons for actions and status hints where the icon improves scanning.
 
-`ReasonDialog` is a shared pattern for approve, reopen, manual override intent, export recording, and review-changing writes. It uses one required reason text field with a minimum of 10 trimmed characters. Dialog titles and secondary fields are action-specific, but reason validation is shared.
+`ReasonDialog` is a shared pattern for approve, reopen, manual override intent, email preparation recording, and review-changing writes. It uses one required reason text field with a minimum of 10 trimmed characters. Dialog titles and secondary fields are action-specific, but reason validation is shared.
 
 ## Visual Direction
 
 The UI should feel like a precise operations console:
 
-- restrained neutral base with clear semantic color for success/warning/error/blocked/exported
+- restrained neutral base with clear semantic color for success/warning/error/blocked/email-ready
 - compact page headers and dense tables
 - no marketing hero sections
 - no decorative cards nested inside cards
 - cards only for repeated summary widgets or framed tools
 - clear page-level empty states rather than vague "no data" messages
-- status text should be explicit: `Generated`, `Approved`, `Exported`, `Blocked`, `Unreviewed`, `Superseded`
+- status text should be explicit: `Generated`, `Approved`, `Email ready`, `Blocked`, `Unreviewed`, `Superseded`
 
 Initial navigation labels:
 

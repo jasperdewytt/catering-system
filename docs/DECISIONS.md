@@ -139,7 +139,7 @@ Manual overrides are recorded in `manual_overrides` before any future override-a
 
 **Decision**: Treat suspicious, pseudonymous, and free-webmail caterer contacts as expected artefacts of the competition/synthetic dataset.
 
-The system should still surface recipient names and addresses verbatim in the order review UI and should snapshot the exact recipients used for each exported or sent communication. For this submission, these contact anomalies should not drive a dedicated verification workflow before communications persistence is implemented.
+The system should still surface recipient names and addresses verbatim in the order review UI and should snapshot the exact recipients used for each email-ready or sent communication. For this submission, these contact anomalies should not drive a dedicated verification workflow before communications persistence is implemented.
 
 **Why this shape**: The suspicious addresses are not real production contact data. The useful system behaviour for the submission is auditable communications state, not overfitting to fake-address patterns.
 
@@ -157,15 +157,15 @@ Room numbers are expected to be missing most of the time. Delivery notes and cat
 
 ## D-13 - Communication snapshot is not email delivery
 
-**Decision**: The persisted backend state currently called `exported` means an operator produced and recorded a send-ready communication snapshot from an approved, issue-free order run. It does not prove the email was sent or delivered.
+**Decision**: The persisted backend event currently stored as `communication_exported` means an operator produced and recorded a send-ready communication snapshot from an approved, issue-free order run. Operator-facing UI should present that state as "Email ready". It does not prove the email was sent or delivered.
 
-The first export for each `(order_run_id, caterer_id)` stores the immutable communication snapshot: exact recipients, subject, body, rendered text, delivery notes, template version, actor, reason, and timestamp. Repeated exports reuse that same snapshot and append export events. A human operator may then copy or download the recorded text and send it manually outside the system.
+The first email-preparation recording for each `(order_run_id, caterer_id)` stores the immutable communication snapshot: exact recipients, subject, body, rendered text, delivery notes, template version, actor, reason, and timestamp. Repeated caterer email preparation events reuse that same snapshot and append email preparation events. A human operator may then copy or download the recorded text and send it manually outside the system.
 
 The Next.js UI must not render caterer communication templates itself. It may display persisted communication snapshots and may call an explicit audited communication-recording contract. If a communication snapshot does not exist yet, the UI should show that a Python-owned email preparation action is required rather than assembling the draft in TypeScript.
 
-Operator-facing copy should avoid "export" as the workflow name. Use "Caterer emails", "Email ready", and "Not emailed yet" where that matches the visible workflow. Future live email sending should add a separate `sent` state or delivery event with provider metadata. It should not overload the existing snapshot/export event.
+Operator-facing copy should use "Caterer emails", "Email ready", and "Not emailed yet" where that matches the visible workflow. Future live email sending should add a separate `sent` state or delivery event with provider metadata. It should not overload the existing snapshot/email preparation event.
 
-**Why this shape**: The system needs a durable audit trail for what was prepared before it can safely send email. Separating "exported" from "sent" avoids claiming delivery that the current application cannot prove.
+**Why this shape**: The system needs a durable audit trail for what was prepared before it can safely send email. Separating "Email ready" from "Sent" avoids claiming delivery that the current application cannot prove.
 
 ---
 
@@ -188,7 +188,7 @@ Supabase SSR helpers should be isolated behind `web/lib/supabase/*` and package 
 **Why not Streamlit**:
 
 - Streamlit's reactive model and rendering ceiling produce a "data tool" feel; the submission target is a polished operator product.
-- Composing dense workflows (variant editor, dietary review, allocation grid, export drawer, audit trail) inside Streamlit forces awkward state passing and a flat layout.
+- Composing dense workflows (variant editor, dietary review, allocation grid, caterer email drawer, audit trail) inside Streamlit forces awkward state passing and a flat layout.
 - shadcn/ui + Tailwind give pixel-level control without bespoke design work, and Supabase's TypeScript SDK exposes RLS, real-time, and auth more cleanly than the Python client.
 - Auth, RLS-aware reads, and cookie-based SSR are first-class in `@supabase/ssr`; replicating them in Streamlit is friction.
 
@@ -196,7 +196,7 @@ Supabase SSR helpers should be isolated behind `web/lib/supabase/*` and package 
 
 - Python in `src/padea_catering/` remains the authority on ingestion, deterministic ordering, validation, order generation, and Python-owned audited operations.
 - Batch operations stay CLI-driven by default: ingestion, order generation, and validation preflight.
-- Simple operator-triggered writes from Next.js, such as approve/reopen/export metadata, may go through Server Actions that call explicit audited database contracts.
+- Simple operator-triggered writes from Next.js, such as approve/reopen/email preparation metadata, may go through Server Actions that call explicit audited database contracts.
 - The Next.js layer must not re-implement allocation, dietary safety, quantity logic, ingestion parsing, or validation rules.
 - If the UI needs to trigger Python jobs live, add a small HTTP/queue bridge such as FastAPI or a job runner endpoint. Do not import or shell into Python from the Next.js request path as the normal architecture.
 
@@ -204,7 +204,7 @@ Supabase SSR helpers should be isolated behind `web/lib/supabase/*` and package 
 
 1. Scaffold `web/` (Next.js, Tailwind, shadcn/ui, Supabase clients, generated types) with auth shell and mocked/static or server-only dev data.
 2. Phase 4 RLS policies and `security_invoker` views land before real browser-facing Supabase reads.
-3. Port menu setup, order review, approval, and export workflows from the Streamlit MVPs into `web/`.
+3. Port menu setup, order review, approval, and caterer email workflows from the Streamlit MVPs into `web/`.
 4. Once parity is verified end-to-end on the existing approved run, the Streamlit MVPs in `app/` are removed.
 
 **Why this shape**: the competition target is a finished, taste-forward catering product. Next.js + Supabase is the natural pairing for that level of polish without abandoning the deterministic Python core, the audit model, or the existing migrations.
@@ -256,7 +256,7 @@ For Phase 4 and later, prefer Postgres RPC functions for website writes that nee
 - order run approval
 - order run reopen
 - manual override intent recording
-- communication export event recording
+- communication email preparation event recording
 
 The existing Python audited actions can remain as verification harnesses and backend operations, but the website should not duplicate their internal rules in TypeScript. If a Python-owned operation has no RPC or HTTP/queue bridge yet, the UI should show the operation as unavailable or CLI-backed rather than recreating it.
 

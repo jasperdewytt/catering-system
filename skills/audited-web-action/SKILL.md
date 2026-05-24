@@ -1,6 +1,6 @@
 ---
 name: audited-web-action
-description: Implement or review Padea Next.js Server Actions for audited operator writes. Use when adding menu setup, dish variant review, offer selection, order approval/reopen, manual override intent, or communication export actions that must validate with Zod, resolve actor identity, capture reason/timestamp, call RPC/backend write contracts, and avoid duplicating Python-owned catering logic.
+description: Implement or review Padea Next.js Server Actions for audited operator writes. Use when adding menu setup, dish variant review, offer selection, order approval/reopen, manual override intent, or communication email preparation actions that must validate with Zod, resolve actor identity, capture reason/timestamp, call RPC/backend write contracts, and avoid duplicating Python-owned catering logic.
 ---
 
 # Audited Web Action
@@ -24,7 +24,7 @@ Read before editing:
 - Do not implement ordering, allocation, dietary safety, absence, exclusion, validation, quantity, or communication-template logic in TypeScript.
 - Do not rely on disabled client buttons for safety. Enforce on the server/RPC.
 - Do not use editable user metadata for authorization or audit display names.
-- Do not allow approval/reopen/export/manual override writes without actor, reason where required, and timestamp/audit trail.
+- Do not allow approval/reopen/caterer-email/manual override writes without actor, reason where required, and timestamp/audit trail.
 - Do not expose service-role or secret keys to `web/`.
 
 ## Implementation Workflow
@@ -49,7 +49,7 @@ Read before editing:
    - Let the contract enforce business invariants transactionally.
 
 5. Revalidate affected routes.
-   - Use `revalidatePath` for dashboard, week, order run, audit, or export routes affected by the write.
+   - Use `revalidatePath` for dashboard, week, order run, audit, or caterer email routes affected by the write.
    - Redirect only when the workflow expects navigation.
    - Return structured field/form errors for recoverable validation failures.
 

@@ -21,7 +21,7 @@ The system already has deterministic support for:
 - manual override recording via `manual_overrides`
 - deterministic copy-ready caterer email drafts
 
-Communications persistence is now implemented: approved, issue-free runs can record immutable communication snapshots, recipient snapshots, and export events before any live sending. LLM integration should remain optional and should build on those persisted records rather than generating ephemeral UI-only output.
+Communications persistence is now implemented: approved, issue-free runs can record immutable communication snapshots, recipient snapshots, and email preparation events before any live sending. LLM integration should remain optional and should build on those persisted records rather than generating ephemeral UI-only output.
 
 ---
 
@@ -336,8 +336,8 @@ API keys belong in `.env` (Python) or `web/.env.local` (Next.js, server-only —
 1. **Communications persistence first** — complete
    - `communications`
    - `communication_recipients`
-   - deterministic export action
-   - audit action for export
+   - deterministic email preparation action
+   - audit action for caterer email preparation
 
 2. **LLM plan scaffolding**
    - provider-neutral `padea_catering.llm` types
@@ -429,6 +429,6 @@ This plan does not add:
 
 Do not implement LLM features immediately.
 
-The next backend stage should remain communications persistence and export tracking. Once exported communications are durable and auditable, LLM email polish becomes a clean optional layer because the system can store both the deterministic draft and any accepted polished variant.
+The next backend stage should remain communications persistence and email snapshot tracking. Once email-ready communications are durable and auditable, LLM email polish becomes a clean optional layer because the system can store both the deterministic draft and any accepted polished variant.
 
 The first LLM feature worth implementing is probably **LLM order review storage**, because it is low-risk, advisory, and exercises the audit pattern without changing production decisions.

@@ -34,8 +34,8 @@ first design pass. All five are in here:
    weekly offers panel with minimum-order callout.
 3. **Order run detail** — header strip, tabs for lines / allocations /
    issues / contacts / approval history, reopen dialog with reason capture.
-4. **Exports** — caterer list, communication snapshot, recipients table,
-   rendered draft, export events timeline.
+4. **Caterer Emails** — caterer list, communication snapshot, recipients table,
+   rendered draft, email preparation events timeline.
 5. **Audit** — filterable append-only table, drawer with before/after JSON.
 
 A **Login** screen and minimal placeholders for the remaining routes
@@ -46,7 +46,7 @@ nav doesn't dead-end.
 
 Open `index.html`. The app boots into the Dashboard. Use the left rail to move
 between screens; some screens have CTAs that navigate into others (Dashboard
-"Start exports", Order run "Open exports", Reopen run dialog, etc.).
+"Prepare caterer emails", Order run "Open caterer emails", Reopen run dialog, etc.).
 
 ## Component conventions
 

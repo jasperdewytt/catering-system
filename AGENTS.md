@@ -134,7 +134,7 @@ These are retained for internal verification only; new operator-facing functiona
   * `src/padea_catering/ingestion/`: parse and normalise source files.
   * `src/padea_catering/ordering/`: attendance resolution, menu filtering, meal allocation, and order generation.
   * `src/padea_catering/validation/`: preflight checks and system invariants.
-  * `src/padea_catering/operations/`: audited backend actions (approve/reopen, export, override recording).
+  * `src/padea_catering/operations/`: audited backend actions (approve/reopen, email preparation, override recording).
   * `src/padea_catering/llm/`: provider-neutral LLM adapters (advisory features only).
 * `supabase/migrations/`: database schema changes.
 * `data/raw/`: original source files; do not mutate.
@@ -236,7 +236,7 @@ Recommended skills:
 ## Frontend Conventions (`web/`)
 
 * Default to **React Server Components**. Drop into client components only for interactivity, forms, optimistic UI, or hooks.
-* All writes go through **Server Actions**. Simple operator actions may use typed TypeScript wrappers around audited SQL contracts; Python-owned jobs (ingestion, validation, order generation) remain CLI/service operations unless a deliberate HTTP/queue bridge is added. Server actions must record actor and reason where the domain requires it (approval, override, export).
+* All writes go through **Server Actions**. Simple operator actions may use typed TypeScript wrappers around audited SQL contracts; Python-owned jobs (ingestion, validation, order generation) remain CLI/service operations unless a deliberate HTTP/queue bridge is added. Server actions must record actor and reason where the domain requires it (approval, override, email preparation).
 * Use `@supabase/ssr` for the server Supabase client and `@supabase/supabase-js` only inside client components.
 * Keep Supabase SSR setup isolated behind `web/lib/supabase/*` and pin package versions; auth helper APIs can change.
 * RLS is the security boundary, not React state. Anonymous reads are forbidden until Phase 4 RLS policies land.

@@ -19,7 +19,7 @@ The main click-through prototype entry is:
 
 `docs/design-handoff/project/ui_kits/operator/index.html`
 
-Open that file in a browser to review the designed operator screens. It covers Dashboard, Menu setup, Order run detail, Exports, Audit, Login, and placeholders for the remaining navigation routes.
+Open that file in a browser to review the designed operator screens. It covers Dashboard, Menu setup, Order run detail, Caterer Emails, Audit, Login, and placeholders for the remaining navigation routes.
 
 ## Design Sources
 
@@ -40,9 +40,9 @@ Preserve these design rules:
 
 - Keep the UI dense, calm, and operations-first.
 - Use crimson sparingly for brand, primary actions, active navigation, and focus rings.
-- Use the fixed status vocabulary: Ready, Unreviewed, Generated, Approved, Exported, Blocked, Superseded.
+- Use the fixed status vocabulary: Ready, Unreviewed, Generated, Approved, Email ready, Blocked, Superseded.
 - Use concrete safety language. Do not imply data has been fixed or sent unless the underlying audited action exists.
-- Keep audit context near approvals, exports, overrides, and reopen actions.
+- Keep audit context near approvals, email preparation, overrides, and reopen actions.
 - Do not duplicate Python-owned catering rules in the UI.
 
 ## Current Scope

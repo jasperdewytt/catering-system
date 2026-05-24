@@ -22,7 +22,7 @@ _Update this file whenever a significant phase completes or the active focus shi
   - `data/raw/absences.pdf` — 10 individual student absences across 6 school/date groups
 - [x] `docs/DATA_INVENTORY.md` written — field names, types, row counts, samples, cross-file reference map
 - [x] `docs/EDGE_CASES.md` written — 24 edge cases (E-01..E-24): E-09 and E-16 now resolved by D-11/D-12, E-23 updates D-03, E-02 resolved on inspection, E-06 deferred, remaining cases open
-- [x] `docs/DECISIONS.md` written — D-01..D-14 decided (student PK, exclusion model, day column, null dietary, multi-session, opt-out, menu-item count, deterministic dietary matching, customisable dish variants, approval/audit, synthetic contact anomalies, delivery-location granularity, export-vs-send semantics, Next.js operator UI)
+- [x] `docs/DECISIONS.md` written — D-01..D-14 decided (student PK, exclusion model, day column, null dietary, multi-session, opt-out, menu-item count, deterministic dietary matching, customisable dish variants, approval/audit, synthetic contact anomalies, delivery-location granularity, communication-snapshot-vs-send semantics, Next.js operator UI)
 - [x] Supabase project connected (`fogxaakhlpqnjmznyurm`) and MCP authenticated
 - [x] **Phase 1 schema applied** — 14 source/validation tables across 7 migrations in `supabase/migrations/`:
   - `20260522120000_extensions_and_helpers.sql` — pgcrypto, citext, trigger fn, 3 enum types
@@ -69,14 +69,14 @@ _Update this file whenever a significant phase completes or the active focus shi
   - reviewing variant dietary/ingredient flags and saving `operator_reviewed` metadata
   - running validation and order-generation dry runs
 - [x] **Generated order run achieved** — `order_run_id=9b23f6a1-38f1-4ec7-a933-d4f6a1d2d6f0`, `status=generated`, 320 allocations, 33 order lines, 0 issues.
-- [x] **Narrow Order Review MVP implemented** — `uv run streamlit run app/order_review_mvp.py` provides a read-only/export-only UI for:
+- [x] **Narrow Order Review MVP implemented** — `uv run streamlit run app/order_review_mvp.py` provides a read-only/caterer-email-only UI for:
   - selecting generated order runs
   - reviewing order lines, allocations, contacts, and delivery notes
   - preparing deterministic copy-ready caterer email drafts
   - downloading draft text files
 - [x] **Phase 3 approval/audit implemented** — order runs can be approved/reopened through audited backend actions. `audit_log` and `manual_overrides` provide the durable record path required before live sending or manual correction logic.
-- [x] **Phase 3 communications persistence implemented** — approved, issue-free runs can record send-ready caterer email snapshots before any live sending. The first persisted snapshot per `(order_run_id, caterer_id)` captures subject/body/rendered text, delivery notes, recipient snapshots, template version, actor/timestamps, and an audit-log row. Repeated recordings reuse the snapshot and append events. D-13 now separates internal export/snapshot tokens from operator-facing "Caterer emails" language.
-- [x] **Approved-run export workflow verified** — the approved zero-issue run has persisted export snapshots for all four caterers, with recipient snapshots, export events, and matching `communication_exported` audit-log rows.
+- [x] **Phase 3 communications persistence implemented** — approved, issue-free runs can record send-ready caterer email snapshots before any live sending. The first persisted snapshot per `(order_run_id, caterer_id)` captures subject/body/rendered text, delivery notes, recipient snapshots, template version, actor/timestamps, and an audit-log row. Repeated recordings reuse the snapshot and append events. D-13 now separates internal snapshot/audit tokens from operator-facing "Caterer emails" language.
+- [x] **Approved-run caterer email workflow verified** — the approved zero-issue run has persisted email snapshots for all four caterers, with recipient snapshots, email preparation events, and matching `communication_exported` audit-log rows.
 - [x] **LLM integration plan written** — `docs/LLM_INTEGRATION_PLAN.md` defines advisory-only LLM use cases, forbidden safety-critical uses, provider boundaries, and the recommended order after communications persistence.
 - [x] **Operator UI direction decided** — see [D-14](DECISIONS.md#d-14---operator-ui-is-nextjs--supabase-not-streamlit). The final operator interface is Next.js 16 + TypeScript in `web/`, using shadcn/ui, Tailwind, and `@supabase/ssr`. Streamlit MVPs in `app/` become legacy verification harnesses and are scheduled for removal once `web/` reaches parity.
 - [x] **Operator UI planning tightened after architecture review** — `docs/WEBSITE_IMPLEMENTATION_STAGES.md` now stages the build, `docs/WEBSITE_DATA_CONTRACTS.md` maps screens to views/write contracts, and D-15..D-17 decide operator identity, active-week derivation, and audited website write boundaries.
@@ -91,7 +91,7 @@ _Update this file whenever a significant phase completes or the active focus shi
 
 **Add audited web write contracts and continue porting read-only operator pages without moving Python-owned rules into TypeScript.**
 
-The deterministic Python backend can write generated order runs end-to-end, and communications persistence captures recipient snapshots and export events. The Streamlit MVPs have proven the workflow against the live DB, and the first Next.js pages now read real authenticated operational data. The implemented allocation algorithm remains:
+The deterministic Python backend can write generated order runs end-to-end, and communications persistence captures recipient snapshots and email preparation events. The Streamlit MVPs have proven the workflow against the live DB, and the first Next.js pages now read real authenticated operational data. The implemented allocation algorithm remains:
 
 1. For each non-cancelled session, walk the enrolled students minus opted-out, year-excluded, and absent.
 2. For each student, pick a safe offered variant given their dietary tags.
@@ -108,7 +108,7 @@ The current approved run has no allocation issues. Building-only delivery locati
 4. **Add remaining read-only pages** — validation, orders, caterer emails, audit, caterers, and students as their Phase 4 views are added.
 5. **Restore complete generated `web/types/supabase.ts`** once Supabase CLI auth or reliable direct Postgres connectivity is available.
 6. **Retire Streamlit MVPs** once parity is verified.
-7. Live email sending only after the persisted export workflow is operator-confirmed in `web/`.
+7. Live email sending only after the persisted caterer email workflow is operator-confirmed in `web/`.
 8. `session_validation_findings` table to persist full Python validation output before live validation-history UI, if needed beyond the submission readiness summary.
 9. Submission artefacts.
 
@@ -116,13 +116,13 @@ The current approved run has no allocation issues. Building-only delivery locati
 
 - final UI replacement for `app/menu_setup_mvp.py`, `app/order_review_mvp.py`, and `app/streamlit_app.py` — these are now classified as legacy under D-14 and tracked for removal once `web/` ships parity
 - manual override application logic — Phase 3 records overrides but does not yet mutate generated allocations/order lines
-- live email sending — intentionally deferred until persisted export snapshots have been operator-reviewed in `web/`
-- web-callable audited RPC/write contracts for menu setup, approval/reopen, manual override intent, and communication export recording
+- live email sending — intentionally deferred until persisted email snapshots have been operator-reviewed in `web/`
+- web-callable audited RPC/write contracts for menu setup, approval/reopen, manual override intent, and communication email preparation recording
 - contact verification workflow is no longer a priority for the competition dataset; suspicious addresses should remain visible and auditable, but not block communications persistence
 - LLM integration is planned but intentionally deferred until communications persistence exists; first likely LLM feature is advisory order-review storage
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
 - `session_validation_findings` — persisted Python validation output for full validation-history UI; not required before Stage 1 scaffold
-- remaining `security_invoker` views for validation, order detail, exports, audit index, caterers, and students
+- remaining `security_invoker` views for validation, order detail, caterer emails, audit index, caterers, and students
 
 ## Parking Lot
 

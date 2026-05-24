@@ -8,7 +8,7 @@ operations product for catering coordinators and reviewers.
 
 **Padea** is a tutoring company. Its catering operations team runs a weekly
 service cycle: source-data ingestion → menu setup → validation → order
-generation → review → approval → caterer exports → audit. The current
+generation → review → approval → caterer emails → audit. The current
 operator surface is a set of Streamlit MVPs (`app/menu_setup_mvp.py`,
 `app/order_review_mvp.py`); the next surface is a Next.js + Supabase web app
 (see decision **D-14**), and this design system is the visual + interaction
@@ -21,10 +21,10 @@ visibility**, not delight.
 
 ### Sources provided
 
-| Source | Where | Notes |
-| --- | --- | --- |
-| Brand logo | `uploads/padeaeducation_logo.jpg` | 200×200 JPG, crimson square with white graduation cap. Sampled brand red = `#A51C30`. |
-| Product spec | The "Operator Website Plan" pasted into the brief | Drives IA, page plan, components, visual direction. |
+| Source       | Where                                             | Notes                                                                                 |
+| ------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Brand logo   | `uploads/padeaeducation_logo.jpg`                 | 200×200 JPG, crimson square with white graduation cap. Sampled brand red = `#A51C30`. |
+| Product spec | The "Operator Website Plan" pasted into the brief | Drives IA, page plan, components, visual direction.                                   |
 
 > Heads-up: there is **no existing codebase, Figma, or component library**
 > attached. The visual direction below is synthesised from the spec's stated
@@ -48,7 +48,7 @@ visibility**, not delight.
         ├── README.md
         ├── index.html         — click-thru of the five core screens
         ├── *.jsx              — components (AppShell, DataTable, etc.)
-        └── screens/*.jsx      — Dashboard, Menu, Order Run, Exports, Audit
+        └── screens/*.jsx      — Dashboard, Menu, Order Run, Caterer Emails, Audit
 ```
 
 ---
@@ -86,7 +86,7 @@ asks for the opposite. The system follows it literally.
   issues" beats "Looks like we need to review a few things". The UI never
   euphemises.
 - **Stateful nouns, not friendly verbs.** Buttons say "Approve run", "Record
-  export", "Reopen run" — not "Looks good!" / "Send it" / "Try again".
+  prepared email", "Reopen run" — not "Looks good!" / "Send it" / "Try again".
 - **No silent fixes** is a content rule as much as a behaviour rule. If data
   is ambiguous we **say what is unresolved**; we do not paper over it.
 - **No exclamation marks. No emoji.** Not in UI strings, not in error toasts,
@@ -114,29 +114,29 @@ asks for the opposite. The system follows it literally.
 The system has a fixed list of state words. Use these literally; do not
 invent synonyms.
 
-| Token | Use for |
-| --- | --- |
-| `Ready` | Source data ingested, prereqs met. |
-| `Unreviewed` | A dish variant or item is missing required review. |
-| `Generated` | An order run has been produced but not approved. |
-| `Approved` | An order run has been approved with a note. |
-| `Exported` | A caterer communication has been recorded as exported. |
-| `Blocked` | Has at least one validation error or allocation issue. |
-| `Superseded` | An earlier run replaced by a newer one. |
-| `Issue` / `Finding` | A single validation or allocation problem. |
+| Token               | Use for                                                   |
+| ------------------- | --------------------------------------------------------- |
+| `Ready`             | Source data ingested, prereqs met.                        |
+| `Unreviewed`        | A dish variant or item is missing required review.        |
+| `Generated`         | An order run has been produced but not approved.          |
+| `Approved`          | An order run has been approved with a note.               |
+| `Email ready`       | A caterer communication has been recorded as email-ready. |
+| `Blocked`           | Has at least one validation error or allocation issue.    |
+| `Superseded`        | An earlier run replaced by a newer one.                   |
+| `Issue` / `Finding` | A single validation or allocation problem.                |
 
-We say **"exported"**, never "sent". Live email is out of scope; the UI must
+We say **"email-ready"**, never "sent". Live email is out of scope; the UI must
 not imply we sent anything.
 
 ### Examples
 
-| Don't | Do |
-| --- | --- |
+| Don't                              | Do                                                       |
+| ---------------------------------- | -------------------------------------------------------- |
 | "Looking good — ready to approve!" | "Run 24-W18-03 generated, 0 issues. Approval available." |
-| "Send to caterer" | "Record export — Padea Kitchen Co." |
-| "Oops, something went wrong" | "Save failed: 2 of 4 offers rejected. Open issues." |
-| "All set ✅" | "All 14 variants reviewed for week of 6 Oct." |
-| "👀 Heads up" | "3 variants unreviewed. Cannot generate run." |
+| "Send to caterer"                  | "Record prepared email — Padea Kitchen Co."              |
+| "Oops, something went wrong"       | "Save failed: 2 of 4 offers rejected. Open issues."      |
+| "All set ✅"                       | "All 14 variants reviewed for week of 6 Oct."            |
+| "👀 Heads up"                      | "3 variants unreviewed. Cannot generate run."            |
 
 ---
 
@@ -302,26 +302,26 @@ Stripe Dashboard with one Padea-red point of light.
 
 Common icons mapped to operator-UI concepts (Lucide names):
 
-| Concept | Icon |
-| --- | --- |
-| Dashboard | `LayoutDashboard` |
-| Weeks | `CalendarDays` |
-| Menu setup | `UtensilsCrossed` |
-| Validation | `ShieldCheck` |
-| Orders | `ListChecks` |
-| Order run | `FileCog` |
-| Exports | `Send` (used at rest, not as "send live") |
-| Caterers | `Building2` |
-| Students | `Users` |
-| Audit | `History` |
-| Settings | `Settings` |
-| Approve | `CircleCheck` |
-| Reopen | `Undo2` |
-| Override | `Pencil` |
-| Blocked | `OctagonAlert` |
-| Unreviewed | `CircleAlert` |
-| Generated | `Sparkle` (sparingly) |
-| Superseded | `Archive` |
+| Concept        | Icon                                      |
+| -------------- | ----------------------------------------- |
+| Dashboard      | `LayoutDashboard`                         |
+| Weeks          | `CalendarDays`                            |
+| Menu setup     | `UtensilsCrossed`                         |
+| Validation     | `ShieldCheck`                             |
+| Orders         | `ListChecks`                              |
+| Order run      | `FileCog`                                 |
+| Caterer Emails | `Send` (used at rest, not as "send live") |
+| Caterers       | `Building2`                               |
+| Students       | `Users`                                   |
+| Audit          | `History`                                 |
+| Settings       | `Settings`                                |
+| Approve        | `CircleCheck`                             |
+| Reopen         | `Undo2`                                   |
+| Override       | `Pencil`                                  |
+| Blocked        | `OctagonAlert`                            |
+| Unreviewed     | `CircleAlert`                             |
+| Generated      | `Sparkle` (sparingly)                     |
+| Superseded     | `Archive`                                 |
 
 ---
 

@@ -22,9 +22,9 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Do not expose the Supabase service-role key to `web/`.
 - Do not allow anonymous reads.
 - Do not duplicate ingestion, validation, allocation, dietary, exclusion, absence, ordering, or quantity rules in TypeScript.
-- Do not add unaudited writes for approvals, reopen actions, exports, manual overrides, dietary review, or menu-offer changes.
+- Do not add unaudited writes for approvals, reopen actions, caterer emails, manual overrides, dietary review, or menu-offer changes.
 - Do not write directly to operational tables from Server Actions when an audited RPC/backend contract is required.
-- Do not imply provider-confirmed delivery until a separate sent/delivery model exists. Operator-facing copy should say "Caterer emails", "Email ready", or "Not emailed yet" instead of making "export" the workflow.
+- Do not imply provider-confirmed delivery until a separate sent/delivery model exists. Operator-facing copy should say "Caterer emails", "Email ready", or "Not emailed yet"; avoid making preparation/downloading language the operator workflow.
 - Do not copy the Claude Design JSX prototype directly into production. Re-implement with Next.js, TypeScript, Tailwind, shadcn/ui, Radix, Lucide, and Supabase SSR.
 - Do not create a Python job trigger from the UI until a deliberate HTTP or queue bridge exists.
 
@@ -88,7 +88,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Build shadcn-compatible primitives for buttons, badges, cards, alerts, tabs, inputs, tables, empty states, and app shell layout.
 - Use Lucide icons in production instead of the prototype's inline icon set.
 - Use the design handoff as visual reference for icon concepts, but source icons from `lucide-react`; do not treat `Icons.jsx` as the production icon inventory.
-- Implement fixed status vocabulary: `Ready`, `Unreviewed`, `Generated`, `Approved`, `Exported`, `Blocked`, `Superseded`.
+- Implement fixed status vocabulary: `Ready`, `Unreviewed`, `Generated`, `Approved`, `Email ready`, `Blocked`, `Superseded`.
 - Add reusable loading, empty, error, and RLS-unavailable states.
 
 **Exit criteria**
@@ -139,7 +139,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Prefer `security_invoker` views for UI read models where views are needed.
 - Grant only the required access to `authenticated`.
 - Keep `anon` denied for operational data.
-- Add the read models sketched in `docs/WEBSITE_DATA_CONTRACTS.md` for dashboard, weeks, week overview, validation summaries, order runs, exports, audit, caterers, and students as needed.
+- Add the read models sketched in `docs/WEBSITE_DATA_CONTRACTS.md` for dashboard, weeks, week overview, validation summaries, order runs, caterer emails, audit, caterers, and students as needed.
 - Add the active-week read model from D-16 rather than an active-week config table.
 - Extend `audit_log.action` for menu setup audit coverage before Stage 6: `dish_variant_created`, `dish_variant_reviewed`, `dish_variant_availability_updated`, and `menu_offers_updated`.
 - Add or plan web-callable RPC/write contracts for Stage 6-8 writes before exposing the corresponding UI controls.
@@ -193,7 +193,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Implement Weeks index and Week overview against typed read models.
 - Implement Validation read view using `operator_validation_summary`; later adopt persisted `session_validation_findings` if that table is added.
 - Implement Orders index and Order run detail read views.
-- Implement Exports read view showing persisted snapshots, recipients, rendered drafts, and export events.
+- Implement Caterer Emails read view showing persisted snapshots, recipients, rendered drafts, and email preparation events.
 - Implement Audit read view with filters and detail drawer.
 - Implement Caterers and Students read/detail pages as inspection surfaces.
 
@@ -269,19 +269,19 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Render persisted caterer communication snapshots only.
 - Show recipient snapshots, delivery notes, subject/body/rendered text, template version, and email preparation events.
 - Add Server Action to record a prepared caterer email through an audited RPC/backend contract.
-- Preserve first-snapshot immutability and append repeated export events.
+- Preserve first-snapshot immutability and append repeated email preparation events.
 - Add copy/download affordances for rendered text.
 
 **Exit criteria**
 
 - Caterer email workflow parity with `app/order_review_mvp.py`.
 - Email preparation events are persisted and visible in the audit trail.
-- UI language avoids "export" as the operator workflow name.
+- UI language uses "Caterer emails" as the operator workflow name.
 
 **Do not**
 
 - Add live email sending.
-- Mutate an existing communication snapshot during repeated export recording.
+- Mutate an existing communication snapshot during repeated email preparation recording.
 - Build subject/body/rendered text in TypeScript.
 
 ## Stage 9 - Python Job Bridge
@@ -314,7 +314,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 **Tasks**
 
 - Add focused unit/component tests for high-risk components and Server Actions.
-- Add Playwright coverage for login, read-only inspection, menu setup, approval/reopen, export recording, and audit visibility.
+- Add Playwright coverage for login, read-only inspection, menu setup, approval/reopen, email preparation recording, and audit visibility.
 - Add a deterministic test-data seed/reset strategy for local or Supabase branch E2E runs before Playwright. Prefer a Python helper that reuses existing ingestion/order-generation code, or a documented branch database reset flow.
 - Verify keyboard focus, labels, dialogs, tables, and form errors.
 - Check desktop and mobile layouts against the design handoff.
