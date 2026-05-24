@@ -12,10 +12,126 @@ export type Database = {
   };
   public: {
     Tables: {
-      [_ in never]: never;
+      operators: {
+        Row: {
+          id: string;
+          display_name: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          display_name: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          display_name?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
-      [_ in never]: never;
+      operator_audit_events: {
+        Row: {
+          audit_id: string | null;
+          created_at: string | null;
+          actor_name: string | null;
+          action: string | null;
+          display_action: string | null;
+          entity_type: string | null;
+          entity_id: string | null;
+          order_run_id: string | null;
+          reason: string | null;
+          before_state: Json | null;
+          after_state: Json | null;
+        };
+        Relationships: [];
+      };
+      operator_current_week: {
+        Row: {
+          week_start: string | null;
+          week_end: string | null;
+          session_count: number | null;
+          latest_order_run_id: string | null;
+          latest_order_run_status: string | null;
+        };
+        Relationships: [];
+      };
+      operator_order_runs: {
+        Row: {
+          order_run_id: string | null;
+          week_start: string | null;
+          status: string | null;
+          generated_at: string | null;
+          generated_by: string | null;
+          approved_at: string | null;
+          approved_by: string | null;
+          approval_note: string | null;
+          allocation_count: number | null;
+          line_count: number | null;
+          issue_count: number | null;
+          exported_caterer_count: number | null;
+          is_latest: boolean | null;
+        };
+        Relationships: [];
+      };
+      operator_week_sessions: {
+        Row: {
+          week_start: string | null;
+          session_id: string | null;
+          session_date: string | null;
+          school_id: string | null;
+          school_name: string | null;
+          caterer_id: string | null;
+          caterer_name: string | null;
+          manager_name: string | null;
+          manager_mobile: string | null;
+          building: string | null;
+          enrolled_count: number | null;
+          orderable_student_count: number | null;
+          cancelled_count: number | null;
+          latest_order_line_count: number | null;
+          export_state: string | null;
+        };
+        Relationships: [];
+      };
+      operator_week_status: {
+        Row: {
+          week_start: string | null;
+          source_data_ready: boolean | null;
+          menu_offers_ready: boolean | null;
+          variant_review_ready: boolean | null;
+          validation_state: string | null;
+          latest_order_run_id: string | null;
+          latest_order_run_status: string | null;
+          approval_state: string | null;
+          export_state: string | null;
+          blocking_issue_count: number | null;
+          warning_count: number | null;
+          unreviewed_variant_count: number | null;
+          missing_offer_caterer_count: number | null;
+        };
+        Relationships: [];
+      };
+      operator_weeks: {
+        Row: {
+          week_start: string | null;
+          week_end: string | null;
+          session_count: number | null;
+          student_count: number | null;
+          caterer_count: number | null;
+          latest_order_run_id: string | null;
+          latest_order_run_status: string | null;
+          approved_at: string | null;
+          exported_caterer_count: number | null;
+          allocation_issue_count: number | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       [_ in never]: never;
