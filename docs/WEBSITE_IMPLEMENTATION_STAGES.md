@@ -3,6 +3,7 @@
 **Status**: Planning guide; Stage 1 scaffold complete and Phase 4 is next  
 **Last updated**: 2026-05-23  
 **Related docs**:
+
 - [Operator Website Plan](WEBSITE_PLAN.md)
 - [Design Handoff](design.md)
 - [Website Data Contracts](WEBSITE_DATA_CONTRACTS.md)
@@ -23,7 +24,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Do not duplicate ingestion, validation, allocation, dietary, exclusion, absence, ordering, or quantity rules in TypeScript.
 - Do not add unaudited writes for approvals, reopen actions, exports, manual overrides, dietary review, or menu-offer changes.
 - Do not write directly to operational tables from Server Actions when an audited RPC/backend contract is required.
-- Do not imply live email sending. Use "exported" until a separate sent/delivery model exists.
+- Do not imply provider-confirmed delivery until a separate sent/delivery model exists. Operator-facing copy should say "Caterer emails", "Email ready", or "Not emailed yet" instead of making "export" the workflow.
 - Do not copy the Claude Design JSX prototype directly into production. Re-implement with Next.js, TypeScript, Tailwind, shadcn/ui, Radix, Lucide, and Supabase SSR.
 - Do not create a Python job trigger from the UI until a deliberate HTTP or queue bridge exists.
 
@@ -259,23 +260,23 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Approve runs based only on client-side checks.
 - Display `order_run_unapproved` verbatim; map it to "Reopen run" in UI copy.
 
-## Stage 8 - Export Workflow Writes
+## Stage 8 - Caterer Email Workflow Writes
 
-**Goal**: Port deterministic communication export tracking into the web app.
+**Goal**: Port deterministic caterer email snapshot tracking into the web app.
 
 **Tasks**
 
 - Render persisted caterer communication snapshots only.
-- Show recipient snapshots, delivery notes, subject/body/rendered text, template version, and export events.
-- Add Server Action to record export for a caterer through an audited RPC/backend contract.
+- Show recipient snapshots, delivery notes, subject/body/rendered text, template version, and email preparation events.
+- Add Server Action to record a prepared caterer email through an audited RPC/backend contract.
 - Preserve first-snapshot immutability and append repeated export events.
 - Add copy/download affordances for rendered text.
 
 **Exit criteria**
 
-- Export workflow parity with `app/order_review_mvp.py`.
-- Export events are persisted and visible in the audit trail.
-- UI language says "exported", not "sent".
+- Caterer email workflow parity with `app/order_review_mvp.py`.
+- Email preparation events are persisted and visible in the audit trail.
+- UI language avoids "export" as the operator workflow name.
 
 **Do not**
 

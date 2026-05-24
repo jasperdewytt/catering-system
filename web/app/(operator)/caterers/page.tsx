@@ -10,7 +10,7 @@ export default function CaterersPage() {
       checkpoints={[
         { label: "Contacts", status: "Blocked" },
         { label: "Menu review", status: "Unreviewed" },
-        { label: "Export state", status: "Exported" },
+        { label: "Email readiness", status: "Exported" },
       ]}
     />
   );

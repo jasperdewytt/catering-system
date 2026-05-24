@@ -14,8 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CompactTable, Td, Th } from "@/components/ui/table";
 import {
+  formatAuditAction,
   formatDate,
   formatDateTime,
+  formatEmailState,
   formatStatus,
   statusToken,
 } from "@/lib/operator-display";
@@ -109,9 +111,11 @@ export default async function DashboardPage() {
       } warning`,
     },
     {
-      label: "Export",
+      label: "Caterer emails",
       value: weekStatus?.export_state ?? null,
-      detail: `${latestOrderRun?.exported_caterer_count ?? 0} persisted caterer snapshot(s)`,
+      detail: `${formatEmailState(weekStatus?.export_state ?? null)} · ${
+        latestOrderRun?.exported_caterer_count ?? 0
+      } caterer email snapshot(s) ready`,
     },
   ];
 
@@ -260,7 +264,7 @@ export default async function DashboardPage() {
                   >
                     <div className="flex items-center justify-between gap-3 text-sm">
                       <span className="font-medium">
-                        {event.display_action ?? formatStatus(event.action)}
+                        {formatAuditAction(event.display_action, event.action)}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {formatDateTime(event.created_at)}
@@ -277,7 +281,7 @@ export default async function DashboardPage() {
               <EmptyState
                 icon={Clock3}
                 title="No audited activity yet"
-                description="Approvals, exports, and manual notes will appear here after audited workflows run."
+                description="Approvals, email preparation, and manual notes will appear here after audited workflows run."
               />
             )}
           </CardContent>

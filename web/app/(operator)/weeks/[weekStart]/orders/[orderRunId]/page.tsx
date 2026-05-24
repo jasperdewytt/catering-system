@@ -17,7 +17,7 @@ export default async function OrderRunDetailPage({
         { label: "Run", status: "Generated" },
         { label: "Approval", status: "Approved" },
         { label: "Issues", status: "Blocked" },
-        { label: "Exports", status: "Exported" },
+        { label: "Emails", status: "Exported" },
       ]}
     />
   );

@@ -3,6 +3,7 @@
 **Status**: Draft for Next.js operator UI design; Stage 1 shell scaffolded  
 **Last updated**: 2026-05-23  
 **Related decisions**:
+
 - [D-14 - Operator UI is Next.js + Supabase, not Streamlit](DECISIONS.md#d-14---operator-ui-is-nextjs--supabase-not-streamlit)
 - [D-15 - Operator identity and Supabase Auth model](DECISIONS.md#d-15---operator-identity-and-supabase-auth-model)
 - [D-16 - Active week derivation for the operator UI](DECISIONS.md#d-16---active-week-derivation-for-the-operator-ui)
@@ -10,14 +11,14 @@
 
 ## Purpose
 
-The website is the final operator surface for Padea catering operations. It should let a coordinator move from source data readiness through weekly menu setup, order review, approval, export, and audit review without needing to inspect raw database tables or run Streamlit tools.
+The website is the final operator surface for Padea catering operations. It should let a coordinator move from source data readiness through weekly menu setup, order review, approval, caterer email preparation, and audit review without needing to inspect raw database tables or run Streamlit tools.
 
 The UI must present the system as an operations product, not a marketing site and not a generic admin panel. It should make the weekly catering run easy to scan, hard to misuse, and explicit about unresolved safety or data issues.
 
 ## Product Principles
 
 - **Operational first**: the first screen should show the next task and a short task list for the current catering week.
-- **Audit visible by default**: approvals, exports, overrides, and actor/reason metadata should be surfaced near the action they explain.
+- **Audit visible by default**: approvals, caterer email preparation, overrides, and actor/reason metadata should be surfaced near the action they explain.
 - **Deterministic core respected**: the UI may trigger or display Python-owned outcomes, but must not duplicate allocation, dietary, validation, ingestion, or ordering rules.
 - **No silent fixes**: ambiguous data appears as findings or review states, not hidden UI smoothing.
 - **Dense but calm**: tables, status summaries, filters, and detail drawers should support repeat operator work without decorative clutter.
@@ -25,8 +26,8 @@ The UI must present the system as an operations product, not a marketing site an
 
 ## Primary Users
 
-- **Operations coordinator**: prepares weekly menu offers, reviews generated orders, approves runs, exports caterer drafts, and records override reasons.
-- **Reviewer/manager**: checks order readiness, export history, audit trail, and exceptions before the submission is considered complete.
+- **Operations coordinator**: prepares weekly menu offers, reviews generated orders, approves runs, prepares caterer emails, and records override reasons.
+- **Reviewer/manager**: checks order readiness, caterer email readiness, audit trail, and exceptions before the submission is considered complete.
 
 Future roles can be added later, but Phase 4 starts with one operator class backed by Supabase Auth, RLS, and the `public.operators` profile table from D-15.
 
@@ -89,7 +90,7 @@ Key content:
 
 - next task card with the highest-priority operator action
 - "Tasks to complete" list for menu setup, decision review, approval, and caterer email preparation
-- "Needs a decision" queue for blocking errors, unreviewed variants, missing offers, allocation issues, and unexported approved caterer drafts
+- "Needs a decision" queue for blocking errors, unreviewed variants, missing offers, allocation issues, and caterer emails not yet ready
 - upcoming sessions grouped by date/school/caterer
 - latest audit activity
 
@@ -98,7 +99,7 @@ Primary actions:
 - open active week
 - continue menu setup
 - review latest order run
-- open export workflow
+- open caterer email workflow
 
 Empty/loading states:
 
@@ -116,7 +117,7 @@ Purpose: browse service weeks and historical run state.
 
 Key content:
 
-- table of service weeks with generated/approved/exported status
+- table of service weeks with generated/approved/caterer-email status
 - counts for sessions, students, caterers, menu offers, order lines, allocation issues
 - filters for status and date range
 
@@ -141,7 +142,7 @@ Key content:
   - order approved
   - caterer exports recorded
 - session summary table grouped by school/caterer/date
-- caterer summary: offer count, forecast quantity, minimum status, order line count, export state
+- caterer summary: offer count, forecast quantity, minimum status, order line count, email readiness
 - recent audit events scoped to the week
 
 Primary actions:
@@ -149,7 +150,7 @@ Primary actions:
 - set up menu
 - view validation
 - open latest order
-- open exports
+- open caterer emails
 
 ### Menu Setup
 
@@ -247,9 +248,9 @@ Safety requirements:
 - manual overrides should not imply allocation mutation until override application logic exists
 - manual override intent may use the existing override types: `allocation`, `order_line`, `student_attendance`, `dietary_resolution`, `contact`, `other`
 
-### Exports
+### Caterer Emails
 
-Purpose: replace the communication export portions of `app/order_review_mvp.py`.
+Purpose: replace the communication preparation portions of `app/order_review_mvp.py`.
 
 Key content:
 
@@ -257,18 +258,18 @@ Key content:
 - recipient snapshots: to/cc/name/contact role
 - deterministic subject/body/rendered text preview
 - persisted communication snapshot state
-- export events timeline
+- email preparation events timeline
 - delivery notes
 
 Primary actions:
 
-- record export for a caterer
+- record prepared email for a caterer
 - download or copy persisted rendered text
-- view previous export events
+- view previous email preparation events
 
 Safety requirements:
 
-- label the state as "exported", not "sent"
+- label the visible workflow as "Caterer emails", with states such as "Email ready" and "Not emailed yet"
 - display persisted communication snapshots and recipient snapshots; do not render caterer email templates in TypeScript
 - first export creates or displays the immutable communication snapshot through a Python/backend or database contract
 - repeated exports append events without mutating the original snapshot
@@ -348,7 +349,7 @@ For this submission, Settings is a read-only placeholder for signed-in operator 
 3. **Read-only week overview**: Supabase SSR read path after Phase 4 views/RLS; no writes.
 4. **Menu setup parity**: variant review and weekly offer selection through Server Actions and audited contracts where required.
 5. **Order review parity**: run list, order run detail, allocation/order-line tables, approval/reopen actions.
-6. **Export parity**: communication previews, recipient snapshots, export event recording, persisted snapshot display.
+6. **Caterer email parity**: communication previews, recipient snapshots, email preparation recording, persisted snapshot display.
 7. **Audit and drilldowns**: audit page, caterer detail, student detail, richer cross-links.
 8. **Streamlit retirement**: remove legacy MVPs only after the Next.js workflows are verified against the existing approved run.
 
@@ -386,7 +387,7 @@ Writes should go through Server Actions with Zod validation that call audited da
 - approve order run
 - reopen order run
 - record manual override intent
-- record communication export
+- record prepared caterer email
 
 Python-owned jobs should remain outside the request path unless a deliberate job bridge is added:
 
@@ -440,7 +441,7 @@ Initial navigation labels:
 - Menu
 - Validation
 - Orders
-- Exports
+- Caterer Emails
 - Caterers
 - Students
 - Audit
@@ -456,8 +457,8 @@ Initial navigation labels:
 5. Python order generation produces a generated run. For the current submission, this remains CLI-triggered with `uv run python -m padea_catering.ordering --week-start 2026-05-01`; UI-triggered generation is a later job-bridge stage.
 6. Operator reviews order lines, allocations, contacts, and delivery notes.
 7. Operator approves the run with a note.
-8. Operator records exports for each caterer.
-9. Audit page shows approval and export events.
+8. Operator marks caterer emails ready for each caterer.
+9. Audit page shows approval and email preparation events.
 
 ### Blocked Menu Path
 
@@ -476,13 +477,13 @@ Initial navigation labels:
 4. Operator records manual override intent if appropriate.
 5. Actual allocation mutation remains deferred until override application logic exists.
 
-### Export Path
+### Caterer Email Path
 
-1. Operator opens Exports for an approved, issue-free run.
+1. Operator opens Caterer Emails for an approved, issue-free run.
 2. UI shows deterministic draft and recipient list.
-3. Operator records export with reason.
-4. First export stores immutable communication and recipients.
-5. Later exports append event history and reuse the original snapshot.
+3. Operator records the prepared email with reason.
+4. First recording stores immutable communication and recipients.
+5. Later recordings append event history and reuse the original snapshot.
 
 ## Initial Design Targets
 

@@ -48,7 +48,7 @@ The order generator filters out any student whose year level appears in the excl
 - Recognised dietary tag (`Halal`, `Nut Free`, `No Beef`, etc.) → restriction recorded and applied to meal allocation.
 - Unrecognised text → operator warning raised; order for that student is blocked until manually reviewed.
 
-**Why not warn on null**: The majority of blanks (261/320) are almost certainly genuinely unrestricted students. Flagging all of them as unverified would create noise that obscures real issues. The risk is captured by warning on *unrecognised* text instead.
+**Why not warn on null**: The majority of blanks (261/320) are almost certainly genuinely unrestricted students. Flagging all of them as unverified would create noise that obscures real issues. The risk is captured by warning on _unrecognised_ text instead.
 
 ---
 
@@ -155,15 +155,15 @@ Room numbers are expected to be missing most of the time. Delivery notes and cat
 
 ---
 
-## D-13 - Communication export is not email delivery
+## D-13 - Communication snapshot is not email delivery
 
-**Decision**: `exported` means an operator produced and recorded a send-ready communication snapshot from an approved, issue-free order run. It does not mean the email was sent or delivered.
+**Decision**: The persisted backend state currently called `exported` means an operator produced and recorded a send-ready communication snapshot from an approved, issue-free order run. It does not prove the email was sent or delivered.
 
 The first export for each `(order_run_id, caterer_id)` stores the immutable communication snapshot: exact recipients, subject, body, rendered text, delivery notes, template version, actor, reason, and timestamp. Repeated exports reuse that same snapshot and append export events. A human operator may then copy or download the recorded text and send it manually outside the system.
 
-The Next.js UI must not render caterer communication templates itself. It may display persisted communication snapshots and may call an explicit audited export-recording contract. If a communication snapshot does not exist yet, the UI should show that a Python-owned communication preparation/export action is required rather than assembling the draft in TypeScript.
+The Next.js UI must not render caterer communication templates itself. It may display persisted communication snapshots and may call an explicit audited communication-recording contract. If a communication snapshot does not exist yet, the UI should show that a Python-owned email preparation action is required rather than assembling the draft in TypeScript.
 
-Future live email sending should add a separate `sent` state or delivery event with provider metadata. It should not overload `exported`.
+Operator-facing copy should avoid "export" as the workflow name. Use "Caterer emails", "Email ready", and "Not emailed yet" where that matches the visible workflow. Future live email sending should add a separate `sent` state or delivery event with provider metadata. It should not overload the existing snapshot/export event.
 
 **Why this shape**: The system needs a durable audit trail for what was prepared before it can safely send email. Separating "exported" from "sent" avoids claiming delivery that the current application cannot prove.
 

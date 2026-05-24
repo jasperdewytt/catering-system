@@ -25,6 +25,16 @@ const statusStyles: Record<StatusToken, string> = {
     "border-[var(--muted-border)] bg-[var(--muted-bg)] text-[var(--muted-fg)]",
 };
 
+const statusLabels: Record<StatusToken, string> = {
+  Ready: "Ready",
+  Unreviewed: "Unreviewed",
+  Generated: "Generated",
+  Approved: "Approved",
+  Exported: "Email ready",
+  Blocked: "Blocked",
+  Superseded: "Superseded",
+};
+
 export function StatusBadge({
   status,
   className,
@@ -40,7 +50,7 @@ export function StatusBadge({
         className,
       )}
     >
-      {status}
+      {statusLabels[status]}
     </span>
   );
 }

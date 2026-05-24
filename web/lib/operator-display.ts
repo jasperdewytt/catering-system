@@ -36,6 +36,37 @@ export function formatStatus(value: string | null): string {
     .join(" ");
 }
 
+export function formatEmailState(value: string | null): string {
+  if (value === "exported") {
+    return "Email ready";
+  }
+
+  if (value === "partial") {
+    return "Some emails ready";
+  }
+
+  if (value === "not_exported") {
+    return "Not emailed yet";
+  }
+
+  if (value === "not_ready") {
+    return "Not ready for email";
+  }
+
+  return "Not emailed yet";
+}
+
+export function formatAuditAction(
+  displayAction: string | null,
+  action: string | null,
+): string {
+  if (action === "communication_exported") {
+    return "Email prepared";
+  }
+
+  return displayAction ?? formatStatus(action);
+}
+
 export function statusToken(value: string | boolean | null): StatusToken {
   if (value === true || value === "ready") {
     return "Ready";

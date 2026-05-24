@@ -10,13 +10,13 @@ export default async function WeekExportsPage({
   return (
     <RoutePlaceholder
       eyebrow={`Week ${weekStart}`}
-      title="Exports"
-      description="Export previews must display persisted communication snapshots. This route does not render email templates in TypeScript."
+      title="Caterer Emails"
+      description="Email previews must display persisted communication snapshots. This route does not render email templates in TypeScript."
       readModel="operator_communications, operator_order_run_contacts, operator_audit_events"
       checkpoints={[
         { label: "Snapshot", status: "Blocked" },
         { label: "Recipients", status: "Blocked" },
-        { label: "Exported", status: "Exported" },
+        { label: "Emails ready", status: "Exported" },
       ]}
     />
   );

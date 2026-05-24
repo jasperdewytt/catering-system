@@ -75,7 +75,7 @@ _Update this file whenever a significant phase completes or the active focus shi
   - preparing deterministic copy-ready caterer email drafts
   - downloading draft text files
 - [x] **Phase 3 approval/audit implemented** — order runs can be approved/reopened through audited backend actions. `audit_log` and `manual_overrides` provide the durable record path required before live sending or manual correction logic.
-- [x] **Phase 3 communications persistence/export tracking implemented** — approved, issue-free runs can record caterer export events before any live sending. The first export per `(order_run_id, caterer_id)` creates an immutable communication snapshot with subject/body/rendered text, delivery notes, recipient snapshots, template version, actor/timestamps, and an audit-log row. Repeated exports reuse the snapshot and append export events. Export semantics are recorded in D-13: exported means prepared for manual sending, not sent.
+- [x] **Phase 3 communications persistence implemented** — approved, issue-free runs can record send-ready caterer email snapshots before any live sending. The first persisted snapshot per `(order_run_id, caterer_id)` captures subject/body/rendered text, delivery notes, recipient snapshots, template version, actor/timestamps, and an audit-log row. Repeated recordings reuse the snapshot and append events. D-13 now separates internal export/snapshot tokens from operator-facing "Caterer emails" language.
 - [x] **Approved-run export workflow verified** — the approved zero-issue run has persisted export snapshots for all four caterers, with recipient snapshots, export events, and matching `communication_exported` audit-log rows.
 - [x] **LLM integration plan written** — `docs/LLM_INTEGRATION_PLAN.md` defines advisory-only LLM use cases, forbidden safety-critical uses, provider boundaries, and the recommended order after communications persistence.
 - [x] **Operator UI direction decided** — see [D-14](DECISIONS.md#d-14---operator-ui-is-nextjs--supabase-not-streamlit). The final operator interface is Next.js 16 + TypeScript in `web/`, using shadcn/ui, Tailwind, and `@supabase/ssr`. Streamlit MVPs in `app/` become legacy verification harnesses and are scheduled for removal once `web/` reaches parity.
@@ -98,14 +98,14 @@ The deterministic Python backend can write generated order runs end-to-end, and 
 3. Aggregate per-session into variant-aware `order_lines`, per-student into `order_allocations`.
 4. Reproducibility: the same DB state should always produce the same order_run output.
 
-The current approved run has no allocation issues. Building-only delivery locations and suspicious/free-webmail caterer addresses are documented as expected competition-data artefacts, not blockers. Communications preserve recipient snapshots and delivery-note content for audit before any live email sending is added. The manual export workflow has been tested and verified against the database.
+The current approved run has no allocation issues. Building-only delivery locations and suspicious/free-webmail caterer addresses are documented as expected competition-data artefacts, not blockers. Communications preserve recipient snapshots and delivery-note content for audit before any live email sending is added. The manual caterer-email preparation workflow has been tested and verified against the database.
 
 ## Up Next (in order)
 
 1. **Port menu setup workflow** — variant creation, weekly menu offer selection, operator review metadata through audited RPC/backend contracts.
 2. **Port order review and approval** — run picker, allocation/line tables, contacts/delivery notes, approve/reopen actions calling audited contracts.
-3. **Port export workflow** — display persisted communication snapshots, surface recipient snapshots, record export events; do not render communication templates in TypeScript.
-4. **Add remaining read-only pages** — validation, orders, exports, audit, caterers, and students as their Phase 4 views are added.
+3. **Port caterer email workflow** — display persisted communication snapshots, surface recipient snapshots, record email preparation events; do not render communication templates in TypeScript.
+4. **Add remaining read-only pages** — validation, orders, caterer emails, audit, caterers, and students as their Phase 4 views are added.
 5. **Restore complete generated `web/types/supabase.ts`** once Supabase CLI auth or reliable direct Postgres connectivity is available.
 6. **Retire Streamlit MVPs** once parity is verified.
 7. Live email sending only after the persisted export workflow is operator-confirmed in `web/`.

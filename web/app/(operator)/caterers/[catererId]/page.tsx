@@ -16,7 +16,7 @@ export default async function CatererDetailPage({
       checkpoints={[
         { label: "Profile", status: "Blocked" },
         { label: "Menu", status: "Unreviewed" },
-        { label: "Exports", status: "Exported" },
+        { label: "Emails", status: "Exported" },
       ]}
     />
   );

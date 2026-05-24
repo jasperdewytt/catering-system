@@ -8,8 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CompactTable, Td, Th } from "@/components/ui/table";
 import {
+  formatAuditAction,
   formatDate,
   formatDateTime,
+  formatEmailState,
   formatStatus,
   statusToken,
 } from "@/lib/operator-display";
@@ -120,7 +122,7 @@ export default async function WeekOverviewPage({
         title="Week Overview"
         description={`${formatStatus(
           weekStatus.validation_state,
-        )} validation, ${formatStatus(weekStatus.export_state)} export state`}
+        )} validation, ${formatEmailState(weekStatus.export_state)}`}
         actions={
           <Button asChild variant="secondary">
             <Link href="/weeks">Back to weeks</Link>
@@ -159,7 +161,7 @@ export default async function WeekOverviewPage({
                     <Th>Caterer</Th>
                     <Th className="text-right">Enrolled</Th>
                     <Th className="text-right">Orderable</Th>
-                    <Th>Export</Th>
+                    <Th>Email</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -181,11 +183,7 @@ export default async function WeekOverviewPage({
                       <Td className="text-right">
                         {session.orderable_student_count ?? 0}
                       </Td>
-                      <Td>
-                        <StatusBadge
-                          status={statusToken(session.export_state)}
-                        />
-                      </Td>
+                      <Td>{formatEmailState(session.export_state)}</Td>
                     </tr>
                   ))}
                 </tbody>
@@ -272,7 +270,7 @@ export default async function WeekOverviewPage({
                   <tr key={event.audit_id ?? index}>
                     <Td>{formatDateTime(event.created_at)}</Td>
                     <Td>
-                      {event.display_action ?? formatStatus(event.action)}
+                      {formatAuditAction(event.display_action, event.action)}
                     </Td>
                     <Td>{event.actor_name ?? "Unknown operator"}</Td>
                     <Td>{event.reason ?? "No reason recorded"}</Td>
@@ -284,7 +282,7 @@ export default async function WeekOverviewPage({
             <EmptyState
               icon={History}
               title="No audit events for this week"
-              description="Approval, reopen, export, and manual override events will appear after audited operations run."
+              description="Approval, reopen, email preparation, and manual override events will appear after audited operations run."
             />
           )}
         </CardContent>

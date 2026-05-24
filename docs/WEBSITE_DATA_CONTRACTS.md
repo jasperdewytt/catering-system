@@ -38,7 +38,7 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 | `/weeks/[weekStart]/validation`          | `operator_validation_summary`, `operator_order_run_issues`; future `session_validation_findings`                                          | rerun validation only after job bridge                       | Stage 5 read, Stage 9 trigger   |
 | `/weeks/[weekStart]/orders`              | `operator_order_runs`                                                                                                                     | generate run only after job bridge                           | Stage 5 read, Stage 9 trigger   |
 | `/weeks/[weekStart]/orders/[orderRunId]` | `operator_order_runs`, `operator_order_run_lines`, `operator_order_run_allocations`, `operator_order_run_issues`, `operator_audit_events` | approve, reopen, manual override intent through RPCs         | Stage 7 writes                  |
-| `/weeks/[weekStart]/exports`             | `operator_communications`, `operator_order_run_contacts`, `operator_audit_events`                                                         | record export event through RPC/backend contract             | Stage 8 writes                  |
+| `/weeks/[weekStart]/exports`             | `operator_communications`, `operator_order_run_contacts`, `operator_audit_events`                                                         | record prepared caterer email through RPC/backend contract   | Stage 8 writes                  |
 | `/caterers`                              | `operator_caterers`                                                                                                                       | none for submission                                          | Stage 5                         |
 | `/caterers/[catererId]`                  | `operator_caterer_detail`, `operator_menu_setup`, `operator_communications`                                                               | none for submission                                          | Stage 5                         |
 | `/students`                              | `operator_students`                                                                                                                       | none for submission                                          | Stage 5                         |
@@ -149,7 +149,7 @@ Allowed sources for the first web build:
 - offered `dish_variants.operator_reviewed = false`
 - latest `order_runs.status`
 - latest `order_allocation_issues`
-- missing communication snapshots or export events for approved runs
+- missing communication snapshots or email preparation events for approved runs
 
 Do not recompute caterer minimums, dietary safety, absence/exclusion handling, allocation decisions, or order quantities in this view.
 
@@ -259,7 +259,7 @@ Map stored `order_run_unapproved` to display action `Reopen run`.
 
 ### `operator_caterers` and `operator_caterer_detail`
 
-Expose caterer name, assigned schools, contacts, weekly minimums, latest menu review status, latest order-line counts, and communication/export state. No contact-verification workflow is required for the submission.
+Expose caterer name, assigned schools, contacts, weekly minimums, latest menu review status, latest order-line counts, and caterer-email readiness. No contact-verification workflow is required for the submission.
 
 ### `operator_students` and `operator_student_detail`
 
@@ -278,7 +278,7 @@ All website writes are called from Server Actions. The Server Action validates r
 | Approve order run             | Postgres RPC or existing audited operation adapted for web | `order_run_approved`                                       | Needs web-callable contract |
 | Reopen order run              | Postgres RPC or existing audited operation adapted for web | stored `order_run_unapproved`, displayed as "Reopen run"   | Needs web-callable contract |
 | Record manual override intent | Postgres RPC or existing audited operation adapted for web | `manual_override_created`                                  | Needs web-callable contract |
-| Record communication export   | Postgres RPC/backend contract                              | `communication_exported`                                   | Needs web-callable contract |
+| Record prepared caterer email | Postgres RPC/backend contract                              | `communication_exported`                                   | Needs web-callable contract |
 | Trigger order generation      | Python job bridge                                          | job audit/status row                                       | Deferred to Stage 9         |
 | Trigger validation preflight  | Python job bridge                                          | job audit/status row; future `session_validation_findings` | Deferred to Stage 9         |
 
@@ -292,12 +292,12 @@ When added, it should be written by `src/padea_catering.validation`, not by the 
 
 ### Communication draft pre-generation
 
-The current backend creates immutable communication snapshots when export is recorded. For the web UI, a stronger flow is preferred before Stage 8: generate or prepare draft snapshots through Python/backend code before the operator records export, so the UI can preview persisted text without rendering templates in TypeScript.
+The current backend creates immutable communication snapshots when the preparation event is recorded. For the web UI, a stronger flow is preferred before Stage 8: generate or prepare draft snapshots through Python/backend code before the operator marks the caterer email ready, so the UI can preview persisted text without rendering templates in TypeScript.
 
 The UI should handle both cases:
 
 - snapshot exists: display it
-- snapshot missing: show a clear state that a backend preparation/export contract is required
+- snapshot missing: show a clear state that a backend email preparation contract is required
 
 ### Manual override application
 

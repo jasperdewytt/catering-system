@@ -9,7 +9,7 @@ export default function AuditPage() {
       readModel="operator_audit_events"
       checkpoints={[
         { label: "Approvals", status: "Approved" },
-        { label: "Exports", status: "Exported" },
+        { label: "Emails", status: "Exported" },
         { label: "Overrides", status: "Unreviewed" },
       ]}
     />

@@ -54,7 +54,7 @@ export default async function WeeksPage() {
       <PageHeader
         eyebrow="Weeks"
         title="Service Weeks"
-        description="Browse generated, approved, and exported state by service week."
+        description="Browse generated, approved, and caterer-email readiness by service week."
       />
 
       <Card>
@@ -72,7 +72,7 @@ export default async function WeeksPage() {
                   <Th className="text-right">Students</Th>
                   <Th className="text-right">Caterers</Th>
                   <Th className="text-right">Issues</Th>
-                  <Th className="text-right">Exported</Th>
+                  <Th className="text-right">Emails ready</Th>
                   <Th className="text-right">Open</Th>
                 </tr>
               </thead>
