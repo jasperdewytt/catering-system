@@ -59,9 +59,14 @@ export default async function WeekOrdersPage({
             : "Order generation remains a backend CLI operation until the job bridge lands."
         }
         actions={
-          <Button asChild variant="secondary">
-            <Link href={`/weeks/${weekStart}`}>Back to week</Link>
-          </Button>
+          <>
+            <Button asChild variant="secondary">
+              <Link href={`/weeks/${weekStart}/exports`}>Caterer emails</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href={`/weeks/${weekStart}`}>Back to week</Link>
+            </Button>
+          </>
         }
       />
 

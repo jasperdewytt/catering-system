@@ -116,6 +116,14 @@ export default async function WeekOverviewPage({
         ? `Approved ${formatDateTime(latestOrderRun.approved_at)}`
         : "Review generated order runs before approval",
     },
+    {
+      label: "Caterer emails",
+      value: weekStatus.export_state,
+      href: `/weeks/${weekStart}/exports`,
+      detail: `${formatEmailState(weekStatus.export_state)} · ${
+        latestOrderRun?.exported_caterer_count ?? 0
+      } snapshot(s) ready`,
+    },
   ];
 
   return (
@@ -141,13 +149,19 @@ export default async function WeekOverviewPage({
               </Link>
             </Button>
             <Button asChild variant="secondary">
+              <Link href={`/weeks/${weekStart}/exports`}>
+                Caterer emails
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+            </Button>
+            <Button asChild variant="secondary">
               <Link href="/weeks">Back to weeks</Link>
             </Button>
           </>
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {readiness.map((item) => {
           const card = (
             <Card

@@ -145,6 +145,13 @@ export default async function OrderRunDetailPage({
             <Button asChild variant="secondary">
               <Link href={`/weeks/${weekStart}/orders`}>Back to runs</Link>
             </Button>
+            <Button asChild variant="secondary">
+              <Link
+                href={`/weeks/${weekStart}/exports?orderRunId=${orderRunId}`}
+              >
+                Caterer emails
+              </Link>
+            </Button>
             <StatusBadge status={statusToken(run.status)} />
           </>
         }

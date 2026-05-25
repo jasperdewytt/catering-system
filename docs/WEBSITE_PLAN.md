@@ -1,7 +1,7 @@
 # Operator Website Plan
 
-**Status**: Draft for Next.js operator UI design; menu setup and order review usability slices implemented
-**Last updated**: 2026-05-24
+**Status**: Draft for Next.js operator UI design; menu setup, order review, and persisted-first caterer email slices implemented
+**Last updated**: 2026-05-25
 **Related decisions**:
 
 - [D-14 - Operator UI is Next.js + Supabase, not Streamlit](DECISIONS.md#d-14---operator-ui-is-nextjs--supabase-not-streamlit)
@@ -265,14 +265,13 @@ Key content:
 Primary actions:
 
 - record prepared email for a caterer
-- download or copy persisted rendered text
 - view previous email preparation events
 
 Safety requirements:
 
 - label the visible workflow as "Caterer emails", with states such as "Email ready" and "Not emailed yet"
 - display persisted communication snapshots and recipient snapshots; do not render caterer email templates in TypeScript
-- first email-preparation recording creates or displays the immutable communication snapshot through a Python/backend or database contract
+- first email-preparation recording creates or displays the immutable communication snapshot through a Python/backend contract; the persisted-first web slice displays existing snapshots and records repeated preparation events
 - repeated email-preparation recordings append events without mutating the original snapshot
 - live email sending is out of scope until a separate sent/delivery model exists
 
@@ -349,10 +348,11 @@ For this submission, Settings is a read-only placeholder for signed-in operator 
 2. **Auth shell and dashboard skeleton**: login, authenticated layout, active week placeholder, static/mock readiness cards.
 3. **Read-only week overview**: Supabase SSR read path after Phase 4 views/RLS; no writes.
 4. **Menu setup parity**: variant review and weekly offer selection through Server Actions and audited contracts where required.
-5. **Order review parity**: run list, order run detail, allocation/order-line tables, approval/reopen actions. Implemented for order review and approval; caterer email preparation remains separate.
-6. **Caterer email parity**: communication previews, recipient snapshots, email preparation recording, persisted snapshot display.
-7. **Audit and drilldowns**: audit page, caterer detail, student detail, richer cross-links.
-8. **Streamlit retirement**: remove legacy MVPs only after the Next.js workflows are verified against the existing approved run.
+5. **Order review parity**: run list, order run detail, allocation/order-line tables, approval/reopen actions. Implemented for order review and approval.
+6. **Caterer email parity**: persisted snapshot review, recipients, rendered text, delivery notes, and repeat preparation-event recording. Implemented for existing snapshots; missing snapshot creation remains backend/Python-bridge work.
+7. **Caterer email parity**: communication previews, recipient snapshots, email preparation recording, persisted snapshot display.
+8. **Audit and drilldowns**: audit page, caterer detail, student detail, richer cross-links.
+9. **Streamlit retirement**: remove legacy MVPs only after the Next.js workflows are verified against the existing approved run.
 
 ## Data Access Shape
 
@@ -374,6 +374,8 @@ Recommended view/API groups:
 - `operator_order_run_issues`
 - `operator_order_run_contacts`
 - `operator_communications`
+- `operator_communication_recipients`
+- `operator_communication_events`
 - `operator_audit_events`
 - `operator_caterers`
 - `operator_caterer_detail`
@@ -388,7 +390,7 @@ Writes should go through Server Actions with Zod validation that call audited da
 - approve order run
 - reopen order run
 - record follow-up/override notes
-- record prepared caterer email
+- record prepared caterer email for an existing immutable snapshot
 - future audited individual meal edits through a backend-owned contract
 
 Individual meal editing is intentionally separate from follow-up notes. A future meal-edit workflow must call a backend/RPC contract that validates eligible variants, applies allocation and order-line changes transactionally, and records before/after audit state; the Next.js UI must not directly recalculate or mutate generated order facts.
@@ -484,10 +486,10 @@ Initial navigation labels:
 ### Caterer Email Path
 
 1. Operator opens Caterer Emails for an approved, issue-free run.
-2. UI shows deterministic draft and recipient list.
-3. Operator records the prepared email with reason.
-4. First recording stores immutable communication and recipients.
-5. Later recordings append event history and reuse the original snapshot.
+2. UI shows persisted rendered text, delivery notes, recipient snapshots, and event history.
+3. Operator records a repeat preparation event with reason for an existing snapshot.
+4. Event history and audit rows update without mutating the original snapshot.
+5. Missing snapshot creation remains a Python/backend bridge concern.
 
 ## Initial Design Targets
 

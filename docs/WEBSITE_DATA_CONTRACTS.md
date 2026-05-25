@@ -1,7 +1,7 @@
 # Website Data Contracts
 
-**Status**: Phase 4 order review usability slice implemented
-**Last updated**: 2026-05-24
+**Status**: Phase 4 caterer-email persisted-first slice implemented
+**Last updated**: 2026-05-25
 **Related docs**:
 
 - [Operator Website Plan](WEBSITE_PLAN.md)
@@ -28,27 +28,27 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 
 ## Screen To Data Map
 
-| Screen                                   | Initial reads                                                                                                                                                                                         | Writes                                                       | Stage status                    |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------- |
-| `/login`                                 | Supabase Auth session; `operators` profile for shell display                                                                                                                                          | sign in, sign out                                            | Stage 3 scaffolded              |
-| `/dashboard`                             | `operator_current_week`, `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                                                                             | none                                                         | Stage 5 first slice implemented |
-| `/weeks`                                 | `operator_weeks`                                                                                                                                                                                      | none                                                         | Stage 5 first slice implemented |
-| `/weeks/[weekStart]`                     | `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                                                                                                      | none                                                         | Stage 5 first slice implemented |
-| `/weeks/[weekStart]/menu`                | `operator_menu_setup`, `operator_validation_summary`                                                                                                                                                  | menu offers, variant create/review/availability through RPCs | Stage 6 implemented             |
-| `/weeks/[weekStart]/validation`          | `operator_validation_summary`, `operator_order_run_issues`; future `session_validation_findings`                                                                                                      | rerun validation only after job bridge                       | Stage 5 read, Stage 9 trigger   |
-| `/weeks/[weekStart]/orders`              | `operator_order_runs`                                                                                                                                                                                 | generate run only after job bridge                           | Stage 7 read implemented        |
-| `/weeks/[weekStart]/orders/[orderRunId]` | `operator_order_runs`, `operator_order_run_lines`, `operator_order_run_allocations`, `operator_order_run_issues`, `operator_order_run_contacts`, `operator_manual_overrides`, `operator_audit_events` | approve, reopen, follow-up/override notes through RPCs       | Stage 7 implemented             |
-| `/weeks/[weekStart]/exports`             | `operator_communications`, `operator_order_run_contacts`, `operator_audit_events`                                                                                                                     | record prepared caterer email through RPC/backend contract   | Stage 8 writes                  |
-| `/caterers`                              | `operator_caterers`                                                                                                                                                                                   | none for submission                                          | Stage 5                         |
-| `/caterers/[catererId]`                  | `operator_caterer_detail`, `operator_menu_setup`, `operator_communications`                                                                                                                           | none for submission                                          | Stage 5                         |
-| `/students`                              | `operator_students`                                                                                                                                                                                   | none for submission                                          | Stage 5                         |
-| `/students/[studentId]`                  | `operator_student_detail`, allocation and audit slices                                                                                                                                                | none for submission                                          | Stage 5                         |
-| `/audit`                                 | `operator_audit_events`                                                                                                                                                                               | none                                                         | Stage 5                         |
-| `/settings`                              | session user, `operators`, build metadata                                                                                                                                                             | none for submission                                          | Stage 3/5                       |
+| Screen                                   | Initial reads                                                                                                                                                                                         | Writes                                                            | Stage status                        |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------- |
+| `/login`                                 | Supabase Auth session; `operators` profile for shell display                                                                                                                                          | sign in, sign out                                                 | Stage 3 scaffolded                  |
+| `/dashboard`                             | `operator_current_week`, `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                                                                             | none                                                              | Stage 5 first slice implemented     |
+| `/weeks`                                 | `operator_weeks`                                                                                                                                                                                      | none                                                              | Stage 5 first slice implemented     |
+| `/weeks/[weekStart]`                     | `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                                                                                                      | none                                                              | Stage 5 first slice implemented     |
+| `/weeks/[weekStart]/menu`                | `operator_menu_setup`, `operator_validation_summary`                                                                                                                                                  | menu offers, variant create/review/availability through RPCs      | Stage 6 implemented                 |
+| `/weeks/[weekStart]/validation`          | `operator_validation_summary`, `operator_order_run_issues`; future `session_validation_findings`                                                                                                      | rerun validation only after job bridge                            | Stage 5 read, Stage 9 trigger       |
+| `/weeks/[weekStart]/orders`              | `operator_order_runs`                                                                                                                                                                                 | generate run only after job bridge                                | Stage 7 read implemented            |
+| `/weeks/[weekStart]/orders/[orderRunId]` | `operator_order_runs`, `operator_order_run_lines`, `operator_order_run_allocations`, `operator_order_run_issues`, `operator_order_run_contacts`, `operator_manual_overrides`, `operator_audit_events` | approve, reopen, follow-up/override notes through RPCs            | Stage 7 implemented                 |
+| `/weeks/[weekStart]/exports`             | `operator_communications`, `operator_communication_recipients`, `operator_communication_events`, `operator_audit_events`                                                                              | repeat email-preparation event through RPC for existing snapshots | Stage 8 persisted-first implemented |
+| `/caterers`                              | `operator_caterers`                                                                                                                                                                                   | none for submission                                               | Stage 5                             |
+| `/caterers/[catererId]`                  | `operator_caterer_detail`, `operator_menu_setup`, `operator_communications`                                                                                                                           | none for submission                                               | Stage 5                             |
+| `/students`                              | `operator_students`                                                                                                                                                                                   | none for submission                                               | Stage 5                             |
+| `/students/[studentId]`                  | `operator_student_detail`, allocation and audit slices                                                                                                                                                | none for submission                                               | Stage 5                             |
+| `/audit`                                 | `operator_audit_events`                                                                                                                                                                               | none                                                              | Stage 5                             |
+| `/settings`                              | session user, `operators`, build metadata                                                                                                                                                             | none for submission                                               | Stage 3/5                           |
 
 ## Implemented Phase 4 Read Models
 
-The first Dashboard/Weeks group below is implemented in `supabase/migrations/20260524130454_phase_4_operator_read_models.sql`. The menu setup group is implemented in `supabase/migrations/20260524154500_menu_setup_read_models_and_rpcs.sql`. The order review group is implemented in `supabase/migrations/20260524171000_order_review_read_models_and_rpcs.sql`. These views use `WITH (security_invoker = true)` and are granted only to `authenticated`; underlying table access is guarded by RLS policies requiring a row in `public.operators`.
+The first Dashboard/Weeks group below is implemented in `supabase/migrations/20260524130454_phase_4_operator_read_models.sql`. The menu setup group is implemented in `supabase/migrations/20260524154500_menu_setup_read_models_and_rpcs.sql`. The order review group is implemented in `supabase/migrations/20260524171000_order_review_read_models_and_rpcs.sql`. The caterer-email persisted-first group is implemented in `supabase/migrations/20260525100000_caterer_email_read_models_and_rpc.sql`. These views use `WITH (security_invoker = true)` and are granted only to `authenticated`; underlying table access is guarded by RLS policies requiring a row in `public.operators`.
 
 `web/types/supabase.ts` was updated for the implemented Phase 4 table, views, menu RPCs, and order-review RPCs. Local CLI typegen by project id is blocked without `SUPABASE_ACCESS_TOKEN`, so the file currently contains the verified website surface needed by the implemented slices rather than a full database type dump.
 
@@ -262,27 +262,61 @@ Allowed sources are stored menu offers, stored variant review/availability field
 
 This view exposes follow-up/override note records only. The UI should let operators choose affected allocations, order lines, contacts, or the whole run with human-readable labels, then submit the selected row UUID internally. It does not apply manual corrections or mutate generated allocation/order facts.
 
-## Deferred Read Models
-
-The following contracts remain planned and should be added only when the corresponding page slice or audited write contract is ready.
-
 ### `operator_communications`
 
 - `communication_id uuid`
 - `order_run_id uuid`
+- `week_start date`
+- `order_run_status text`
+- `issue_count integer`
 - `caterer_id uuid`
 - `caterer_name text`
+- `email_state text`
 - `subject text`
 - `body text`
 - `rendered_text text`
+- `delivery_note_text text`
 - `template_version text`
 - `exported_at timestamptz null`
 - `exported_by text null`
-- `recipient_snapshot jsonb`
+- `line_count integer`
+- `total_quantity integer`
 - `event_count integer`
 - `latest_event_at timestamptz null`
 
-This view displays persisted snapshots only. The UI must not build communication text.
+One row per order-run/caterer represented in persisted order lines. Communication fields are nullable when a snapshot is missing. This view displays persisted snapshots only; it does not build communication text.
+
+### `operator_communication_recipients`
+
+- `recipient_id uuid`
+- `communication_id uuid`
+- `order_run_id uuid`
+- `caterer_id uuid`
+- `caterer_name text`
+- `caterer_contact_id uuid null`
+- `display_name text null`
+- `email text`
+- `recipient_type text`
+- `role text null`
+- `cc_preference text null`
+- `created_at timestamptz`
+
+This view exposes immutable recipient snapshots captured with the communication record, not live contact recomputation.
+
+### `operator_communication_events`
+
+- `event_id uuid`
+- `communication_id uuid`
+- `order_run_id uuid`
+- `caterer_id uuid`
+- `caterer_name text`
+- `event_type text`
+- `actor_name text`
+- `reason text`
+- `metadata jsonb`
+- `created_at timestamptz`
+
+This view exposes append-only email-preparation events.
 
 ### `operator_audit_events`
 
@@ -300,6 +334,10 @@ This view displays persisted snapshots only. The UI must not build communication
 
 Map stored `order_run_unapproved` to display action `Reopen run`.
 
+## Deferred Read Models
+
+The following contracts remain planned and should be added only when the corresponding page slice or audited write contract is ready.
+
 ### `operator_caterers` and `operator_caterer_detail`
 
 Expose caterer name, assigned schools, contacts, weekly minimums, latest menu review status, latest order-line counts, and caterer-email readiness. No contact-verification workflow is required for the submission.
@@ -312,18 +350,18 @@ Expose student identity, school, year level, opted-out state, dietary tags, enro
 
 All website writes are called from Server Actions. The Server Action validates request shape with Zod, resolves the signed-in operator, calls an audited backend/database contract, and revalidates affected routes.
 
-| Operation                      | Contract owner                                  | Required audit                                             | Status before build         |
-| ------------------------------ | ----------------------------------------------- | ---------------------------------------------------------- | --------------------------- |
-| Create dish variant            | `operator_create_dish_variant` RPC              | `dish_variant_created`                                     | Implemented                 |
-| Review dish variant flags      | `operator_review_dish_variant` RPC              | `dish_variant_reviewed`                                    | Implemented                 |
-| Change variant availability    | `operator_update_dish_variant_availability` RPC | `dish_variant_availability_updated`                        | Implemented                 |
-| Save menu offers               | `operator_save_menu_offers` RPC                 | `menu_offers_updated` with before/after variant id arrays  | Implemented                 |
-| Approve order run              | `operator_approve_order_run` RPC                | `order_run_approved`                                       | Implemented                 |
-| Reopen order run               | `operator_reopen_order_run` RPC                 | stored `order_run_unapproved`, displayed as "Reopen run"   | Implemented                 |
-| Record follow-up/override note | `operator_record_manual_override` RPC           | `manual_override_created`                                  | Implemented                 |
-| Record prepared caterer email  | Postgres RPC/backend contract                   | `communication_exported`                                   | Needs web-callable contract |
-| Trigger order generation       | Python job bridge                               | job audit/status row                                       | Deferred to Stage 9         |
-| Trigger validation preflight   | Python job bridge                               | job audit/status row; future `session_validation_findings` | Deferred to Stage 9         |
+| Operation                      | Contract owner                                  | Required audit                                             | Status                             |
+| ------------------------------ | ----------------------------------------------- | ---------------------------------------------------------- | ---------------------------------- |
+| Create dish variant            | `operator_create_dish_variant` RPC              | `dish_variant_created`                                     | Implemented                        |
+| Review dish variant flags      | `operator_review_dish_variant` RPC              | `dish_variant_reviewed`                                    | Implemented                        |
+| Change variant availability    | `operator_update_dish_variant_availability` RPC | `dish_variant_availability_updated`                        | Implemented                        |
+| Save menu offers               | `operator_save_menu_offers` RPC                 | `menu_offers_updated` with before/after variant id arrays  | Implemented                        |
+| Approve order run              | `operator_approve_order_run` RPC                | `order_run_approved`                                       | Implemented                        |
+| Reopen order run               | `operator_reopen_order_run` RPC                 | stored `order_run_unapproved`, displayed as "Reopen run"   | Implemented                        |
+| Record follow-up/override note | `operator_record_manual_override` RPC           | `manual_override_created`                                  | Implemented                        |
+| Record prepared caterer email  | `operator_record_caterer_email_preparation` RPC | `communication_exported`                                   | Implemented for existing snapshots |
+| Trigger order generation       | Python job bridge                               | job audit/status row                                       | Deferred to Stage 9                |
+| Trigger validation preflight   | Python job bridge                               | job audit/status row; future `session_validation_findings` | Deferred to Stage 9                |
 
 ## Deferred Data Contracts
 
@@ -333,14 +371,14 @@ A persisted findings table is useful before live operations because it lets the 
 
 When added, it should be written by `src/padea_catering.validation`, not by the Next.js app.
 
-### Communication draft pre-generation
+### Communication draft pre-generation / missing snapshot creation
 
-The current backend creates immutable communication snapshots when the preparation event is recorded. For the web UI, a stronger flow is preferred before Stage 8: generate or prepare draft snapshots through Python/backend code before the operator marks the caterer email ready, so the UI can preview persisted text without rendering templates in TypeScript.
+The current web UI can preview persisted communication snapshots and record repeat preparation events for existing snapshots. Creating a missing immutable snapshot from the web remains deferred because the deterministic communication template builder is Python-owned.
 
 The UI should handle both cases:
 
 - snapshot exists: display it
-- snapshot missing: show a clear state that a backend email preparation contract is required
+- snapshot missing: show a clear state that a Python/backend email preparation contract is required
 
 ### Manual override application
 

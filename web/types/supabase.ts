@@ -61,6 +61,62 @@ export type Database = {
         };
         Relationships: [];
       };
+      operator_communication_events: {
+        Row: {
+          event_id: string | null;
+          communication_id: string | null;
+          order_run_id: string | null;
+          caterer_id: string | null;
+          caterer_name: string | null;
+          event_type: string | null;
+          actor_name: string | null;
+          reason: string | null;
+          metadata: Json | null;
+          created_at: string | null;
+        };
+        Relationships: [];
+      };
+      operator_communication_recipients: {
+        Row: {
+          recipient_id: string | null;
+          communication_id: string | null;
+          order_run_id: string | null;
+          caterer_id: string | null;
+          caterer_name: string | null;
+          caterer_contact_id: string | null;
+          display_name: string | null;
+          email: string | null;
+          recipient_type: string | null;
+          role: string | null;
+          cc_preference: string | null;
+          created_at: string | null;
+        };
+        Relationships: [];
+      };
+      operator_communications: {
+        Row: {
+          order_run_id: string | null;
+          week_start: string | null;
+          order_run_status: string | null;
+          issue_count: number | null;
+          caterer_id: string | null;
+          caterer_name: string | null;
+          communication_id: string | null;
+          email_state: string | null;
+          subject: string | null;
+          body: string | null;
+          rendered_text: string | null;
+          delivery_note_text: string | null;
+          template_version: string | null;
+          exported_at: string | null;
+          exported_by: string | null;
+          line_count: number | null;
+          total_quantity: number | null;
+          event_count: number | null;
+          latest_event_at: string | null;
+        };
+        Relationships: [];
+      };
       operator_menu_setup: {
         Row: {
           week_start: string | null;
@@ -298,6 +354,13 @@ export type Database = {
           p_override_type: string;
           p_entity_type: string;
           p_entity_id: string | null;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      operator_record_caterer_email_preparation: {
+        Args: {
+          p_communication_id: string;
           p_reason: string;
         };
         Returns: string;

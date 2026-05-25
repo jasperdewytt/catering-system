@@ -1,7 +1,7 @@
 # Website Implementation Stages
 
-**Status**: Planning guide; Stage 1 scaffold, menu setup, and order review/approval slices implemented
-**Last updated**: 2026-05-24
+**Status**: Planning guide; Stage 1 scaffold, menu setup, order review/approval, and persisted-first caterer email slices implemented
+**Last updated**: 2026-05-25
 **Related docs**:
 
 - [Operator Website Plan](WEBSITE_PLAN.md)
@@ -283,19 +283,20 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 ## Stage 8 - Caterer Email Workflow Writes
 
+**Status**: Persisted-first slice implemented. The web UI displays existing immutable snapshots and can append audited preparation events for those snapshots. Creating missing snapshots from the web remains deferred to a Python/backend bridge.
+
 **Goal**: Port deterministic caterer email snapshot tracking into the web app.
 
 **Tasks**
 
 - Render persisted caterer communication snapshots only.
 - Show recipient snapshots, delivery notes, subject/body/rendered text, template version, and email preparation events.
-- Add Server Action to record a prepared caterer email through an audited RPC/backend contract.
+- Add Server Action to record a prepared caterer email through an audited RPC/backend contract for existing snapshots.
 - Preserve first-snapshot immutability and append repeated email preparation events.
-- Add copy/download affordances for rendered text.
 
 **Exit criteria**
 
-- Caterer email workflow parity with `app/order_review_mvp.py`.
+- Persisted caterer email workflow parity with the snapshot-review portions of `app/order_review_mvp.py`.
 - Email preparation events are persisted and visible in the audit trail.
 - UI language uses "Caterer emails" as the operator workflow name.
 
@@ -304,6 +305,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Add live email sending.
 - Mutate an existing communication snapshot during repeated email preparation recording.
 - Build subject/body/rendered text in TypeScript.
+- Create missing communication snapshots in TypeScript.
 
 ## Stage 9 - Python Job Bridge
 

@@ -9,6 +9,11 @@ export type OperatorCurrentWeek = Tables<"operator_current_week">;
 export type OperatorWeek = Tables<"operator_weeks">;
 export type OperatorWeekStatus = Tables<"operator_week_status">;
 export type OperatorWeekSession = Tables<"operator_week_sessions">;
+export type OperatorCommunication = Tables<"operator_communications">;
+export type OperatorCommunicationRecipient =
+  Tables<"operator_communication_recipients">;
+export type OperatorCommunicationEvent =
+  Tables<"operator_communication_events">;
 export type OperatorOrderRun = Tables<"operator_order_runs">;
 export type OperatorOrderRunLine = Tables<"operator_order_run_lines">;
 export type OperatorOrderRunAllocation =
@@ -415,6 +420,115 @@ export async function getOrderRunDetailReadModel(
       issues: issuesResult.data ?? [],
       contacts: contactsResult.data ?? [],
       manualOverrides: overridesResult.data ?? [],
+      auditEvents: auditResult.data ?? [],
+    },
+    error: null,
+  };
+}
+
+export async function getCatererEmailsReadModel(
+  supabase: OperatorSupabaseClient,
+  weekStart: string,
+  orderRunId?: string,
+): Promise<
+  ReadModelResult<{
+    orderRuns: OperatorOrderRun[];
+    selectedRun: OperatorOrderRun | null;
+    communications: OperatorCommunication[];
+    recipients: OperatorCommunicationRecipient[];
+    events: OperatorCommunicationEvent[];
+    auditEvents: OperatorAuditEvent[];
+  }>
+> {
+  const { data: orderRuns, error: orderRunsError } = await supabase
+    .from("operator_order_runs")
+    .select("*")
+    .eq("week_start", weekStart)
+    .order("generated_at", { ascending: false });
+
+  if (orderRunsError) {
+    return {
+      data: null,
+      error: readError("Order runs", orderRunsError),
+    };
+  }
+
+  const runs = orderRuns ?? [];
+  const selectedRun =
+    runs.find((run) => run.order_run_id === orderRunId) ?? runs[0] ?? null;
+
+  if (!selectedRun?.order_run_id) {
+    return {
+      data: {
+        orderRuns: runs,
+        selectedRun: null,
+        communications: [],
+        recipients: [],
+        events: [],
+        auditEvents: [],
+      },
+      error: null,
+    };
+  }
+
+  const [communicationsResult, recipientsResult, eventsResult, auditResult] =
+    await Promise.all([
+      supabase
+        .from("operator_communications")
+        .select("*")
+        .eq("order_run_id", selectedRun.order_run_id)
+        .order("caterer_name", { ascending: true }),
+      supabase
+        .from("operator_communication_recipients")
+        .select("*")
+        .eq("order_run_id", selectedRun.order_run_id)
+        .order("caterer_name", { ascending: true })
+        .order("recipient_type", { ascending: true }),
+      supabase
+        .from("operator_communication_events")
+        .select("*")
+        .eq("order_run_id", selectedRun.order_run_id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("operator_audit_events")
+        .select("*")
+        .eq("order_run_id", selectedRun.order_run_id)
+        .eq("action", "communication_exported")
+        .order("created_at", { ascending: false }),
+    ]);
+
+  if (communicationsResult.error) {
+    return {
+      data: null,
+      error: readError("Caterer emails", communicationsResult.error),
+    };
+  }
+
+  if (recipientsResult.error) {
+    return {
+      data: null,
+      error: readError("Communication recipients", recipientsResult.error),
+    };
+  }
+
+  if (eventsResult.error) {
+    return {
+      data: null,
+      error: readError("Communication events", eventsResult.error),
+    };
+  }
+
+  if (auditResult.error) {
+    return { data: null, error: readError("Audit events", auditResult.error) };
+  }
+
+  return {
+    data: {
+      orderRuns: runs,
+      selectedRun,
+      communications: communicationsResult.data ?? [],
+      recipients: recipientsResult.data ?? [],
+      events: eventsResult.data ?? [],
       auditEvents: auditResult.data ?? [],
     },
     error: null,
