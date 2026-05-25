@@ -84,7 +84,7 @@ _Update this file whenever a significant phase completes or the active focus shi
 - [x] **Phase 4 first read-model slice implemented** — `public.operators` now maps Supabase Auth users to durable operator display names; authenticated operator RLS policies guard the operational tables needed by the first website slice; `operator_current_week`, `operator_weeks`, `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, and `operator_audit_events` are `security_invoker` views for Dashboard and Weeks. `audit_log.action` now permits the future menu setup audit tokens from D-17.
 - [x] **Demo operator profile seeded for the existing Auth user** — `public.operators.display_name = 'Padea Operator'` is present for the existing Supabase Auth account. Credentials remain outside source control.
 - [x] **First real website reads wired** — `/dashboard`, `/weeks`, and `/weeks/[weekStart]` now read Supabase through SSR helpers and typed read-model wrappers. Other routes remain deliberate placeholders until their read models or audited write contracts land.
-- [x] **Phase 4 type surface updated** — `web/types/supabase.ts` includes the implemented `operators` table and the verified website surface for dashboard/weeks, menu setup, order review, caterer email, audit, validation, caterer, and student read slices. Full CLI typegen is still blocked locally without `SUPABASE_ACCESS_TOKEN`, and direct DB typegen selected unreachable IPv6/pooler paths from this environment.
+- [x] **Phase 4 type surface regenerated** — `web/types/supabase.ts` is generated from the linked Supabase project and includes the full current database type surface.
 - [x] **Phase 4 advisors reviewed** — remaining security advisor items are deferred-table `rls_enabled_no_policy` INFOs for tables not exposed in the first read slice, the deliberate `citext` in `public` warning, and the Supabase Auth leaked-password-protection warning. Performance advisor items are unused-index INFOs on the small fixture database and are not being removed.
 - [x] **Menu setup read models implemented** — `operator_menu_setup` and `operator_validation_summary` expose browser-safe menu setup rows, configured caterer offer-count tiers, current offer metadata, variant review/availability fields, and stored menu-readiness findings without recalculating allocation, absence, quantity, or dietary matching logic.
 - [x] **Audited menu setup RPCs implemented** — `operator_create_dish_variant`, `operator_review_dish_variant`, `operator_update_dish_variant_availability`, and `operator_save_menu_offers` require Supabase Auth plus a matching `public.operators` row, enforce reason text, validate offer-set invariants transactionally, and write menu audit-log rows.
@@ -117,11 +117,10 @@ The current approved run has no allocation issues and the web caterer-email page
 ## Up Next (in order)
 
 1. **Add a backend/Python bridge for creating missing email snapshots from the web**, if needed; the current web workflow can record repeat preparation events only for existing persisted snapshots.
-2. **Restore complete generated `web/types/supabase.ts`** once Supabase CLI auth is available; the current type file contains the verified website surface for implemented slices.
-3. **Retire Streamlit MVPs** once parity is verified.
-4. Live email sending only after the persisted caterer email workflow is operator-confirmed in `web/`.
-5. `session_validation_findings` table to persist full Python validation output before live validation-history UI, if needed beyond the submission readiness summary.
-6. Submission artefacts.
+2. **Retire Streamlit MVPs** once parity is verified.
+3. Live email sending only after the persisted caterer email workflow is operator-confirmed in `web/`.
+4. `session_validation_findings` table to persist full Python validation output before live validation-history UI, if needed beyond the submission readiness summary.
+5. Submission artefacts.
 
 ## Known schema follow-ups (Phase 2+)
 

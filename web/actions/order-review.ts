@@ -187,7 +187,7 @@ export async function recordManualOverride(
       p_order_run_id: parsed.data.orderRunId,
       p_override_type: parsed.data.overrideType,
       p_entity_type: parsed.data.entityType,
-      p_entity_id: parsed.data.entityId,
+      p_entity_id: parsed.data.entityId as string,
       p_reason: parsed.data.reason,
     },
   );
