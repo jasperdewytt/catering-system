@@ -1,6 +1,6 @@
 # Website Implementation Stages
 
-**Status**: Planning guide; Stage 1 scaffold, menu setup, order review/approval, persisted-first caterer email, and audit read slices implemented
+**Status**: Planning guide; Stage 1 scaffold, menu setup, order review/approval, persisted-first caterer email, audit read, and validation read slices implemented
 **Last updated**: 2026-05-25
 **Related docs**:
 
@@ -191,7 +191,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 - Implement Dashboard against typed read models.
 - Implement Weeks index and Week overview against typed read models.
-- Implement Validation read view using `operator_validation_summary`; later adopt persisted `session_validation_findings` if that table is added.
+- Implement Validation read view using `operator_validation_summary`; later adopt persisted `session_validation_findings` if that table is added. Implemented for readiness summaries and latest persisted order-run issues.
 - Implement Orders index and Order run detail read views.
 - Implement Caterer Emails read view showing persisted snapshots, recipients, rendered drafts, and email preparation events.
 - Implement Audit read view with filters and detail drawer.

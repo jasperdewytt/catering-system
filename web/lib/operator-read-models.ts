@@ -303,6 +303,98 @@ export async function getOrdersIndexReadModel(
   return { data: { orderRuns: data ?? [] }, error: null };
 }
 
+export async function getValidationReadModel(
+  supabase: OperatorSupabaseClient,
+  weekStart: string,
+): Promise<
+  ReadModelResult<{
+    weekStatus: OperatorWeekStatus | null;
+    orderRuns: OperatorOrderRun[];
+    latestOrderRun: OperatorOrderRun | null;
+    validationSummary: OperatorValidationSummary[];
+    latestOrderRunIssues: OperatorOrderRunIssue[];
+  }>
+> {
+  const [statusResult, orderRunsResult, validationResult] = await Promise.all([
+    supabase
+      .from("operator_week_status")
+      .select("*")
+      .eq("week_start", weekStart)
+      .maybeSingle(),
+    supabase
+      .from("operator_order_runs")
+      .select("*")
+      .eq("week_start", weekStart)
+      .order("generated_at", { ascending: false }),
+    supabase
+      .from("operator_validation_summary")
+      .select("*")
+      .eq("week_start", weekStart)
+      .order("severity", { ascending: true })
+      .order("category", { ascending: true }),
+  ]);
+
+  if (statusResult.error) {
+    return { data: null, error: readError("Week status", statusResult.error) };
+  }
+
+  if (orderRunsResult.error) {
+    return {
+      data: null,
+      error: readError("Order runs", orderRunsResult.error),
+    };
+  }
+
+  if (validationResult.error) {
+    return {
+      data: null,
+      error: readError("Validation summary", validationResult.error),
+    };
+  }
+
+  const orderRuns = orderRunsResult.data ?? [];
+  const latestOrderRun =
+    orderRuns.find((orderRun) => orderRun.is_latest) ?? orderRuns[0] ?? null;
+
+  if (!latestOrderRun?.order_run_id) {
+    return {
+      data: {
+        weekStatus: statusResult.data,
+        orderRuns,
+        latestOrderRun: null,
+        validationSummary: validationResult.data ?? [],
+        latestOrderRunIssues: [],
+      },
+      error: null,
+    };
+  }
+
+  const { data: issues, error: issuesError } = await supabase
+    .from("operator_order_run_issues")
+    .select("*")
+    .eq("order_run_id", latestOrderRun.order_run_id)
+    .order("severity", { ascending: true })
+    .order("category", { ascending: true });
+
+  if (issuesError) {
+    return {
+      data: null,
+      error: readError("Latest order-run issues", issuesError),
+    };
+  }
+
+  return {
+    data: {
+      weekStatus: statusResult.data,
+      orderRuns,
+      latestOrderRun,
+      validationSummary: validationResult.data ?? [],
+      latestOrderRunIssues: issues ?? [],
+    },
+    error: null,
+  };
+}
+
 export async function getOrderRunDetailReadModel(
   supabase: OperatorSupabaseClient,
   weekStart: string,
