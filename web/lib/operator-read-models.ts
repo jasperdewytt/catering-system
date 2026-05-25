@@ -534,3 +534,46 @@ export async function getCatererEmailsReadModel(
     error: null,
   };
 }
+
+export async function getAuditReadModel(
+  supabase: OperatorSupabaseClient,
+): Promise<
+  ReadModelResult<{
+    auditEvents: OperatorAuditEvent[];
+    orderRunWeekStarts: Record<string, string>;
+  }>
+> {
+  const [auditResult, orderRunsResult] = await Promise.all([
+    supabase
+      .from("operator_audit_events")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200),
+    supabase.from("operator_order_runs").select("order_run_id, week_start"),
+  ]);
+
+  if (auditResult.error) {
+    return { data: null, error: readError("Audit events", auditResult.error) };
+  }
+
+  if (orderRunsResult.error) {
+    return {
+      data: null,
+      error: readError("Order run audit links", orderRunsResult.error),
+    };
+  }
+
+  const orderRunWeekStarts = Object.fromEntries(
+    (orderRunsResult.data ?? [])
+      .filter((run) => run.order_run_id && run.week_start)
+      .map((run) => [run.order_run_id as string, run.week_start as string]),
+  );
+
+  return {
+    data: {
+      auditEvents: auditResult.data ?? [],
+      orderRunWeekStarts,
+    },
+    error: null,
+  };
+}

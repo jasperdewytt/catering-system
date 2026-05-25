@@ -2,7 +2,7 @@
 
 _Update this file whenever a significant phase completes or the active focus shifts._
 
-## Status: Phase 4 Caterer Emails Persisted-First Slice Implemented — Remaining Read Pages Next
+## Status: Phase 4 Audit Read Page Implemented — Remaining Read Pages Next
 
 **Last updated**: 2026-05-25
 
@@ -96,6 +96,7 @@ _Update this file whenever a significant phase completes or the active focus shi
 - [x] **Order review usability refined** — order-line and allocation tables now support search, filters, counts, reset controls, and sortable headers. The override-note form uses human-readable allocation/order-line/contact selectors instead of raw UUID entry, while still submitting row ids internally to the audited RPC.
 - [x] **Caterer email persisted-first web workflow implemented** — `/weeks/[weekStart]/exports` now reads real communication snapshots through `operator_communications`, `operator_communication_recipients`, and `operator_communication_events`; displays persisted recipients, rendered text, delivery notes, and email-preparation history; and records repeat email-preparation events through the audited `operator_record_caterer_email_preparation` RPC without rendering Python-owned templates in TypeScript.
 - [x] **Stage 8 advisors reviewed** — Supabase now reports `operator_record_caterer_email_preparation` as an authenticated `SECURITY DEFINER` function, which is intentional for the audited operator write boundary from D-17. Other remaining security/performance advisor items are the previously documented deferred-table RLS INFOs, deliberate `citext` warning, Auth leaked-password warning, and unused-index INFOs on the small fixture database.
+- [x] **Audit read page implemented** — `/audit` now reads `operator_audit_events` through the typed Supabase SSR helper, shows summary counts, provides search/action/actor/entity filters, links order-run audit rows back to order details, and exposes before/after JSON snapshots without adding writes or recomputing domain logic.
 
 ## Active Focus
 
@@ -112,13 +113,15 @@ The current approved run has no allocation issues and the web caterer-email page
 
 ## Up Next (in order)
 
-1. **Add remaining read-only pages** — validation, audit, caterers, and students as their Phase 4 views are added.
-2. **Add a backend/Python bridge for creating missing email snapshots from the web**, if needed; the current web workflow can record repeat preparation events only for existing persisted snapshots.
-3. **Restore complete generated `web/types/supabase.ts`** once Supabase CLI auth is available; the current type file contains the verified website surface for implemented slices.
-4. **Retire Streamlit MVPs** once parity is verified.
-5. Live email sending only after the persisted caterer email workflow is operator-confirmed in `web/`.
-6. `session_validation_findings` table to persist full Python validation output before live validation-history UI, if needed beyond the submission readiness summary.
-7. Submission artefacts.
+1. **Implement `/weeks/[weekStart]/validation` read page** — use `operator_validation_summary` and `operator_order_run_issues`; do not claim full Python validation-history coverage until `session_validation_findings` exists.
+2. **Implement caterer read pages** — add `operator_caterers` / `operator_caterer_detail` views and wire `/caterers` plus `/caterers/[catererId]`.
+3. **Implement student read pages** — add `operator_students` / `operator_student_detail` views and wire `/students` plus `/students/[studentId]`.
+4. **Add a backend/Python bridge for creating missing email snapshots from the web**, if needed; the current web workflow can record repeat preparation events only for existing persisted snapshots.
+5. **Restore complete generated `web/types/supabase.ts`** once Supabase CLI auth is available; the current type file contains the verified website surface for implemented slices.
+6. **Retire Streamlit MVPs** once parity is verified.
+7. Live email sending only after the persisted caterer email workflow is operator-confirmed in `web/`.
+8. `session_validation_findings` table to persist full Python validation output before live validation-history UI, if needed beyond the submission readiness summary.
+9. Submission artefacts.
 
 ## Known schema follow-ups (Phase 2+)
 
@@ -132,7 +135,7 @@ The current approved run has no allocation issues and the web caterer-email page
 - LLM integration is planned but intentionally deferred until communications persistence exists; first likely LLM feature is advisory order-review storage
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
 - `session_validation_findings` — persisted Python validation output for full validation-history UI; not required before Stage 1 scaffold
-- remaining `security_invoker` views for validation, audit index, caterers, and students
+- remaining `security_invoker` views for validation, caterers, and students
 
 ## Parking Lot
 

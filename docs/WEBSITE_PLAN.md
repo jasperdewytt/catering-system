@@ -1,6 +1,6 @@
 # Operator Website Plan
 
-**Status**: Draft for Next.js operator UI design; menu setup, order review, and persisted-first caterer email slices implemented
+**Status**: Draft for Next.js operator UI design; menu setup, order review, persisted-first caterer email, and audit read slices implemented
 **Last updated**: 2026-05-25
 **Related decisions**:
 
@@ -350,9 +350,10 @@ For this submission, Settings is a read-only placeholder for signed-in operator 
 4. **Menu setup parity**: variant review and weekly offer selection through Server Actions and audited contracts where required.
 5. **Order review parity**: run list, order run detail, allocation/order-line tables, approval/reopen actions. Implemented for order review and approval.
 6. **Caterer email parity**: persisted snapshot review, recipients, rendered text, delivery notes, and repeat preparation-event recording. Implemented for existing snapshots; missing snapshot creation remains backend/Python-bridge work.
-7. **Caterer email parity**: communication previews, recipient snapshots, email preparation recording, persisted snapshot display.
-8. **Audit and drilldowns**: audit page, caterer detail, student detail, richer cross-links.
-9. **Streamlit retirement**: remove legacy MVPs only after the Next.js workflows are verified against the existing approved run.
+7. **Validation read page**: implement `/weeks/[weekStart]/validation` from readiness summaries and persisted order-run issues; full validation history waits for `session_validation_findings`.
+8. **Audit and drilldowns**: audit page implemented; caterer detail, student detail, and richer cross-links remain.
+9. **Caterer and student inspection**: implement `/caterers`, `/caterers/[catererId]`, `/students`, and `/students/[studentId]` after their Phase 4 read models land.
+10. **Streamlit retirement**: remove legacy MVPs only after the Next.js workflows are verified against the existing approved run.
 
 ## Data Access Shape
 

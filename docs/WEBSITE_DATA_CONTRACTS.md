@@ -1,6 +1,6 @@
 # Website Data Contracts
 
-**Status**: Phase 4 caterer-email persisted-first slice implemented
+**Status**: Phase 4 audit read page implemented
 **Last updated**: 2026-05-25
 **Related docs**:
 
@@ -43,7 +43,7 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 | `/caterers/[catererId]`                  | `operator_caterer_detail`, `operator_menu_setup`, `operator_communications`                                                                                                                           | none for submission                                               | Stage 5                             |
 | `/students`                              | `operator_students`                                                                                                                                                                                   | none for submission                                               | Stage 5                             |
 | `/students/[studentId]`                  | `operator_student_detail`, allocation and audit slices                                                                                                                                                | none for submission                                               | Stage 5                             |
-| `/audit`                                 | `operator_audit_events`                                                                                                                                                                               | none                                                              | Stage 5                             |
+| `/audit`                                 | `operator_audit_events`                                                                                                                                                                               | none                                                              | Stage 5 implemented                 |
 | `/settings`                              | session user, `operators`, build metadata                                                                                                                                                             | none for submission                                               | Stage 3/5                           |
 
 ## Implemented Phase 4 Read Models
