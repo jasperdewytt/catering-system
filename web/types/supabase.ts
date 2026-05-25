@@ -102,6 +102,78 @@ export type Database = {
         };
         Relationships: [];
       };
+      operator_student_detail: {
+        Row: {
+          student_id: string | null;
+          student_name: string | null;
+          school_id: string | null;
+          school_name: string | null;
+          year_level: number | null;
+          subjects: string | null;
+          opted_out: boolean | null;
+          dietary_raw: string | null;
+          dietary_tags: string[] | null;
+          dietary_tag_details: Json | null;
+          warning_count: number | null;
+          pending_warning_count: number | null;
+          enrolment_count: number | null;
+          absence_count: number | null;
+          latest_order_run_id: string | null;
+          latest_order_week_start: string | null;
+          latest_order_run_status: string | null;
+          latest_allocation_count: number | null;
+          latest_allocated_count: number | null;
+          latest_not_allocated_count: number | null;
+          latest_allocation_statuses: string[] | null;
+          first_session_date: string | null;
+          last_session_date: string | null;
+          source_file: string | null;
+          student_email: string | null;
+          parent_name: string | null;
+          parent_email: string | null;
+          parent_mobile: string | null;
+          dietary_warnings: Json | null;
+          enrolments: Json | null;
+          absences: Json | null;
+          latest_allocations: Json | null;
+          manual_overrides: Json | null;
+          audit_events: Json | null;
+        };
+        Relationships: [];
+      };
+      operator_students: {
+        Row: {
+          student_id: string | null;
+          student_name: string | null;
+          school_id: string | null;
+          school_name: string | null;
+          year_level: number | null;
+          subjects: string | null;
+          opted_out: boolean | null;
+          dietary_raw: string | null;
+          dietary_tags: string[] | null;
+          dietary_tag_details: Json | null;
+          warning_count: number | null;
+          pending_warning_count: number | null;
+          enrolment_count: number | null;
+          absence_count: number | null;
+          latest_order_run_id: string | null;
+          latest_order_week_start: string | null;
+          latest_order_run_status: string | null;
+          latest_allocation_count: number | null;
+          latest_allocated_count: number | null;
+          latest_not_allocated_count: number | null;
+          latest_allocation_statuses: string[] | null;
+          first_session_date: string | null;
+          last_session_date: string | null;
+          source_file: string | null;
+          student_email: string | null;
+          parent_name: string | null;
+          parent_email: string | null;
+          parent_mobile: string | null;
+        };
+        Relationships: [];
+      };
       operator_audit_events: {
         Row: {
           audit_id: string | null;

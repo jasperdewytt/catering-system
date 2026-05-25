@@ -1,6 +1,6 @@
 # Website Implementation Stages
 
-**Status**: Planning guide; Stage 1 scaffold, menu setup, order review/approval, persisted-first caterer email, audit read, validation read, and caterer read slices implemented
+**Status**: Planning guide; Stage 1 scaffold, menu setup, order review/approval, persisted-first caterer email, audit read, validation read, caterer read, and student read slices implemented
 **Last updated**: 2026-05-25
 **Related docs**:
 

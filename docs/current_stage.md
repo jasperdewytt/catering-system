@@ -2,7 +2,7 @@
 
 _Update this file whenever a significant phase completes or the active focus shifts._
 
-## Status: Caterer Read Pages Implemented — Student Read Pages Next
+## Status: Student Read Pages Implemented — Backend Bridge Next
 
 **Last updated**: 2026-05-25
 
@@ -84,7 +84,7 @@ _Update this file whenever a significant phase completes or the active focus shi
 - [x] **Phase 4 first read-model slice implemented** — `public.operators` now maps Supabase Auth users to durable operator display names; authenticated operator RLS policies guard the operational tables needed by the first website slice; `operator_current_week`, `operator_weeks`, `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, and `operator_audit_events` are `security_invoker` views for Dashboard and Weeks. `audit_log.action` now permits the future menu setup audit tokens from D-17.
 - [x] **Demo operator profile seeded for the existing Auth user** — `public.operators.display_name = 'Padea Operator'` is present for the existing Supabase Auth account. Credentials remain outside source control.
 - [x] **First real website reads wired** — `/dashboard`, `/weeks`, and `/weeks/[weekStart]` now read Supabase through SSR helpers and typed read-model wrappers. Other routes remain deliberate placeholders until their read models or audited write contracts land.
-- [x] **Phase 4 type surface updated** — `web/types/supabase.ts` includes the implemented `operators` table and first six operator views. Full CLI typegen is still blocked locally without `SUPABASE_ACCESS_TOKEN`, and direct DB typegen selected unreachable IPv6/pooler paths from this environment.
+- [x] **Phase 4 type surface updated** — `web/types/supabase.ts` includes the implemented `operators` table and the verified website surface for dashboard/weeks, menu setup, order review, caterer email, audit, validation, caterer, and student read slices. Full CLI typegen is still blocked locally without `SUPABASE_ACCESS_TOKEN`, and direct DB typegen selected unreachable IPv6/pooler paths from this environment.
 - [x] **Phase 4 advisors reviewed** — remaining security advisor items are deferred-table `rls_enabled_no_policy` INFOs for tables not exposed in the first read slice, the deliberate `citext` in `public` warning, and the Supabase Auth leaked-password-protection warning. Performance advisor items are unused-index INFOs on the small fixture database and are not being removed.
 - [x] **Menu setup read models implemented** — `operator_menu_setup` and `operator_validation_summary` expose browser-safe menu setup rows, configured caterer offer-count tiers, current offer metadata, variant review/availability fields, and stored menu-readiness findings without recalculating allocation, absence, quantity, or dietary matching logic.
 - [x] **Audited menu setup RPCs implemented** — `operator_create_dish_variant`, `operator_review_dish_variant`, `operator_update_dish_variant_availability`, and `operator_save_menu_offers` require Supabase Auth plus a matching `public.operators` row, enforce reason text, validate offer-set invariants transactionally, and write menu audit-log rows.
@@ -99,10 +99,11 @@ _Update this file whenever a significant phase completes or the active focus shi
 - [x] **Audit read page implemented** — `/audit` now reads `operator_audit_events` through the typed Supabase SSR helper, shows summary counts, provides search/action/actor/entity filters, links order-run audit rows back to order details, and exposes before/after JSON snapshots without adding writes or recomputing domain logic.
 - [x] **Validation read page implemented** — `/weeks/[weekStart]/validation` reads `operator_week_status`, `operator_validation_summary`, `operator_order_runs`, and latest `operator_order_run_issues` through the typed Supabase SSR helper. The page shows stored readiness summaries and latest persisted allocation issues without triggering Python jobs, adding writes, or claiming full validation-history coverage before `session_validation_findings` exists.
 - [x] **Caterer read pages implemented** — `operator_caterers` and `operator_caterer_detail` are browser-safe `security_invoker` views for caterer directory/detail inspection. `/caterers` and `/caterers/[catererId]` now show assigned schools, contacts, weekly minimums, stored menu review counts, latest persisted order totals, and communication readiness without contact-verification writes or TypeScript recomputation of catering rules.
+- [x] **Student read pages implemented** — `operator_students` and `operator_student_detail` are browser-safe `security_invoker` views for student directory/detail inspection. `/students` and `/students/[studentId]` now show profile/contact fields, opt-out state, stored dietary tags and warnings, enrolments, absences, latest persisted allocations, and relevant override/audit context without student edits or TypeScript recomputation of attendance, exclusions, dietary safety, allocation, or quantities.
 
 ## Active Focus
 
-**Add student read-only pages and keep Streamlit only as a temporary verification harness.**
+**Add a backend/Python bridge for missing web-triggered job and email snapshot creation, while keeping Streamlit only as a temporary verification harness.**
 
 The deterministic Python backend can write generated order runs end-to-end, and communications persistence captures recipient snapshots and email preparation events. The Streamlit MVPs have proven the workflow against the live DB, and the first Next.js pages now read real authenticated operational data. The implemented allocation algorithm remains:
 
@@ -115,13 +116,12 @@ The current approved run has no allocation issues and the web caterer-email page
 
 ## Up Next (in order)
 
-1. **Implement student read pages** — add `operator_students` / `operator_student_detail` views and wire `/students` plus `/students/[studentId]`.
-2. **Add a backend/Python bridge for creating missing email snapshots from the web**, if needed; the current web workflow can record repeat preparation events only for existing persisted snapshots.
-3. **Restore complete generated `web/types/supabase.ts`** once Supabase CLI auth is available; the current type file contains the verified website surface for implemented slices.
-4. **Retire Streamlit MVPs** once parity is verified.
-5. Live email sending only after the persisted caterer email workflow is operator-confirmed in `web/`.
-6. `session_validation_findings` table to persist full Python validation output before live validation-history UI, if needed beyond the submission readiness summary.
-7. Submission artefacts.
+1. **Add a backend/Python bridge for creating missing email snapshots from the web**, if needed; the current web workflow can record repeat preparation events only for existing persisted snapshots.
+2. **Restore complete generated `web/types/supabase.ts`** once Supabase CLI auth is available; the current type file contains the verified website surface for implemented slices.
+3. **Retire Streamlit MVPs** once parity is verified.
+4. Live email sending only after the persisted caterer email workflow is operator-confirmed in `web/`.
+5. `session_validation_findings` table to persist full Python validation output before live validation-history UI, if needed beyond the submission readiness summary.
+6. Submission artefacts.
 
 ## Known schema follow-ups (Phase 2+)
 
@@ -135,7 +135,6 @@ The current approved run has no allocation issues and the web caterer-email page
 - LLM integration is planned but intentionally deferred until communications persistence exists; first likely LLM feature is advisory order-review storage
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
 - `session_validation_findings` — persisted Python validation output for full validation-history UI; not required before Stage 1 scaffold
-- remaining `security_invoker` views for students
 
 ## Parking Lot
 

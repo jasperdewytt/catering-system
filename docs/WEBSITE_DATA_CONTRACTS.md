@@ -1,6 +1,6 @@
 # Website Data Contracts
 
-**Status**: Phase 4 caterer read pages implemented
+**Status**: Phase 4 student read pages implemented
 **Last updated**: 2026-05-25
 **Related docs**:
 
@@ -41,14 +41,14 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 | `/weeks/[weekStart]/exports`             | `operator_communications`, `operator_communication_recipients`, `operator_communication_events`, `operator_audit_events`                                                                              | repeat email-preparation event through RPC for existing snapshots | Stage 8 persisted-first implemented |
 | `/caterers`                              | `operator_caterers`                                                                                                                                                                                   | none for submission                                               | Stage 9 implemented                 |
 | `/caterers/[catererId]`                  | `operator_caterer_detail`                                                                                                                                                                             | none for submission                                               | Stage 9 implemented                 |
-| `/students`                              | `operator_students`                                                                                                                                                                                   | none for submission                                               | Stage 5                             |
-| `/students/[studentId]`                  | `operator_student_detail`, allocation and audit slices                                                                                                                                                | none for submission                                               | Stage 5                             |
+| `/students`                              | `operator_students`                                                                                                                                                                                   | none for submission                                               | Stage 9 implemented                 |
+| `/students/[studentId]`                  | `operator_student_detail`                                                                                                                                                                             | none for submission                                               | Stage 9 implemented                 |
 | `/audit`                                 | `operator_audit_events`                                                                                                                                                                               | none                                                              | Stage 5 implemented                 |
 | `/settings`                              | session user, `operators`, build metadata                                                                                                                                                             | none for submission                                               | Stage 3/5                           |
 
 ## Implemented Phase 4 Read Models
 
-The first Dashboard/Weeks group below is implemented in `supabase/migrations/20260524130454_phase_4_operator_read_models.sql`. The menu setup group is implemented in `supabase/migrations/20260524154500_menu_setup_read_models_and_rpcs.sql`. The order review group is implemented in `supabase/migrations/20260524171000_order_review_read_models_and_rpcs.sql`. The caterer-email persisted-first group is implemented in `supabase/migrations/20260525100000_caterer_email_read_models_and_rpc.sql`. The caterer directory/detail group is implemented in `supabase/migrations/20260525113000_caterer_read_models.sql`. These views use `WITH (security_invoker = true)` and are granted only to `authenticated`; underlying table access is guarded by RLS policies requiring a row in `public.operators`.
+The first Dashboard/Weeks group below is implemented in `supabase/migrations/20260524130454_phase_4_operator_read_models.sql`. The menu setup group is implemented in `supabase/migrations/20260524154500_menu_setup_read_models_and_rpcs.sql`. The order review group is implemented in `supabase/migrations/20260524171000_order_review_read_models_and_rpcs.sql`. The caterer-email persisted-first group is implemented in `supabase/migrations/20260525100000_caterer_email_read_models_and_rpc.sql`. The caterer directory/detail group is implemented in `supabase/migrations/20260525113000_caterer_read_models.sql`. The student directory/detail group is implemented in `supabase/migrations/20260525124500_student_read_models.sql`. These views use `WITH (security_invoker = true)` and are granted only to `authenticated`; underlying table access is guarded by RLS policies requiring a row in `public.operators`.
 
 `web/types/supabase.ts` was updated for the implemented Phase 4 table, views, menu RPCs, and order-review RPCs. Local CLI typegen by project id is blocked without `SUPABASE_ACCESS_TOKEN`, so the file currently contains the verified website surface needed by the implemented slices rather than a full database type dump.
 
@@ -401,13 +401,55 @@ One row per caterer. Pricing, delivery, contact, school, menu-review, latest per
 
 One row per caterer with JSON arrays for operator-friendly drilldown sections. Contacts are shown verbatim from source rows, including synthetic or unverified contact data. Latest order and communication sections expose persisted rows only; they do not build or mutate email snapshots.
 
+### `operator_students`
+
+- `student_id uuid`
+- `student_name text`
+- `school_id uuid`
+- `school_name text`
+- `year_level smallint`
+- `subjects text null`
+- `opted_out boolean`
+- `dietary_raw text null`
+- `dietary_tags text[]`
+- `dietary_tag_details jsonb`
+- `warning_count integer`
+- `pending_warning_count integer`
+- `enrolment_count integer`
+- `absence_count integer`
+- `latest_order_run_id uuid null`
+- `latest_order_week_start date null`
+- `latest_order_run_status text null`
+- `latest_allocation_count integer`
+- `latest_allocated_count integer`
+- `latest_not_allocated_count integer`
+- `latest_allocation_statuses text[]`
+- `first_session_date date null`
+- `last_session_date date null`
+- `source_file text null`
+- `student_email text null`
+- `parent_name text null`
+- `parent_email text null`
+- `parent_mobile text null`
+
+One row per student. The view exposes source profile/contact fields, school/year/subjects, opt-out state, stored dietary tags/warning counts, enrolment/absence counts, and latest persisted allocation counts/statuses. It does not expose `students.source_row` and does not recalculate attendance, exclusions, dietary safety, allocation, or quantities.
+
+### `operator_student_detail`
+
+Includes all `operator_students` profile/contact columns plus:
+
+- `dietary_warnings jsonb`
+- `enrolments jsonb`
+- `absences jsonb`
+- `latest_allocations jsonb`
+- `manual_overrides jsonb`
+- `audit_events jsonb`
+
+One row per student with JSON arrays for operator drilldown sections. Allocation rows are the latest persisted order-run allocations only. Override and audit arrays include records directly tied to the student id in `entity_id`, `before_state.student_id`, or `after_state.student_id`. The detail view remains read-only and does not expose raw source JSON.
+
 ## Deferred Read Models
 
 The following contracts remain planned and should be added only when the corresponding page slice or audited write contract is ready.
-
-### `operator_students` and `operator_student_detail`
-
-Expose student identity, school, year level, opted-out state, dietary tags, enrolments, absences, allocations, and relevant audit/override records. No student edit workflow is required for the submission.
 
 ## Write Contracts
 

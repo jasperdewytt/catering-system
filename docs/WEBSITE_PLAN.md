@@ -351,8 +351,8 @@ For this submission, Settings is a read-only placeholder for signed-in operator 
 5. **Order review parity**: run list, order run detail, allocation/order-line tables, approval/reopen actions. Implemented for order review and approval.
 6. **Caterer email parity**: persisted snapshot review, recipients, rendered text, delivery notes, and repeat preparation-event recording. Implemented for existing snapshots; missing snapshot creation remains backend/Python-bridge work.
 7. **Validation read page**: implemented from readiness summaries and persisted latest order-run issues; full validation history waits for `session_validation_findings`.
-8. **Audit and drilldowns**: audit and caterer detail pages implemented; student detail and richer cross-links remain.
-9. **Caterer and student inspection**: caterer inspection implemented; implement `/students` and `/students/[studentId]` after their Phase 4 read models land.
+8. **Audit and drilldowns**: audit, caterer detail, and student detail pages implemented; richer cross-links remain.
+9. **Caterer and student inspection**: caterer and student inspection implemented.
 10. **Streamlit retirement**: remove legacy MVPs only after the Next.js workflows are verified against the existing approved run.
 
 ## Data Access Shape

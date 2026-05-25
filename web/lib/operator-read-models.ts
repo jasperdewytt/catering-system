@@ -26,6 +26,8 @@ export type OperatorMenuSetupRow = Tables<"operator_menu_setup">;
 export type OperatorValidationSummary = Tables<"operator_validation_summary">;
 export type OperatorCaterer = Tables<"operator_caterers">;
 export type OperatorCatererDetail = Tables<"operator_caterer_detail">;
+export type OperatorStudent = Tables<"operator_students">;
+export type OperatorStudentDetail = Tables<"operator_student_detail">;
 
 export type ReadModelResult<T> =
   | { data: T; error: null }
@@ -699,6 +701,40 @@ export async function getCatererDetailReadModel(
 
   if (error) {
     return { data: null, error: readError("Caterer detail", error) };
+  }
+
+  return { data, error: null };
+}
+
+export async function getStudentsReadModel(
+  supabase: OperatorSupabaseClient,
+): Promise<ReadModelResult<OperatorStudent[]>> {
+  const { data, error } = await supabase
+    .from("operator_students")
+    .select("*")
+    .order("school_name", { ascending: true })
+    .order("year_level", { ascending: true })
+    .order("student_name", { ascending: true });
+
+  if (error) {
+    return { data: null, error: readError("Students", error) };
+  }
+
+  return { data: data ?? [], error: null };
+}
+
+export async function getStudentDetailReadModel(
+  supabase: OperatorSupabaseClient,
+  studentId: string,
+): Promise<ReadModelResult<OperatorStudentDetail | null>> {
+  const { data, error } = await supabase
+    .from("operator_student_detail")
+    .select("*")
+    .eq("student_id", studentId)
+    .maybeSingle();
+
+  if (error) {
+    return { data: null, error: readError("Student detail", error) };
   }
 
   return { data, error: null };
