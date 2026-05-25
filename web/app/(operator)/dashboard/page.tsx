@@ -108,6 +108,7 @@ export default async function DashboardPage() {
     {
       label: "Validation",
       value: weekStatus?.validation_state ?? null,
+      href: `/weeks/${currentWeek.week_start}/validation`,
       detail: `${weekStatus?.blocking_issue_count ?? 0} blocking, ${
         weekStatus?.warning_count ?? 0
       } warning`,

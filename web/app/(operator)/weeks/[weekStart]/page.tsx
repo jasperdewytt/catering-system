@@ -109,6 +109,14 @@ export default async function WeekOverviewPage({
           : "Offered variants are reviewed",
     },
     {
+      label: "Validation",
+      value: weekStatus.validation_state,
+      href: `/weeks/${weekStart}/validation`,
+      detail: `${weekStatus.blocking_issue_count ?? 0} blocking, ${
+        weekStatus.warning_count ?? 0
+      } warning`,
+    },
+    {
       label: "Approval",
       value: weekStatus.approval_state,
       href: `/weeks/${weekStart}/orders`,
@@ -143,6 +151,12 @@ export default async function WeekOverviewPage({
               </Link>
             </Button>
             <Button asChild variant="secondary">
+              <Link href={`/weeks/${weekStart}/validation`}>
+                Validation
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+            </Button>
+            <Button asChild variant="secondary">
               <Link href={`/weeks/${weekStart}/orders`}>
                 View order runs
                 <ArrowRight className="size-4" aria-hidden="true" />
@@ -161,7 +175,7 @@ export default async function WeekOverviewPage({
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         {readiness.map((item) => {
           const card = (
             <Card
