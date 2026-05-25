@@ -35,6 +35,73 @@ export type Database = {
       };
     };
     Views: {
+      operator_caterer_detail: {
+        Row: {
+          caterer_id: string | null;
+          caterer_name: string | null;
+          region: string | null;
+          per_item_price: number | null;
+          gst_inclusive: boolean | null;
+          gst_rate_percent: number | null;
+          delivery_fee: number | null;
+          delivery_scope: string | null;
+          delivery_notes: string | null;
+          assigned_school_count: number | null;
+          contact_count: number | null;
+          dish_count: number | null;
+          variant_count: number | null;
+          available_variant_count: number | null;
+          reviewed_variant_count: number | null;
+          unreviewed_variant_count: number | null;
+          contacts: Json | null;
+          weekly_minimums: Json | null;
+          assigned_schools: Json | null;
+          menu_summary: Json | null;
+          latest_order_totals: Json | null;
+          latest_order_lines: Json | null;
+          latest_communication: Json | null;
+        };
+        Relationships: [];
+      };
+      operator_caterers: {
+        Row: {
+          caterer_id: string | null;
+          caterer_name: string | null;
+          region: string | null;
+          per_item_price: number | null;
+          gst_inclusive: boolean | null;
+          gst_rate_percent: number | null;
+          delivery_fee: number | null;
+          delivery_scope: string | null;
+          delivery_notes: string | null;
+          assigned_school_names: string[] | null;
+          assigned_school_count: number | null;
+          contact_count: number | null;
+          primary_contact_name: string | null;
+          primary_contact_email: string | null;
+          primary_contact_role: string | null;
+          valid_offer_counts: number[] | null;
+          weekly_minimum_tiers: Json | null;
+          dish_count: number | null;
+          variant_count: number | null;
+          available_variant_count: number | null;
+          reviewed_variant_count: number | null;
+          unreviewed_variant_count: number | null;
+          latest_order_run_id: string | null;
+          latest_order_week_start: string | null;
+          latest_order_run_status: string | null;
+          latest_order_line_count: number | null;
+          latest_order_quantity: number | null;
+          latest_order_total: number | null;
+          latest_communication_id: string | null;
+          email_state: string | null;
+          exported_at: string | null;
+          exported_by: string | null;
+          communication_event_count: number | null;
+          latest_communication_event_at: string | null;
+        };
+        Relationships: [];
+      };
       operator_audit_events: {
         Row: {
           audit_id: string | null;

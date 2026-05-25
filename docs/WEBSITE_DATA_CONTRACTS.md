@@ -1,6 +1,6 @@
 # Website Data Contracts
 
-**Status**: Phase 4 audit read page implemented
+**Status**: Phase 4 caterer read pages implemented
 **Last updated**: 2026-05-25
 **Related docs**:
 
@@ -39,8 +39,8 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 | `/weeks/[weekStart]/orders`              | `operator_order_runs`                                                                                                                                                                                 | generate run only after job bridge                                | Stage 7 read implemented            |
 | `/weeks/[weekStart]/orders/[orderRunId]` | `operator_order_runs`, `operator_order_run_lines`, `operator_order_run_allocations`, `operator_order_run_issues`, `operator_order_run_contacts`, `operator_manual_overrides`, `operator_audit_events` | approve, reopen, follow-up/override notes through RPCs            | Stage 7 implemented                 |
 | `/weeks/[weekStart]/exports`             | `operator_communications`, `operator_communication_recipients`, `operator_communication_events`, `operator_audit_events`                                                                              | repeat email-preparation event through RPC for existing snapshots | Stage 8 persisted-first implemented |
-| `/caterers`                              | `operator_caterers`                                                                                                                                                                                   | none for submission                                               | Stage 5                             |
-| `/caterers/[catererId]`                  | `operator_caterer_detail`, `operator_menu_setup`, `operator_communications`                                                                                                                           | none for submission                                               | Stage 5                             |
+| `/caterers`                              | `operator_caterers`                                                                                                                                                                                   | none for submission                                               | Stage 9 implemented                 |
+| `/caterers/[catererId]`                  | `operator_caterer_detail`                                                                                                                                                                             | none for submission                                               | Stage 9 implemented                 |
 | `/students`                              | `operator_students`                                                                                                                                                                                   | none for submission                                               | Stage 5                             |
 | `/students/[studentId]`                  | `operator_student_detail`, allocation and audit slices                                                                                                                                                | none for submission                                               | Stage 5                             |
 | `/audit`                                 | `operator_audit_events`                                                                                                                                                                               | none                                                              | Stage 5 implemented                 |
@@ -48,7 +48,7 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 
 ## Implemented Phase 4 Read Models
 
-The first Dashboard/Weeks group below is implemented in `supabase/migrations/20260524130454_phase_4_operator_read_models.sql`. The menu setup group is implemented in `supabase/migrations/20260524154500_menu_setup_read_models_and_rpcs.sql`. The order review group is implemented in `supabase/migrations/20260524171000_order_review_read_models_and_rpcs.sql`. The caterer-email persisted-first group is implemented in `supabase/migrations/20260525100000_caterer_email_read_models_and_rpc.sql`. These views use `WITH (security_invoker = true)` and are granted only to `authenticated`; underlying table access is guarded by RLS policies requiring a row in `public.operators`.
+The first Dashboard/Weeks group below is implemented in `supabase/migrations/20260524130454_phase_4_operator_read_models.sql`. The menu setup group is implemented in `supabase/migrations/20260524154500_menu_setup_read_models_and_rpcs.sql`. The order review group is implemented in `supabase/migrations/20260524171000_order_review_read_models_and_rpcs.sql`. The caterer-email persisted-first group is implemented in `supabase/migrations/20260525100000_caterer_email_read_models_and_rpc.sql`. The caterer directory/detail group is implemented in `supabase/migrations/20260525113000_caterer_read_models.sql`. These views use `WITH (security_invoker = true)` and are granted only to `authenticated`; underlying table access is guarded by RLS policies requiring a row in `public.operators`.
 
 `web/types/supabase.ts` was updated for the implemented Phase 4 table, views, menu RPCs, and order-review RPCs. Local CLI typegen by project id is blocked without `SUPABASE_ACCESS_TOKEN`, so the file currently contains the verified website surface needed by the implemented slices rather than a full database type dump.
 
@@ -334,13 +334,76 @@ This view exposes append-only email-preparation events.
 
 Map stored `order_run_unapproved` to display action `Reopen run`.
 
+### `operator_caterers`
+
+- `caterer_id uuid`
+- `caterer_name text`
+- `region text null`
+- `per_item_price numeric`
+- `gst_inclusive boolean`
+- `gst_rate_percent numeric`
+- `delivery_fee numeric`
+- `delivery_scope text`
+- `delivery_notes text null`
+- `assigned_school_names text[]`
+- `assigned_school_count integer`
+- `contact_count integer`
+- `primary_contact_name text null`
+- `primary_contact_email text null`
+- `primary_contact_role text null`
+- `valid_offer_counts integer[]`
+- `weekly_minimum_tiers jsonb`
+- `dish_count integer`
+- `variant_count integer`
+- `available_variant_count integer`
+- `reviewed_variant_count integer`
+- `unreviewed_variant_count integer`
+- `latest_order_run_id uuid null`
+- `latest_order_week_start date null`
+- `latest_order_run_status text null`
+- `latest_order_line_count integer`
+- `latest_order_quantity integer`
+- `latest_order_total numeric`
+- `latest_communication_id uuid null`
+- `email_state text`
+- `exported_at timestamptz null`
+- `exported_by text null`
+- `communication_event_count integer`
+- `latest_communication_event_at timestamptz null`
+
+One row per caterer. Pricing, delivery, contact, school, menu-review, latest persisted order, and latest email-readiness fields are display summaries over stored facts. The view does not verify contacts, recalculate caterer minimum compliance, generate communication text, or recompute ordering/allocation rules.
+
+### `operator_caterer_detail`
+
+- `caterer_id uuid`
+- `caterer_name text`
+- `region text null`
+- `per_item_price numeric`
+- `gst_inclusive boolean`
+- `gst_rate_percent numeric`
+- `delivery_fee numeric`
+- `delivery_scope text`
+- `delivery_notes text null`
+- `assigned_school_count integer`
+- `contact_count integer`
+- `dish_count integer`
+- `variant_count integer`
+- `available_variant_count integer`
+- `reviewed_variant_count integer`
+- `unreviewed_variant_count integer`
+- `contacts jsonb`
+- `weekly_minimums jsonb`
+- `assigned_schools jsonb`
+- `menu_summary jsonb`
+- `latest_order_totals jsonb`
+- `latest_order_lines jsonb`
+- `latest_communication jsonb`
+
+One row per caterer with JSON arrays for operator-friendly drilldown sections. Contacts are shown verbatim from source rows, including synthetic or unverified contact data. Latest order and communication sections expose persisted rows only; they do not build or mutate email snapshots.
+
 ## Deferred Read Models
 
 The following contracts remain planned and should be added only when the corresponding page slice or audited write contract is ready.
-
-### `operator_caterers` and `operator_caterer_detail`
-
-Expose caterer name, assigned schools, contacts, weekly minimums, latest menu review status, latest order-line counts, and caterer-email readiness. No contact-verification workflow is required for the submission.
 
 ### `operator_students` and `operator_student_detail`
 

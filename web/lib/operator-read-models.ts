@@ -24,6 +24,8 @@ export type OperatorManualOverride = Tables<"operator_manual_overrides">;
 export type OperatorAuditEvent = Tables<"operator_audit_events">;
 export type OperatorMenuSetupRow = Tables<"operator_menu_setup">;
 export type OperatorValidationSummary = Tables<"operator_validation_summary">;
+export type OperatorCaterer = Tables<"operator_caterers">;
+export type OperatorCatererDetail = Tables<"operator_caterer_detail">;
 
 export type ReadModelResult<T> =
   | { data: T; error: null }
@@ -668,4 +670,36 @@ export async function getAuditReadModel(
     },
     error: null,
   };
+}
+
+export async function getCaterersReadModel(
+  supabase: OperatorSupabaseClient,
+): Promise<ReadModelResult<OperatorCaterer[]>> {
+  const { data, error } = await supabase
+    .from("operator_caterers")
+    .select("*")
+    .order("caterer_name", { ascending: true });
+
+  if (error) {
+    return { data: null, error: readError("Caterers", error) };
+  }
+
+  return { data: data ?? [], error: null };
+}
+
+export async function getCatererDetailReadModel(
+  supabase: OperatorSupabaseClient,
+  catererId: string,
+): Promise<ReadModelResult<OperatorCatererDetail | null>> {
+  const { data, error } = await supabase
+    .from("operator_caterer_detail")
+    .select("*")
+    .eq("caterer_id", catererId)
+    .maybeSingle();
+
+  if (error) {
+    return { data: null, error: readError("Caterer detail", error) };
+  }
+
+  return { data, error: null };
 }

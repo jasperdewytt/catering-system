@@ -14,7 +14,7 @@ export function OperatorShell({
 }) {
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="hidden w-64 shrink-0 border-r border-border bg-card md:block">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 overflow-y-auto border-r border-border bg-card md:block">
         <div className="flex h-14 items-center gap-3 border-b border-border px-4">
           <div className="flex size-8 items-center justify-center rounded-md bg-brand text-sm font-semibold text-white">
             P
