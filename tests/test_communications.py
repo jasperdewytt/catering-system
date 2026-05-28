@@ -202,8 +202,15 @@ def test_record_communication_export_creates_snapshot_event_and_audit() -> None:
 
     assert result["snapshot_created"] is True
     assert communication["subject"] == "Padea catering order - Example Caterer"
+    assert communication["template_version"] == "caterer-order-v2"
+    assert "Example School - Fri 1 May - dinner 6pm" in communication["rendered_text"]
     assert "3 x Cali Burrito - Vegetarian" in communication["rendered_text"]
+    assert "Total meals: 3" in communication["rendered_text"]
+    assert "Please confirm receipt" in communication["rendered_text"]
+    assert "Item subtotal" not in communication["rendered_text"]
+    assert "Delivery fee noted" not in communication["rendered_text"]
     assert "Jessie 0412 345 678" in communication["delivery_note_text"]
+    assert "18:00:00" not in communication["delivery_note_text"]
     assert recipient["email"] == "primary@example.com"
     assert recipient["recipient_type"] == "to"
     assert event["event_type"] == "exported"

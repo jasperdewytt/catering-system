@@ -91,8 +91,13 @@ def test_structured_draft_includes_subject_body_and_recipients() -> None:
         }
     ]
     assert "3 x Cali Burrito - Vegetarian" in draft["body"]
+    assert "Example School - Fri 1 May - dinner 6pm" in draft["body"]
     assert "Jessie 0412 345 678" in draft["delivery_note_text"]
-    assert "Item subtotal: $36.00" in draft["rendered_text"]
+    assert "Total meals: 3" in draft["rendered_text"]
+    assert "Please confirm receipt" in draft["rendered_text"]
+    assert "Item subtotal" not in draft["rendered_text"]
+    assert "Delivery fee noted" not in draft["rendered_text"]
+    assert draft["template_version"] == "caterer-order-v2"
 
 
 def test_email_draft_includes_building_and_manager_mobile_without_room_warning() -> None:
@@ -133,6 +138,8 @@ def test_email_draft_includes_building_and_manager_mobile_without_room_warning()
 
     assert "Delivery: Library" in draft
     assert "Jessie 0412 345 678" in draft
+    assert "Example School - Fri 1 May - dinner 6pm" in draft
+    assert "18:00:00" not in draft
     assert "room number is not recorded" not in draft
 
 

@@ -5,13 +5,13 @@ from __future__ import annotations
 import os
 import smtplib
 from collections import defaultdict
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time
 from email.message import EmailMessage
 from typing import Any
 
 from supabase import Client
 
-COMMUNICATION_TEMPLATE_VERSION = "caterer-order-v1"
+COMMUNICATION_TEMPLATE_VERSION = "caterer-order-v2"
 READY_TO_SEND_STATUSES = {"exported", "failed"}
 
 
@@ -177,12 +177,48 @@ def email_provider_from_env() -> EmailProvider:
     )
 
 
-def _format_money(cents: int) -> str:
-    return f"${cents / 100:.2f}"
-
-
 def _variant_display_name(dish_name: str, variant_name: str) -> str:
     return dish_name if variant_name == "Standard" else f"{dish_name} - {variant_name}"
+
+
+def _format_session_date(value: str | None) -> str:
+    if not value:
+        return "date TBC"
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%d")
+    except ValueError:
+        return value
+    return f"{parsed.strftime('%a')} {parsed.day} {parsed.strftime('%b')}"
+
+
+def _format_dinner_time(value: str | time | None) -> str:
+    if value is None:
+        return "TBC"
+    if isinstance(value, time):
+        parsed = value
+    else:
+        raw = str(value).strip()
+        for pattern in ("%H:%M:%S", "%H:%M"):
+            try:
+                parsed = datetime.strptime(raw, pattern).time()
+                break
+            except ValueError:
+                continue
+        else:
+            return raw or "TBC"
+
+    suffix = "am" if parsed.hour < 12 else "pm"
+    display_hour = parsed.hour % 12 or 12
+    if parsed.minute == 0:
+        return f"{display_hour}{suffix}"
+    return f"{display_hour}:{parsed.minute:02d}{suffix}"
+
+
+def _session_heading(session: dict[str, Any]) -> str:
+    school = session.get("school_name") or "School TBC"
+    session_date = _format_session_date(session.get("session_date"))
+    dinner_time = _format_dinner_time(session.get("dinner_time"))
+    return f"{school} - {session_date} - dinner {dinner_time}"
 
 
 def build_caterer_communication_draft(
@@ -206,7 +242,6 @@ def build_caterer_communication_draft(
     ]
     recipient_emails = [recipient["email"] for recipient in recipients]
     subject = f"Padea catering order - {caterer['name']}"
-    subtotal_cents = sum(row["line_total_cents"] for row in order_lines)
     total_meals = sum(row["quantity"] for row in order_lines)
 
     body_lines = [
@@ -225,10 +260,7 @@ def build_caterer_communication_draft(
         destination = session.get("building") or "delivery location TBC"
         if session.get("room"):
             destination = f"{destination}, Room {session['room']}"
-        session_heading = (
-            f"{session['school_name']} - {session['session_date']} "
-            f"dinner {session.get('dinner_time') or 'TBC'}"
-        )
+        session_heading = _session_heading(session)
         manager_contact = (
             f"{session.get('manager_name') or 'TBC'} {session.get('manager_mobile') or ''}".strip()
         )
@@ -254,14 +286,10 @@ def build_caterer_communication_draft(
     body_lines.extend(
         [
             f"Total meals: {total_meals}",
-            f"Item subtotal: {_format_money(subtotal_cents)}",
+            "",
+            "Please confirm receipt and let us know if anything needs clarification.",
         ]
     )
-    if caterer.get("delivery_fee_cents"):
-        body_lines.append(
-            f"Delivery fee noted in system: {_format_money(caterer['delivery_fee_cents'])} "
-            f"({caterer.get('delivery_scope') or 'scope unknown'})"
-        )
     body_lines.extend(["", "Thanks,", "Padea"])
     body = "\n".join(body_lines)
     rendered_text = "\n".join(
