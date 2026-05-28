@@ -1,6 +1,6 @@
 # Website Implementation Stages
 
-**Status**: Planning guide; Stage 1 scaffold, menu setup, order review/approval, caterer email snapshots, v1 test-routed email sending, audit read, validation read, caterer read, student read, and dynamic workflow-sidebar slices implemented
+**Status**: Historical build record; operator console, menu setup, order review/approval, caterer email snapshots, safety-gated test-recipient sending, audit read, validation read, caterer read, student read, and dynamic workflow-sidebar slices implemented
 **Last updated**: 2026-05-28
 **Related docs**:
 
@@ -12,7 +12,7 @@
 
 ## Purpose
 
-This document breaks the operator website into implementation stages that can be built and reviewed safely. The goal is to avoid a single large website build that accidentally duplicates Python-owned catering logic, bypasses Supabase security, or ships unaudited operator writes.
+This document records how the operator website was built and reviewed safely. It remains as an implementation reference for future changes, not the active roadmap.
 
 The production website lives in `web/`. The Claude Design export in `docs/design-handoff/` is visual reference material only.
 
@@ -24,9 +24,9 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Do not duplicate ingestion, validation, allocation, dietary, exclusion, absence, ordering, or quantity rules in TypeScript.
 - Do not add unaudited writes for approvals, reopen actions, caterer emails, manual overrides, dietary review, or menu-offer changes.
 - Do not write directly to operational tables from Server Actions when an audited RPC/backend contract is required.
-- Do not imply provider-confirmed delivery until a separate sent/delivery model exists. Operator-facing copy should say "Caterer emails", "Email ready", or "Not emailed yet"; avoid making preparation/downloading language the operator workflow.
+- Do not imply provider-confirmed delivery unless the persisted `sent`/`failed` communication state and provider metadata exist. Operator-facing copy should say "Caterer emails", "Email ready", "Not emailed yet", "Sent", or "Failed" where those states match the audit trail.
 - Do not copy the Claude Design JSX prototype directly into production. Re-implement with Next.js, TypeScript, Tailwind, shadcn/ui, Radix, Lucide, and Supabase SSR.
-- Do not create a Python job trigger from the UI until a deliberate HTTP or queue bridge exists.
+- Do not create additional Python job triggers from the UI until a deliberate HTTP or queue bridge exists.
 
 ## Stage 0 - Readiness Inventory
 
@@ -54,7 +54,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 ## Stage 1 - Web Foundation
 
-**Current status**: Complete for the first reviewable slice. The scaffold, auth-only Supabase helpers, operator shell, route placeholders, scripts, and browser-safe `.env.example` exist in `web/`. Full generated Supabase types should be regenerated after Phase 4; local CLI typegen currently requires Supabase CLI auth.
+**Current status**: Complete. The scaffold, auth-only Supabase helpers, operator shell, scripts, browser-safe `.env.example`, and generated Supabase types exist in `web/`.
 
 **Goal**: Create the base Next.js app and toolchain without implementing business workflows.
 
@@ -112,15 +112,15 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Protect authenticated routes.
 - Add sidebar/topbar shell with the route structure from `docs/WEBSITE_PLAN.md`.
 - Add signed-in operator menu and logout.
-- Add current-week selector placeholder or read-backed selector if a safe read path exists.
-- Add global readiness indicator placeholder or read-backed indicator if a safe read path exists.
+- Add a current-week selector or read-backed selector if multiple service weeks need active switching.
+- Add a global readiness indicator if operators need it outside the week workflow panel.
 - Use the D-15 auth model: email/password for submission, session user mapped to `public.operators`, no custom role claim.
 
 **Exit criteria**
 
 - Anonymous users cannot access operator routes.
 - Auth/session logic is isolated under `web/lib/supabase/`.
-- The shell can render placeholder route bodies without business writes.
+- The shell renders protected operator routes without unaudited business writes.
 - Any real actor display name comes from `public.operators`, not user metadata.
 
 **Do not**
@@ -211,7 +211,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 ## Stage 6 - Menu Setup Writes
 
-**Goal**: Port the menu setup workflow from the Streamlit MVP into audited web actions.
+**Goal**: Port menu setup into audited web actions.
 
 **Tasks**
 
@@ -225,7 +225,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 **Exit criteria**
 
-- Menu setup parity with `app/menu_setup_mvp.py` for supported operations.
+- Menu setup supports variant creation, review, availability changes, and weekly offer selection.
 - Every safety-relevant change records the required audit metadata, including central `audit_log` rows for the actions listed in D-17.
 - Invalid or incomplete review submissions fail loudly.
 
@@ -254,7 +254,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 **Exit criteria**
 
-- Order review parity with the approval/reopen portions of `app/order_review_mvp.py`.
+- Order review supports approval, reopen, follow-up/override notes, and persisted audit context.
 - Approval/reopen actions produce audit records.
 - Blocked states are concrete and cannot be bypassed in the UI.
 
@@ -283,7 +283,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 ## Stage 8 - Caterer Email Workflow Writes
 
-**Status**: Implemented. The web UI displays existing immutable snapshots, can append audited preparation events for those snapshots, can create missing first snapshots through the narrow Python email bridge, and can send reviewed snapshots through the v1 Gmail SMTP backend path with a mandatory test-recipient override.
+**Status**: Implemented. The web UI displays existing immutable snapshots, can append audited preparation events for those snapshots, can create missing first snapshots through the narrow Python email bridge, and can send reviewed snapshots through the safety-gated Gmail SMTP backend path with a mandatory test-recipient override.
 
 **Goal**: Port deterministic caterer email snapshot tracking into the web app.
 
@@ -297,23 +297,23 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 **Exit criteria**
 
-- Persisted caterer email workflow parity with the snapshot-review portions of `app/order_review_mvp.py`.
+- Persisted caterer email workflow covers snapshot review, recipient inspection, delivery notes, and preparation history.
 - Email preparation events are persisted and visible in the audit trail.
 - Missing first snapshots can be created without rendering Python-owned email templates in TypeScript.
 - UI language uses "Caterer emails" as the operator workflow name.
 
 **Do not**
 
-- Add live email sending.
+- Bypass the audited Python backend bridge for reviewed sends.
 - Mutate an existing communication snapshot during repeated email preparation recording.
 - Build subject/body/rendered text in TypeScript.
 - Create missing communication snapshots in TypeScript.
 
 ## Stage 9 - Python Job Bridge
 
-**Status**: v1 order-generation bridge implemented. Ingestion, validation preflight, queues, cancellation, retries, and job-status history remain deferred.
+**Status**: Synchronous order-generation bridge implemented. Ingestion, validation preflight, queues, cancellation, retries, and job-status history remain deferred.
 
-**Goal**: Add optional UI triggers for broader Python-owned jobs only after an explicit bridge is designed. The first slice is intentionally narrow and synchronous: website order generation calls FastAPI, Python persists the run, and `order_runs` plus `audit_log` are the persisted status trail.
+**Goal**: Keep website-triggered Python work narrow and explicit. Current website order generation calls FastAPI, Python persists the run, and `order_runs` plus `audit_log` are the persisted status trail.
 
 **Tasks**
 
@@ -336,9 +336,9 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 ## Stage 10 - QA, Accessibility, And Parity
 
-**Status**: Parity confirmed by operator review. Additional automated Playwright/Vitest coverage remains a future hardening task, not a blocker for retiring the MVP workflow.
+**Status**: Parity confirmed by operator review. Additional automated Playwright/Vitest coverage remains a future hardening task, not a blocker for retiring the historical workflow.
 
-**Goal**: Prove the website is reliable enough to replace the Streamlit MVPs.
+**Goal**: Prove the website is reliable enough to replace the historical Streamlit tools.
 
 **Tasks**
 
@@ -348,11 +348,11 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Verify keyboard focus, labels, dialogs, tables, and form errors.
 - Check desktop and mobile layouts against the design handoff.
 - Verify RLS-denied, empty, loading, and failed-write states.
-- Compare completed workflows against Streamlit MVP outputs.
+- Compare completed workflows against historical tool outputs.
 
 **Exit criteria**
 
-- Website workflows reach parity with the retained MVPs. Complete by operator confirmation.
+- Website workflows reach parity with the retained historical tools. Complete by operator confirmation.
 - Tests cover core operator paths.
 - Accessibility and responsive issues are resolved or documented.
 
@@ -377,15 +377,15 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 - Add a write path, migration, Python job trigger, or TypeScript implementation of catering rules.
 
-## Stage 11 - Streamlit Retirement Prep
+## Stage 11 - Historical Harness Retirement Prep
 
-**Status**: Complete for project direction. The Streamlit MVPs are retired/deprecated in docs; physical file/dependency removal is a separate cleanup task.
+**Status**: Complete for project direction. The historical Streamlit tools are retired/deprecated in docs; physical file/dependency removal is a separate cleanup task.
 
-**Goal**: Remove the MVP dependency once the web app owns the operator workflow.
+**Goal**: Remove the historical dependency once the web app owns the operator workflow.
 
 **Tasks**
 
-- Document which Streamlit flows are replaced by which web routes.
+- Document which historical flows are replaced by which web routes.
 - Move `app/menu_setup_mvp.py`, `app/order_review_mvp.py`, and `app/streamlit_app.py` to retired/deprecated status or remove them when approved.
 - Update `docs/current_stage.md`.
 - Update `docs/EDGE_CASES.md` with any remaining unresolved workflow gaps.
@@ -394,7 +394,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 **Exit criteria**
 
 - The web app is the primary operator surface. Complete.
-- Legacy MVP status is explicit. Complete.
+- Legacy harness status is explicit. Complete.
 - Current stage docs reflect the new focus. Complete.
 
 **Do not**

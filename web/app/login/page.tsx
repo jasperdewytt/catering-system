@@ -34,8 +34,8 @@ export default async function LoginPage() {
           </div>
           <CardTitle>Operator Sign In</CardTitle>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Use Supabase Auth email and password credentials. Operational data
-            remains unavailable until Phase 4 RLS-safe views are added.
+            Use Supabase Auth email and password credentials to access the
+            secure operator console.
           </p>
         </CardHeader>
         <CardContent>

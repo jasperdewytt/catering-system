@@ -4,7 +4,7 @@ The Claude Design export has been fetched and extracted to:
 
 `docs/design-handoff/`
 
-This folder is reference material only. It is not the production Next.js app and should not be copied directly into `web/`.
+This folder is historical visual reference material only. It is not the production Next.js app and should not be copied directly into `web/`; the production operator console now lives in `web/`.
 
 ## What To Read
 
@@ -19,7 +19,7 @@ The main click-through prototype entry is:
 
 `docs/design-handoff/project/ui_kits/operator/index.html`
 
-Open that file in a browser to review the designed operator screens. It covers Dashboard, Menu setup, Order run detail, Caterer Emails, Audit, Login, and placeholders for the remaining navigation routes.
+Open that file in a browser to review the designed operator screens. It covers Dashboard, Menu setup, Order run detail, Caterer Emails, Audit, and Login as historical visual references.
 
 ## Design Sources
 
@@ -32,9 +32,9 @@ Open that file in a browser to review the designed operator screens. It covers D
 
 Use `lucide-react` for production icons. The prototype's `Icons.jsx` is a reference for intent only, not the complete or production icon set.
 
-## Implementation Notes For Later
+## Implementation Notes
 
-When building the real website, re-create the design with the project stack in `web/`: Next.js, TypeScript, Tailwind, shadcn/ui, Radix, Lucide, and Supabase SSR. Use the JSX files as visual references, not as production source.
+For production changes, re-create any useful design detail with the project stack in `web/`: Next.js, TypeScript, Tailwind, shadcn/ui, Radix, Lucide, and Supabase SSR. Use the JSX files as visual references, not as production source.
 
 Preserve these design rules:
 
@@ -47,4 +47,4 @@ Preserve these design rules:
 
 ## Current Scope
 
-This handoff documents the design system and prototype only. Website implementation remains a separate task.
+This handoff documents the historical design system and prototype only. The implemented website in `web/` is the source of truth for submitted operator functionality.

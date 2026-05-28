@@ -35,12 +35,3 @@ export function EmptyState({
     </div>
   );
 }
-
-export function PhaseFourEmptyState({ readModel }: { readModel: string }) {
-  return (
-    <EmptyState
-      title="This page is not connected yet"
-      description={`The secure data source for this page is still being prepared. It will use ${readModel} when the live operator views are connected.`}
-    />
-  );
-}

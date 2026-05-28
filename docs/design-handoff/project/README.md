@@ -10,7 +10,7 @@ operations product for catering coordinators and reviewers.
 service cycle: source-data ingestion → menu setup → validation → order
 generation → review → approval → caterer emails → audit. The current operator
 surface is the Next.js + Supabase web app (see decision **D-14**); the old
-Streamlit MVPs are deprecated historical harnesses. This design system is the
+Streamlit tools are deprecated historical harnesses. This design system is the
 visual + interaction foundation for the web app.
 
 The audience for this UI is small (operations coordinator, reviewer/manager)
@@ -25,11 +25,9 @@ visibility**, not delight.
 | Brand logo   | `uploads/padeaeducation_logo.jpg`                 | 200×200 JPG, crimson square with white graduation cap. Sampled brand red = `#A51C30`. |
 | Product spec | The "Operator Website Plan" pasted into the brief | Drives IA, page plan, components, visual direction.                                   |
 
-> Heads-up: there is **no existing codebase, Figma, or component library**
-> attached. The visual direction below is synthesised from the spec's stated
-> principles ("operations product", "dense but calm", "restrained neutral
-> base"), plus standard shadcn/ui + Lucide conventions called out in the spec.
-> If a codebase or Figma file exists, please attach it and we'll align.
+> Historical note: this bundle was generated before the production code was
+> wired end-to-end. The implemented Next.js app in `web/` is now the source of
+> truth for routes, data, auth, and supported actions.
 
 ---
 
@@ -326,10 +324,10 @@ Common icons mapped to operator-UI concepts (Lucide names):
 
 ## Open notes & deferrals
 
-- **No real product data** has been wired up. Numbers, run IDs, caterer
-  names, and dates in the UI kit are illustrative fixtures.
-- **Auth provider not decided** (spec open question). The login screen
-  mocks email + password; magic-link variant is a five-minute swap.
+- **Prototype data only.** Numbers, run IDs, caterer names, and dates in the UI
+  kit are illustrative fixtures.
+- **Auth provider resolved in production.** The implemented console uses
+  Supabase Auth email/password with a seeded operator profile.
 - **Dark mode** is not in the system yet. Operators work in daylight in a
   shared office; dark mode is deferred until requested.
 - **Mobile** is also out of scope. The console is designed for ≥1280 viewports.

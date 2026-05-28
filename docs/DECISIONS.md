@@ -117,7 +117,7 @@ If no safe offered option remains for a student after all filters run, the order
 
 Every ingested dish receives one default `Standard` variant that inherits the source and keyword-inferred flags. Customisable items such as `Cali Burrito` must be split by the operator into concrete variants such as `Vegetarian`, `Chicken`, `Beef`, or any other caterer-confirmed option. Menu offers, allocation, and order lines operate on `dish_variants`, while retaining the parent `dish_id` for traceability to the raw menu item.
 
-The retired Streamlit MVP first proved the variant creation and GF/DF/NF/VO/halal plus ingredient-exclusion review workflow. The equivalent workflow now lives in the Next.js operator UI in `web/` under D-14. A generic customisable parent item should not be marked as safe for restricted students unless the specific orderable variant is safe.
+The retired Streamlit harness first proved the variant creation and GF/DF/NF/VO/halal plus ingredient-exclusion review workflow. The equivalent workflow now lives in the Next.js operator UI in `web/` under D-14. A generic customisable parent item should not be marked as safe for restricted students unless the specific orderable variant is safe.
 
 **Why this shape**: A single boolean set on `dishes` cannot correctly represent a meal that may contain beef, chicken, or no meat depending on how it is ordered. Variants let the operator describe the exact option being offered without LLM guessing, and the generated caterer order can name the concrete option rather than a vague parent dish.
 
@@ -163,7 +163,7 @@ The first email-preparation recording for each `(order_run_id, caterer_id)` stor
 
 The Next.js UI must not render caterer communication templates itself. It may display persisted communication snapshots and may call an explicit audited communication-recording contract. If a communication snapshot does not exist yet, the UI should show that a Python-owned email preparation action is required rather than assembling the draft in TypeScript.
 
-Operator-facing copy should use "Caterer emails", "Email ready", and "Not emailed yet" where that matches the visible workflow. Future live email sending should add a separate `sent` state or delivery event with provider metadata. It should not overload the existing snapshot/email preparation event.
+Operator-facing copy should use "Caterer emails", "Email ready", "Not emailed yet", "Sent", and "Failed" where those labels match persisted workflow state. Provider delivery evidence must remain separate from the immutable snapshot/email preparation event.
 
 **Why this shape**: The system needs a durable audit trail for what was prepared before it can safely send email. Separating "Email ready" from "Sent" avoids claiming delivery that the current application cannot prove.
 
@@ -171,7 +171,7 @@ Operator-facing copy should use "Caterer emails", "Email ready", and "Not emaile
 
 ## D-14 - Operator UI is Next.js + Supabase, not Streamlit
 
-**Decision**: The final operator interface is a Next.js 16 (App Router) + TypeScript app in `web/`, backed by Supabase Auth and the existing PostgreSQL schema. The Streamlit MVPs (`app/menu_setup_mvp.py`, `app/order_review_mvp.py`) are now deprecated historical harnesses after operator-confirmed web parity.
+**Decision**: The final operator interface is a Next.js 16 (App Router) + TypeScript app in `web/`, backed by Supabase Auth and the existing PostgreSQL schema. The Streamlit tools (`app/menu_setup_mvp.py`, `app/order_review_mvp.py`) are now deprecated historical harnesses after operator-confirmed web parity.
 
 **Stack**:
 
@@ -202,10 +202,10 @@ Supabase SSR helpers should be isolated behind `web/lib/supabase/*` and package 
 
 **Migration plan**:
 
-1. Scaffold `web/` (Next.js, Tailwind, shadcn/ui, Supabase clients, generated types) with auth shell and mocked/static or server-only dev data.
+1. Scaffold `web/` (Next.js, Tailwind, shadcn/ui, Supabase clients, generated types) with auth shell and server-only development data.
 2. Phase 4 RLS policies and `security_invoker` views land before real browser-facing Supabase reads.
-3. Port menu setup, order review, approval, and caterer email workflows from the Streamlit MVPs into `web/`.
-4. After parity is verified end-to-end, retire the Streamlit MVPs from active use. Physical file/dependency removal may happen as a separate cleanup.
+3. Port menu setup, order review, approval, and caterer email workflows from the historical Streamlit tools into `web/`.
+4. After parity is verified end-to-end, retire the historical tools from active use. Physical file/dependency removal may happen as a separate cleanup.
 
 **Why this shape**: the competition target is a finished, taste-forward catering product. Next.js + Supabase is the natural pairing for that level of polish without abandoning the deterministic Python core, the audit model, or the existing migrations.
 
@@ -233,13 +233,13 @@ Do not use `raw_user_meta_data` or other user-editable metadata for authorizatio
 
 **Decision**: For the current submission dataset, the active week is derived from source `sessions` data rather than stored in a separate configuration table.
 
-The Phase 4 read model should expose an active-week value based on the earliest available session date in the operational dataset, grouped into a service-week range. The current fixture data has one service week, `2026-05-01` through `2026-05-04`, so this avoids adding configuration state before it is needed.
+The database-owned operator week data should expose an active-week value based on the earliest available session date in the operational dataset, grouped into a service-week range. The current fixture data has one service week, `2026-05-01` through `2026-05-04`, so this avoids adding configuration state before it is needed.
 
 The UI week switcher should read from the same browser-safe week view used by Dashboard and Weeks. It should not infer the active week independently in React.
 
 If future production data contains multiple active or upcoming weeks, add an explicit `service_weeks` or operator-configured active-week table and record that as a new decision.
 
-**Why this shape**: Nearly every operator screen needs a week anchor, but this dataset has only one week. A deterministic read model is enough for the submission and avoids premature configuration tables.
+**Why this shape**: Nearly every operator screen needs a week anchor, but this dataset has only one week. Deterministic operator data is enough for the submission and avoids premature configuration tables.
 
 ---
 
@@ -275,19 +275,19 @@ Menu-offer updates should normally be logged as one audit row per caterer-week s
 
 ---
 
-## D-18 - Stage 9 v1 uses a synchronous order-generation bridge
+## D-18 - Current synchronous order-generation bridge
 
 **Decision**: The first website-triggered Python job is order generation only, implemented as a narrow synchronous FastAPI bridge at `POST /internal/order-runs`. The Next.js Server Action validates the week/note, resolves the operator display name from `public.operators`, calls the bridge with `PADEA_BACKEND_SHARED_SECRET`, and revalidates affected week/order/validation/export/audit pages after Python persists the run.
 
 Python remains the authority for allocation, dietary safety, absence/exclusion handling, quantities, and persistence. The bridge calls `generate_order_run(...)`, which creates the new `order_runs` row and supersedes prior `blocked`/`generated` runs. The backend then writes one `order_run_generated` audit row containing actor, reason, week start, new run id, result counts, and the prior supersedable run ids captured before generation.
 
-No order deletion, queue, retry, cancellation, or separate job table is included in this v1. `order_runs` plus `audit_log` are the persisted status trail. Approved and historical runs remain inspectable.
+No order deletion, queue, retry, cancellation, or separate job table is included in this current bridge. `order_runs` plus `audit_log` are the persisted status trail. Approved and historical runs remain inspectable.
 
 **Why this shape**: Operators need a website path to create order runs, but importing Python from Next.js, shelling out, or duplicating ordering rules would blur the safety boundary. A synchronous bridge is enough for the current fixture-sized generation workflow while preserving reproducibility and auditability.
 
 ---
 
-## D-19 - V1 caterer email sending is reviewed and test-routed
+## D-19 - Safety-gated test-recipient caterer email sending
 
 **Decision**: Live caterer email sending is an audited operator action after a persisted communication snapshot exists. Snapshot readiness remains distinct from delivery state:
 
@@ -297,7 +297,7 @@ No order deletion, queue, retry, cancellation, or separate job table is included
 
 The Next.js app may request sends through `POST /internal/caterer-email-sends`, but it must not hold SMTP credentials, render email templates, or mutate communication state directly. The Python backend validates the approved, issue-free run; existing snapshot ids; recipient snapshots; status eligibility; actor; and reason, then records one communication event and one audit row for every attempted send.
 
-V1 uses Gmail SMTP (`smtp.gmail.com:587` with TLS and an app password) and requires `PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE`. The backend sends to that override while preserving requested caterer recipients in provider metadata. Already-sent communications cannot be resent in v1.
+The current send path uses Gmail SMTP (`smtp.gmail.com:587` with TLS and an app password) and requires `PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE`. The backend sends to that override while preserving requested caterer recipients in provider metadata. Already-sent communications cannot be resent on this path.
 
 Website-editable Gmail settings are deferred until there is encrypted secret storage, rotation policy, and a deliberate real-recipient rollout.
 

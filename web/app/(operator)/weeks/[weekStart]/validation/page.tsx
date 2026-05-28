@@ -88,11 +88,11 @@ export default async function WeekValidationPage({
         <PageHeader
           eyebrow={`Week ${weekStart}`}
           title="Validation"
-          description="This page reads readiness summaries and latest persisted order-run issues from Phase 4 operator views."
+          description="Stored readiness summaries and latest persisted order-run issues."
         />
         <EmptyState
           icon={DatabaseZap}
-          title="Validation read model is unavailable"
+          title="Validation data is unavailable"
           description={result.error}
         />
       </>
@@ -105,12 +105,12 @@ export default async function WeekValidationPage({
         <PageHeader
           eyebrow={`Week ${weekStart}`}
           title="Validation"
-          description="This page reads readiness summaries and latest persisted order-run issues from Phase 4 operator views."
+          description="Stored readiness summaries and latest persisted order-run issues."
         />
         <EmptyState
           icon={DatabaseZap}
-          title="Validation read model is unavailable"
-          description="The validation read model returned no data."
+          title="Validation data is unavailable"
+          description="No validation data was returned for this operator."
         />
       </>
     );
@@ -159,8 +159,8 @@ export default async function WeekValidationPage({
           <CardContent>
             <div className="text-2xl font-semibold">{blockingCount}</div>
             <p className="mt-2 text-sm text-muted-foreground">
-              {weekStatus?.blocking_issue_count ?? blockingCount} blocking item(s)
-              in the week status view.
+              {weekStatus?.blocking_issue_count ?? blockingCount} blocking
+              item(s) in the week status view.
             </p>
           </CardContent>
         </Card>
@@ -249,9 +249,7 @@ export default async function WeekValidationPage({
                         {finding.finding_count ?? 0}
                       </Td>
                       <Td>{finding.caterer_name ?? "All caterers"}</Td>
-                      <Td>
-                        {finding.summary ?? "No summary text recorded."}
-                      </Td>
+                      <Td>{finding.summary ?? "No summary text recorded."}</Td>
                       <Td className="text-right">
                         {targetRoute ? (
                           <Button asChild size="sm" variant="ghost">
@@ -335,10 +333,7 @@ export default async function WeekValidationPage({
                             href={`/weeks/${weekStart}/orders/${latestOrderRun.order_run_id}`}
                           >
                             Run
-                            <ArrowRight
-                              className="size-4"
-                              aria-hidden="true"
-                            />
+                            <ArrowRight className="size-4" aria-hidden="true" />
                           </Link>
                         </Button>
                       </Td>

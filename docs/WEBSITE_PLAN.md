@@ -1,7 +1,7 @@
 # Operator Website Plan
 
-**Status**: Draft for Next.js operator UI design; menu setup, order review, caterer email snapshots, audit read, validation read, caterer read, and student read slices implemented
-**Last updated**: 2026-05-25
+**Status**: Implemented website reference for the Next.js operator console
+**Last updated**: 2026-05-28
 **Related decisions**:
 
 - [D-14 - Operator UI is Next.js + Supabase, not Streamlit](DECISIONS.md#d-14---operator-ui-is-nextjs--supabase-not-streamlit)
@@ -11,7 +11,7 @@
 
 ## Purpose
 
-The website is the final operator surface for Padea catering operations. It should let a coordinator move from source data readiness through weekly menu setup, order review, approval, caterer email preparation, and audit review without needing to inspect raw database tables or run Streamlit tools.
+The website is the final operator surface for Padea catering operations. It lets a coordinator move from source data readiness through weekly menu setup, order generation, order review, approval, caterer email preparation, safety-gated sending, and audit review without needing to inspect raw database tables or run historical tools.
 
 The UI must present the system as an operations product, not a marketing site and not a generic admin panel. It should make the weekly catering run easy to scan, hard to misuse, and explicit about unresolved safety or data issues.
 
@@ -30,7 +30,7 @@ The UI must present the system as an operations product, not a marketing site an
 - **Operations coordinator**: prepares weekly menu offers, reviews generated orders, approves runs, prepares caterer emails, and records override reasons.
 - **Reviewer/manager**: checks order readiness, caterer email readiness, audit trail, and exceptions before the submission is considered complete.
 
-Future roles can be added later, but Phase 4 starts with one operator class backed by Supabase Auth, RLS, and the `public.operators` profile table from D-15.
+Future roles can be added later, but the current console uses one operator class backed by Supabase Auth, RLS, and the `public.operators` profile table from D-15.
 
 ## Information Architecture
 
@@ -111,7 +111,7 @@ Empty/loading states:
 
 Data note:
 
-- Active week comes from the Phase 4 week read model described in D-16. The React app should not independently infer it.
+- Active week comes from the database-owned week data described in D-16. The React app should not independently infer it.
 
 ### Weeks Index
 
@@ -156,7 +156,7 @@ Primary actions:
 
 ### Menu Setup
 
-Purpose: replace `app/menu_setup_mvp.py`.
+Purpose: configure weekly caterer offers and review concrete orderable variants.
 
 Key content:
 
@@ -223,7 +223,7 @@ Empty/loading states:
 
 ### Order Run Detail
 
-Purpose: replace the review portions of `app/order_review_mvp.py`.
+Purpose: review persisted order runs, allocations, contacts, issues, and audited operator decisions.
 
 Key content:
 
@@ -252,7 +252,7 @@ Safety requirements:
 
 ### Caterer Emails
 
-Purpose: replace the communication preparation portions of `app/order_review_mvp.py`.
+Purpose: review persisted caterer email snapshots, create missing snapshots through the Python bridge, and use the safety-gated send path.
 
 Key content:
 
@@ -275,7 +275,7 @@ Safety requirements:
 - display persisted communication snapshots and recipient snapshots; do not render caterer email templates in TypeScript
 - first email-preparation recording creates or displays the immutable communication snapshot through a Python/backend contract; the persisted-first web slice displays existing snapshots and records repeated preparation events
 - repeated email-preparation recordings append events without mutating the original snapshot
-- live email sending uses the Python backend bridge, records `sent`/`failed` delivery state and provider metadata, and is test-routed through `PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE` for v1
+- live email sending uses the Python backend bridge, records `sent`/`failed` delivery state and provider metadata, and is test-routed through `PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE` on the current safety-gated send path
 
 ### Caterers
 
@@ -347,15 +347,15 @@ For this submission, Settings is hidden from the main navigation and remains a d
 ## Route Build Order
 
 1. **Stage 0 readiness inventory**: finish the screen-to-data and write-contract map in `docs/WEBSITE_DATA_CONTRACTS.md`.
-2. **Auth shell and dashboard skeleton**: login, authenticated layout, active week placeholder, static/mock readiness cards.
-3. **Read-only week overview**: Supabase SSR read path after Phase 4 views/RLS; no writes.
+2. **Auth shell and dashboard**: login, authenticated layout, active week display, and read-backed readiness cards.
+3. **Read-only week overview**: Supabase SSR read path through secure operator views; no writes.
 4. **Menu setup parity**: variant review and weekly offer selection through Server Actions and audited contracts where required.
 5. **Order review parity**: run list, order run detail, allocation/order-line tables, approval/reopen actions. Implemented for order review and approval.
-6. **Caterer email parity**: persisted snapshot review, recipients, rendered text, delivery notes, and repeat preparation-event recording. Implemented for existing snapshots; missing snapshot creation remains backend/Python-bridge work.
+6. **Caterer email workflow**: persisted snapshot review, recipients, rendered text, delivery notes, repeat preparation-event recording, missing snapshot creation through the Python bridge, and safety-gated sending. Implemented.
 7. **Validation read page**: implemented from readiness summaries and persisted latest order-run issues; full validation history waits for `session_validation_findings`.
 8. **Audit and drilldowns**: audit, caterer detail, and student detail pages implemented; richer cross-links remain.
 9. **Caterer and student inspection**: caterer and student inspection implemented.
-10. **Streamlit retirement**: parity is confirmed and the Next.js app is now the primary operator surface; physical MVP file removal is a separate cleanup task.
+10. **Historical harness retirement**: parity is confirmed and the Next.js app is now the primary operator surface; physical file removal is a separate cleanup task.
 
 ## Data Access Shape
 
@@ -400,12 +400,12 @@ Writes should go through Server Actions with Zod validation that call audited da
 
 Individual meal editing is intentionally separate from follow-up notes. A future meal-edit workflow must call a backend/RPC contract that validates eligible variants, applies allocation and order-line changes transactionally, and records before/after audit state; the Next.js UI must not directly recalculate or mutate generated order facts.
 
-Python-owned jobs should remain outside the request path unless a deliberate job bridge is added. Order generation now has a narrow synchronous bridge:
+Python-owned jobs should remain outside the request path unless a deliberate job bridge is added. Order generation now has a narrow synchronous bridge, while broader jobs remain deferred:
 
 - ingestion
 - validation preflight
-- order generation through `POST /internal/order-runs`
-- future live email sending job, if implemented
+- order generation through `POST /internal/order-runs` implemented
+- caterer email snapshot creation and safety-gated sending through backend bridges implemented
 
 Server Actions may shape form data, enforce user-interface validation, call `supabase.rpc(...)`, trigger route revalidation, and map database errors into user-facing messages. They must not independently decide safety, allocation, order quantities, caterer minimum compliance, or communication template contents.
 
@@ -465,7 +465,7 @@ Initial navigation labels:
 2. Dashboard shows the active week.
 3. Operator reviews menu variants and selects weekly offers.
 4. Validation shows no blocking errors.
-5. Python order generation produces a generated run. For the current submission, this remains CLI-triggered with `uv run python -m padea_catering.ordering --week-start 2026-05-01`; UI-triggered generation is a later job-bridge stage.
+5. The operator confirms generation in the website. Next.js calls `POST /internal/order-runs`; Python produces a generated run and records the audit event.
 6. Operator reviews order lines, allocations, contacts, and delivery notes.
 7. Operator approves the run with a note.
 8. Operator marks caterer emails ready for each caterer.
@@ -506,7 +506,7 @@ Initial navigation labels:
 
 ## Initial Design Targets
 
-For the first design pass, create mockups for:
+The historical first design pass covered:
 
 1. `/dashboard`
 2. `/weeks/[weekStart]/menu`

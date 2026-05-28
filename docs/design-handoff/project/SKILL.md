@@ -1,12 +1,12 @@
 ---
 name: padea-design
-description: Use this skill to generate well-branded interfaces and assets for Padea Education's internal catering operations console, either for production or throwaway prototypes/mocks. Contains brand colors, type, fonts, assets, and a click-thru UI kit for the operator console.
+description: Use this historical visual-reference skill to generate well-branded interfaces and assets for Padea Education's internal catering operations console. Production changes must align with the implemented Next.js app in web/.
 user-invocable: true
 ---
 
 Read the `README.md` file within this skill, and explore the other available files.
 
-If creating visual artifacts (mocks, prototypes, slide decks for ops team
+If creating visual artifacts (static references, slide decks for ops team
 reviews, etc.), copy the relevant assets out of `assets/`, link
 `colors_and_type.css`, and reuse the components and patterns from
 `ui_kits/operator/`. Create static HTML files for the user to view.
@@ -20,8 +20,6 @@ rather than copying directly. The status vocabulary is fixed (`Ready`,
 `Unreviewed`, `Generated`, `Approved`, `Email ready`, `Blocked`, `Superseded`)
 — treat it as canon, do not invent synonyms.
 
-If the user invokes this skill without other guidance, ask them what they
-want to build or design, ask follow-up questions about which operator workflow
-they're targeting and whether they want a mock or production code, and act as
-an expert designer who outputs HTML artifacts _or_ production code, depending
-on the need.
+If the user invokes this skill without other guidance, ask which operator
+workflow they want to refine and whether the output is a visual reference or a
+production `web/` change.

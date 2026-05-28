@@ -34,7 +34,7 @@ export default async function DashboardPage() {
         <PageHeader
           eyebrow="This week"
           title="Catering Dashboard"
-          description="The dashboard reads from the authenticated Phase 4 operator views."
+          description="Current service-week status from secure operator data."
         />
         <EmptyState
           icon={DatabaseZap}
@@ -51,12 +51,12 @@ export default async function DashboardPage() {
         <PageHeader
           eyebrow="This week"
           title="Catering Dashboard"
-          description="The dashboard reads from the authenticated Phase 4 operator views."
+          description="Current service-week status from secure operator data."
         />
         <EmptyState
           icon={DatabaseZap}
           title="Dashboard data is unavailable"
-          description="The dashboard read model returned no data."
+          description="No dashboard data was returned for this operator."
         />
       </>
     );

@@ -39,7 +39,7 @@ export type ReadModelResult<T> =
 
 function readError(context: string, error: unknown): string {
   console.error(context, error);
-  return `${context} is unavailable. Check operator access and the Phase 4 read models.`;
+  return `${context} is unavailable. Check operator access and secure operator data.`;
 }
 
 export async function getOperatorProfile(

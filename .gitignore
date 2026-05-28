@@ -19,6 +19,7 @@ data/interim/*
 data/processed/*
 data/snapshots/*
 artifacts/exports/*
+docs/submission/
 tmp/
 
 # Web

@@ -81,7 +81,9 @@ const snapshotsFormSchema = z.object({
 const sendFormSchema = z.object({
   weekStart: z.string(),
   orderRunId: z.string().uuid(),
-  communicationIds: z.array(z.string().uuid()).min(1, "Select at least one email."),
+  communicationIds: z
+    .array(z.string().uuid())
+    .min(1, "Select at least one email."),
   reason: z.string().trim().min(10, "Enter at least 10 characters."),
 });
 
@@ -343,7 +345,11 @@ export function CatererEmailSnapshotsForm({
           </div>
           <FieldMessage message={form.formState.errors.catererIds?.message} />
           <FieldMessage message={form.formState.errors.root?.message} />
-          <Button disabled={isPending || !canCreate} type="submit" variant="primary">
+          <Button
+            disabled={isPending || !canCreate}
+            type="submit"
+            variant="primary"
+          >
             <MailPlus className="size-4" aria-hidden="true" />
             {isPending ? "Creating" : "Create snapshots"}
           </Button>
@@ -408,8 +414,9 @@ export function CatererEmailSendForm({
         <DialogHeader>
           <DialogTitle>Send Caterer Email</DialogTitle>
           <DialogDescription>
-            This is a real send action. For v1, the Python backend must route it
-            to the configured test-recipient override, not directly to caterers.
+            This is a real send action. The Python backend routes it to the
+            configured test-recipient override and records provider metadata in
+            the audit trail.
           </DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={form.handleSubmit(submit)}>
@@ -435,7 +442,11 @@ export function CatererEmailSendForm({
             message={form.formState.errors.communicationIds?.message}
           />
           <FieldMessage message={form.formState.errors.root?.message} />
-          <Button disabled={isPending || !canSend} type="submit" variant="primary">
+          <Button
+            disabled={isPending || !canSend}
+            type="submit"
+            variant="primary"
+          >
             <Send className="size-4" aria-hidden="true" />
             {isPending ? "Sending" : "Send now"}
           </Button>

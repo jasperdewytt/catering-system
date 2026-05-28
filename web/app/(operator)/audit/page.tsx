@@ -29,7 +29,7 @@ export default async function AuditPage() {
         <PageHeader
           eyebrow="Audit"
           title="Audit Events"
-          description="This page reads the append-only operator audit trail from Phase 4 views."
+          description="Append-only operator audit trail from secure operator data."
         />
         <EmptyState
           icon={DatabaseZap}

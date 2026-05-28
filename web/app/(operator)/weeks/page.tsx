@@ -21,7 +21,7 @@ export default async function WeeksPage() {
         <PageHeader
           eyebrow="Weeks"
           title="Service Weeks"
-          description="Service weeks are read from the authenticated operator_weeks view."
+          description="Service-week status from secure operator data."
         />
         <EmptyState
           icon={DatabaseZap}
@@ -38,12 +38,12 @@ export default async function WeeksPage() {
         <PageHeader
           eyebrow="Weeks"
           title="Service Weeks"
-          description="Service weeks are read from the authenticated operator_weeks view."
+          description="Service-week status from secure operator data."
         />
         <EmptyState
           icon={DatabaseZap}
           title="Weeks data is unavailable"
-          description="The weeks read model returned no data."
+          description="No service weeks were returned for this operator."
         />
       </>
     );

@@ -33,10 +33,11 @@ PADEA_BACKEND_SHARED_SECRET=
 must never be referenced from client components. The Supabase service-role key
 belongs only in the Python backend environment, not in `web/`.
 
-Gmail SMTP credentials are configured only in the Python backend environment for
-v1. The website does not store or edit SMTP secrets. `PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE`
-is required by the backend so send actions are test-routed until encrypted secret
-management and real-recipient rollout are designed.
+Gmail SMTP credentials are configured only in the Python backend environment.
+The website does not store or edit SMTP secrets. `PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE`
+is required by the backend for the current safety-gated send path, so send
+actions are test-routed until encrypted secret management and real-recipient
+rollout are designed.
 
 ## Commands
 
@@ -51,19 +52,15 @@ pnpm --dir web supabase:types
 
 ## Current Scope
 
-This app has the Stage 1 foundation, authenticated operator shell with dynamic
-next-step workflow guidance, and the
-implemented Phase 4 menu setup plus order review slices. `/dashboard`,
-`/weeks`, `/weeks/[weekStart]`, `/weeks/[weekStart]/menu`,
-`/weeks/[weekStart]/orders`, and
-`/weeks/[weekStart]/orders/[orderRunId]` read real authenticated operational
-data through Supabase SSR helpers and RLS-safe operator views. Order review
-includes searchable/sortable order-line and allocation tables.
+This app is the primary operator console. It has the authenticated shell with
+dynamic next-step workflow guidance, real operational reads for dashboard,
+weeks, menu setup, validation, orders, caterer emails, caterers, students, and
+audit, plus searchable/sortable order-line and allocation tables.
 
-Audited domain writes currently exist for menu setup, order-run approval,
-order-run reopen, follow-up/override notes, caterer email preparation, and
-test-routed caterer email sending. Missing caterer email snapshots and send
-attempts go through the narrow Python backend bridge so deterministic email
-rendering, provider credentials, and service-role Supabase access stay outside
-Next.js. Order generation is also created through that bridge so allocation,
-dietary, absence, exclusion, and quantity rules stay Python-owned.
+Audited domain writes exist for menu setup, order-run generation, order-run
+approval, order-run reopen, follow-up/override notes, caterer email
+preparation, first persisted email snapshot creation, and safety-gated
+test-recipient sending. Email snapshots, send attempts, and order generation go
+through the narrow Python backend bridge so deterministic rendering,
+allocation, dietary, absence, exclusion, quantity rules, provider credentials,
+and service-role Supabase access stay outside Next.js.

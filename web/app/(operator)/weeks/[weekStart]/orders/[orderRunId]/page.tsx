@@ -90,7 +90,7 @@ export default async function OrderRunDetailPage({
         <PageHeader
           eyebrow={`Week ${weekStart}`}
           title="Order Run"
-          description="This page reads persisted order review data from Phase 4 views."
+          description="Persisted order lines, allocations, contacts, issues, and audit trail."
         />
         <EmptyState
           icon={DatabaseZap}

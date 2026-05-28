@@ -1,6 +1,6 @@
 # Website Data Contracts
 
-**Status**: Dynamic workflow sidebar implemented
+**Status**: Implemented operator data and write contract reference
 **Last updated**: 2026-05-28
 **Related docs**:
 
@@ -18,36 +18,36 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 
 ## Baseline Assumptions
 
-- `web/` exists as a Next.js 16 App Router scaffold with Supabase Auth plumbing, protected shell routes, and first authenticated operational reads for Dashboard and Weeks.
+- `web/` is the primary Next.js 16 App Router operator console with Supabase Auth plumbing, protected shell routes, and authenticated operational reads across the implemented workflow.
 - Existing operational tables have RLS enabled. `anon` remains denied. Authenticated reads are available only to users with a matching `public.operators` row.
-- Phase 4 added browser-safe `security_invoker` views for the first read-only UI slice.
+- Browser-safe `security_invoker` views expose operator-shaped data for implemented routes.
 - `public.operators` maps Supabase Auth users to durable operator display names.
 - Current active week is derived from `sessions` data per D-16.
-- Order generation remains CLI-triggered until the Stage 9 job bridge.
+- Order generation is available from the website through the narrow Python backend bridge.
 - Validation summaries for the first web build are read-only summaries over stored facts; full persisted Python validation findings are a later enhancement unless live operations require them sooner.
 
 ## Screen To Data Map
 
-| Screen                                   | Initial reads                                                                                                                                                                                         | Writes                                                            | Stage status                        |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------- |
-| authenticated shell                      | Supabase Auth session; `operators` profile; `operator_current_week`, `operator_week_status`, `operator_communications` for next-step guidance                                                        | sign out                                                          | UX refinement implemented           |
-| `/login`                                 | Supabase Auth session; `operators` profile for shell display                                                                                                                                          | sign in, sign out                                                 | Stage 3 scaffolded                  |
-| `/dashboard`                             | `operator_current_week`, `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                                                                             | none                                                              | Stage 5 first slice implemented     |
-| `/weeks`                                 | `operator_weeks`                                                                                                                                                                                      | none                                                              | Stage 5 first slice implemented     |
-| `/weeks/[weekStart]`                     | `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                                                                                                      | none                                                              | Stage 5 first slice implemented     |
-| `/weeks/[weekStart]/menu`                | `operator_menu_setup`, `operator_validation_summary`                                                                                                                                                  | menu offers, variant create/review/availability through RPCs      | Stage 6 implemented                 |
-| `/weeks/[weekStart]/validation`          | `operator_validation_summary`, `operator_order_run_issues`; future `session_validation_findings`                                                                                                      | rerun validation only after job bridge                            | Stage 5 read, Stage 9 trigger       |
-| `/weeks/[weekStart]/orders`              | `operator_order_runs`                                                                                                                                                                                 | create order run through Python bridge                            | Stage 9 order generation implemented |
-| `/weeks/[weekStart]/orders/[orderRunId]` | `operator_order_runs`, `operator_order_run_lines`, `operator_order_run_allocations`, `operator_order_run_issues`, `operator_order_run_contacts`, `operator_manual_overrides`, `operator_audit_events` | approve, reopen, follow-up/override notes through RPCs            | Stage 7 implemented                 |
-| `/weeks/[weekStart]/exports`             | `operator_communications`, `operator_communication_recipients`, `operator_communication_events`, `operator_audit_events`                                                                              | first snapshot through Python bridge; repeat email-preparation event through RPC; send through Python bridge | Stage 8 + v1 sending implemented    |
-| `/caterers`                              | `operator_caterers`                                                                                                                                                                                   | none for submission                                               | Stage 9 implemented                 |
-| `/caterers/[catererId]`                  | `operator_caterer_detail`                                                                                                                                                                             | none for submission                                               | Stage 9 implemented                 |
-| `/students`                              | `operator_students`                                                                                                                                                                                   | none for submission                                               | Stage 9 implemented                 |
-| `/students/[studentId]`                  | `operator_student_detail`                                                                                                                                                                             | none for submission                                               | Stage 9 implemented                 |
-| `/audit`                                 | `operator_audit_events`                                                                                                                                                                               | none                                                              | Stage 5 implemented                 |
-| `/settings`                              | session user, `operators`, build metadata                                                                                                                                                             | none for submission                                               | Hidden/deferred                     |
+| Screen                                   | Initial reads                                                                                                                                                                                         | Writes                                                                                                       | Stage status                          |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
+| authenticated shell                      | Supabase Auth session; `operators` profile; `operator_current_week`, `operator_week_status`, `operator_communications` for next-step guidance                                                         | sign out                                                                                                     | UX refinement implemented             |
+| `/login`                                 | Supabase Auth session; `operators` profile for shell display                                                                                                                                          | sign in, sign out                                                                                            | Stage 3 scaffolded                    |
+| `/dashboard`                             | `operator_current_week`, `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                                                                             | none                                                                                                         | Implemented                           |
+| `/weeks`                                 | `operator_weeks`                                                                                                                                                                                      | none                                                                                                         | Implemented                           |
+| `/weeks/[weekStart]`                     | `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                                                                                                      | none                                                                                                         | Implemented                           |
+| `/weeks/[weekStart]/menu`                | `operator_menu_setup`, `operator_validation_summary`                                                                                                                                                  | menu offers, variant create/review/availability through RPCs                                                 | Stage 6 implemented                   |
+| `/weeks/[weekStart]/validation`          | `operator_validation_summary`, `operator_order_run_issues`; future `session_validation_findings`                                                                                                      | rerun validation only after job bridge                                                                       | Stage 5 read, Stage 9 trigger         |
+| `/weeks/[weekStart]/orders`              | `operator_order_runs`                                                                                                                                                                                 | create order run through Python bridge                                                                       | Stage 9 order generation implemented  |
+| `/weeks/[weekStart]/orders/[orderRunId]` | `operator_order_runs`, `operator_order_run_lines`, `operator_order_run_allocations`, `operator_order_run_issues`, `operator_order_run_contacts`, `operator_manual_overrides`, `operator_audit_events` | approve, reopen, follow-up/override notes through RPCs                                                       | Stage 7 implemented                   |
+| `/weeks/[weekStart]/exports`             | `operator_communications`, `operator_communication_recipients`, `operator_communication_events`, `operator_audit_events`                                                                              | first snapshot through Python bridge; repeat email-preparation event through RPC; send through Python bridge | Implemented with safety-gated sending |
+| `/caterers`                              | `operator_caterers`                                                                                                                                                                                   | none for submission                                                                                          | Stage 9 implemented                   |
+| `/caterers/[catererId]`                  | `operator_caterer_detail`                                                                                                                                                                             | none for submission                                                                                          | Stage 9 implemented                   |
+| `/students`                              | `operator_students`                                                                                                                                                                                   | none for submission                                                                                          | Stage 9 implemented                   |
+| `/students/[studentId]`                  | `operator_student_detail`                                                                                                                                                                             | none for submission                                                                                          | Stage 9 implemented                   |
+| `/audit`                                 | `operator_audit_events`                                                                                                                                                                               | none                                                                                                         | Stage 5 implemented                   |
+| `/settings`                              | session user, `operators`, safe app metadata                                                                                                                                                          | none for submission                                                                                          | Read-only profile implemented         |
 
-## Implemented Phase 4 Read Models
+## Implemented Operator Data Models
 
 The first Dashboard/Weeks group below is implemented in `supabase/migrations/20260524130454_phase_4_operator_read_models.sql`. The menu setup group is implemented in `supabase/migrations/20260524154500_menu_setup_read_models_and_rpcs.sql`. The order review group is implemented in `supabase/migrations/20260524171000_order_review_read_models_and_rpcs.sql`. The caterer-email persisted-first group is implemented in `supabase/migrations/20260525100000_caterer_email_read_models_and_rpc.sql`. The caterer directory/detail group is implemented in `supabase/migrations/20260525113000_caterer_read_models.sql`. The student directory/detail group is implemented in `supabase/migrations/20260525124500_student_read_models.sql`. These views use `WITH (security_invoker = true)` and are granted only to `authenticated`; underlying table access is guarded by RLS policies requiring a row in `public.operators`.
 
@@ -452,7 +452,7 @@ Includes all `operator_students` profile/contact columns plus:
 
 One row per student with JSON arrays for operator drilldown sections. Allocation rows are the latest persisted order-run allocations only. Override and audit arrays include records directly tied to the student id in `entity_id`, `before_state.student_id`, or `after_state.student_id`. The detail view remains read-only and does not expose raw source JSON.
 
-## Deferred Read Models
+## Deferred Data Models
 
 The following contracts remain planned and should be added only when the corresponding page slice or audited write contract is ready.
 
@@ -460,20 +460,20 @@ The following contracts remain planned and should be added only when the corresp
 
 All website writes are called from Server Actions. The Server Action validates request shape with Zod, resolves the signed-in operator, calls an audited backend/database contract, and revalidates affected routes.
 
-| Operation                      | Contract owner                                  | Required audit                                             | Status                             |
-| ------------------------------ | ----------------------------------------------- | ---------------------------------------------------------- | ---------------------------------- |
-| Create dish variant            | `operator_create_dish_variant` RPC              | `dish_variant_created`                                     | Implemented                        |
-| Review dish variant flags      | `operator_review_dish_variant` RPC              | `dish_variant_reviewed`                                    | Implemented                        |
-| Change variant availability    | `operator_update_dish_variant_availability` RPC | `dish_variant_availability_updated`                        | Implemented                        |
-| Save menu offers               | `operator_save_menu_offers` RPC                 | `menu_offers_updated` with before/after variant id arrays  | Implemented                        |
-| Approve order run              | `operator_approve_order_run` RPC                | `order_run_approved`                                       | Implemented                        |
-| Reopen order run               | `operator_reopen_order_run` RPC                 | stored `order_run_unapproved`, displayed as "Reopen run"   | Implemented                        |
-| Record follow-up/override note | `operator_record_manual_override` RPC           | `manual_override_created`                                  | Implemented                        |
-| Create caterer email snapshot  | Python `POST /internal/caterer-email-snapshots` bridge | `communication_exported`                                   | Implemented                        |
-| Record prepared caterer email  | `operator_record_caterer_email_preparation` RPC | `communication_exported`                                   | Implemented for existing snapshots |
-| Send caterer email             | Python `POST /internal/caterer-email-sends` bridge | `communication_sent` or `communication_send_failed`         | Implemented with mandatory test-recipient override |
-| Trigger order generation       | Python `POST /internal/order-runs` bridge       | `order_run_generated`                                      | Implemented                        |
-| Trigger validation preflight   | Python job bridge                               | job audit/status row; future `session_validation_findings` | Deferred to Stage 9                |
+| Operation                      | Contract owner                                         | Required audit                                             | Status                                             |
+| ------------------------------ | ------------------------------------------------------ | ---------------------------------------------------------- | -------------------------------------------------- |
+| Create dish variant            | `operator_create_dish_variant` RPC                     | `dish_variant_created`                                     | Implemented                                        |
+| Review dish variant flags      | `operator_review_dish_variant` RPC                     | `dish_variant_reviewed`                                    | Implemented                                        |
+| Change variant availability    | `operator_update_dish_variant_availability` RPC        | `dish_variant_availability_updated`                        | Implemented                                        |
+| Save menu offers               | `operator_save_menu_offers` RPC                        | `menu_offers_updated` with before/after variant id arrays  | Implemented                                        |
+| Approve order run              | `operator_approve_order_run` RPC                       | `order_run_approved`                                       | Implemented                                        |
+| Reopen order run               | `operator_reopen_order_run` RPC                        | stored `order_run_unapproved`, displayed as "Reopen run"   | Implemented                                        |
+| Record follow-up/override note | `operator_record_manual_override` RPC                  | `manual_override_created`                                  | Implemented                                        |
+| Create caterer email snapshot  | Python `POST /internal/caterer-email-snapshots` bridge | `communication_exported`                                   | Implemented                                        |
+| Record prepared caterer email  | `operator_record_caterer_email_preparation` RPC        | `communication_exported`                                   | Implemented for existing snapshots                 |
+| Send caterer email             | Python `POST /internal/caterer-email-sends` bridge     | `communication_sent` or `communication_send_failed`        | Implemented with mandatory test-recipient override |
+| Trigger order generation       | Python `POST /internal/order-runs` bridge              | `order_run_generated`                                      | Implemented                                        |
+| Trigger validation preflight   | Python job bridge                                      | job audit/status row; future `session_validation_findings` | Deferred to Stage 9                                |
 
 ## Deferred Data Contracts
 
@@ -483,7 +483,7 @@ A persisted findings table is useful before live operations because it lets the 
 
 When added, it should be written by `src/padea_catering.validation`, not by the Next.js app.
 
-### Communication draft pre-generation / missing snapshot creation
+### Communication snapshot creation
 
 The web UI can preview persisted communication snapshots, record repeat preparation events for existing snapshots, and create a missing immutable snapshot through the narrow Python backend bridge. The bridge is intentionally email-only: Next.js validates the operator request, resolves the database-owned operator display name, then calls `POST /internal/caterer-email-snapshots` with `PADEA_BACKEND_SHARED_SECRET`. The Python backend owns service-role Supabase access and calls `record_communication_export(...)`, so subject/body/rendered text and safety checks stay out of TypeScript.
 
@@ -501,7 +501,7 @@ The Python backend owns service-role Supabase access, Gmail SMTP credentials, pr
 - `order_communication_events.event_type = 'sent'` and `audit_log.action = 'communication_sent'`
 - `order_communication_events.event_type = 'send_failed'` and `audit_log.action = 'communication_send_failed'`
 
-`operator_communications` exposes `sent` and `failed` email states plus latest send event metadata/error for the exports page. `operator_communication_events` exposes provider/error metadata for event history. V1 requires `PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE`; real-recipient sending and website-editable SMTP settings are deferred until encrypted secret management exists.
+`operator_communications` exposes `sent` and `failed` email states plus latest send event metadata/error for the exports page. `operator_communication_events` exposes provider/error metadata for event history. The current safety-gated send path requires `PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE`; real-recipient sending and website-editable SMTP settings are deferred until encrypted secret management exists.
 
 ### Website order generation
 

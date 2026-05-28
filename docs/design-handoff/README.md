@@ -1,8 +1,8 @@
 # CODING AGENTS: READ THIS FIRST
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+This is a **historical handoff bundle** from Claude Design (claude.ai/design).
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle as visual reference. The production operator console now lives in `web/`.
 
 ## What you should do — IMPORTANT
 
@@ -10,7 +10,7 @@ A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported t
 
 **Find the primary design file under `padea-catering-ops-design-system/project/` and read it top to bottom.** The chat transcripts will tell you which file the user was last iterating on. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+**If anything is ambiguous, treat `web/` and the project docs as the source of truth before using this historical reference.**
 
 ## About the design files
 

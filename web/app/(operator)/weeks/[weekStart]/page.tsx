@@ -33,7 +33,7 @@ export default async function WeekOverviewPage({
         <PageHeader
           eyebrow={`Week ${weekStart}`}
           title="Week Overview"
-          description="This page reads week status, sessions, order runs, and audit events from Phase 4 views."
+          description="Week status, sessions, order runs, and audit trail."
         />
         <EmptyState
           icon={DatabaseZap}
@@ -50,12 +50,12 @@ export default async function WeekOverviewPage({
         <PageHeader
           eyebrow={`Week ${weekStart}`}
           title="Week Overview"
-          description="This page reads week status, sessions, order runs, and audit events from Phase 4 views."
+          description="Week status, sessions, order runs, and audit trail."
         />
         <EmptyState
           icon={DatabaseZap}
           title="Week data is unavailable"
-          description="The week overview read model returned no data."
+          description="No week overview data was returned for this operator."
         />
       </>
     );
@@ -69,7 +69,7 @@ export default async function WeekOverviewPage({
         <PageHeader
           eyebrow={`Week ${weekStart}`}
           title="Week Overview"
-          description="No operator_week_status row exists for this week."
+          description="No status record exists for this service week."
         />
         <EmptyState
           icon={CalendarDays}

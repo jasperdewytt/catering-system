@@ -1,8 +1,8 @@
 # Padea Operator Console — UI Kit
 
-A high-fidelity, click-thru recreation of the Next.js operator console
-described in the "Operator Website Plan". This kit is the visual + interaction
-foundation for the production app, not the production app itself.
+A high-fidelity, click-thru historical visual reference for the Next.js
+operator console described in the "Operator Website Plan". This kit is not the
+production app; the implemented console lives in `web/`.
 
 ## What's in here
 
@@ -38,9 +38,8 @@ first design pass. All five are in here:
    rendered draft, email preparation events timeline.
 5. **Audit** — filterable append-only table, drawer with before/after JSON.
 
-A **Login** screen and minimal placeholders for the remaining routes
-(Weeks, Validation, Caterers, Students, Settings) are also wired so the
-nav doesn't dead-end.
+A **Login** screen and minimal historical stubs for the remaining routes are
+also wired in the prototype so the nav doesn't dead-end.
 
 ## How to read it
 
@@ -59,8 +58,8 @@ between screens; some screens have CTAs that navigate into others (Dashboard
 
 ## Known cuts
 
-- This is a mock. No data fetching, no Supabase, no Server Actions. Buttons
-  navigate but do not write.
+- This is a static prototype reference. No data fetching, no Supabase, no
+  Server Actions. Buttons navigate but do not write.
 - No keyboard shortcuts wired beyond browser defaults.
 - No dark mode (deferred per system).
 - Lucide icons are inlined as small SVG components rather than pulled from

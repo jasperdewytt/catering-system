@@ -117,12 +117,13 @@ function EmailSnapshot({
     Boolean(communicationId) &&
     (communication.email_state === "exported" ||
       communication.email_state === "failed");
-  const disabledReason =
-    !["exported", "failed", "sent"].includes(communication.email_state ?? "")
-      ? "A backend email snapshot is required before this email can be previewed."
-      : canRecordPreparation
-        ? undefined
-        : "Only approved, issue-free runs can send or record email preparation events.";
+  const disabledReason = !["exported", "failed", "sent"].includes(
+    communication.email_state ?? "",
+  )
+    ? "A backend email snapshot is required before this email can be previewed."
+    : canRecordPreparation
+      ? undefined
+      : "Only approved, issue-free runs can send or record email preparation events.";
 
   return (
     <Card>
@@ -239,9 +240,9 @@ function EmailSnapshot({
                   </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {communication.email_state === "sent"
-                      ? "This caterer email has already been sent. Resend is disabled for v1."
+                      ? "This caterer email has already been sent. Resend is disabled for the current safety-gated send path."
                       : (disabledReason ??
-                        "Sends this reviewed snapshot through the Python backend. V1 uses the configured test recipient override.")}
+                        "Sends this reviewed snapshot through the Python backend using the configured test-recipient override.")}
                   </p>
                   <div className="mt-3">
                     <CatererEmailSendForm
@@ -369,7 +370,7 @@ export default async function WeekExportsPage({
         <PageHeader
           eyebrow={`Week ${weekStart}`}
           title="Caterer Emails"
-          description="This page reads persisted communication snapshots from Phase 4 views."
+          description="Persisted email snapshots, recipients, send state, and audit trail."
         />
         <EmptyState
           icon={DatabaseZap}
