@@ -24,7 +24,7 @@ class CatererEmailSnapshotRequest(BaseModel):
     order_run_id: str = Field(alias="orderRunId", min_length=1)
     caterer_id: str = Field(alias="catererId", min_length=1)
     actor_name: str = Field(alias="actorName", min_length=1)
-    reason: str = Field(min_length=1)
+    reason: str | None = None
 
 
 class CatererEmailSnapshotResponse(BaseModel):
@@ -126,12 +126,13 @@ def create_caterer_email_snapshot(
     client = get_client()
 
     try:
+        reason = (request.reason or "").strip() or "Created caterer email snapshot from website."
         result = record_communication_export(
             client,
             order_run_id=request.order_run_id,
             caterer_id=request.caterer_id,
             actor_name=request.actor_name,
-            reason=request.reason,
+            reason=reason,
         )
     except ValueError as exc:
         raise HTTPException(

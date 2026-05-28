@@ -15,10 +15,12 @@ import { z } from "zod";
 
 import {
   createCatererEmailSnapshot,
+  createCatererEmailSnapshots,
   recordCatererEmailPreparation,
   sendCatererEmails,
   type CatererEmailActionResult,
   type CreateSnapshotInput,
+  type CreateSnapshotsInput,
   type RecordPreparationInput,
   type SendEmailInput,
 } from "@/actions/caterer-emails";
@@ -52,7 +54,28 @@ const snapshotFormSchema = z.object({
   weekStart: z.string(),
   orderRunId: z.string().uuid(),
   catererId: z.string().uuid(),
-  reason: z.string().trim().min(10, "Enter at least 10 characters."),
+  reason: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value.length === 0 || value.length >= 10,
+      "Enter at least 10 characters, or leave blank.",
+    )
+    .optional(),
+});
+
+const snapshotsFormSchema = z.object({
+  weekStart: z.string(),
+  orderRunId: z.string().uuid(),
+  catererIds: z.array(z.string().uuid()).min(1, "Select at least one caterer."),
+  reason: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value.length === 0 || value.length >= 10,
+      "Enter at least 10 characters, or leave blank.",
+    )
+    .optional(),
 });
 
 const sendFormSchema = z.object({
@@ -213,11 +236,13 @@ export function CatererEmailSnapshotForm({
       <CardContent className="space-y-3">
         <form className="space-y-3" onSubmit={form.handleSubmit(submit)}>
           <div className="space-y-1">
-            <Label htmlFor={`email-snapshot-${catererId}`}>Reason</Label>
+            <Label htmlFor={`email-snapshot-${catererId}`}>
+              Reason <span className="text-muted-foreground">(optional)</span>
+            </Label>
             <Textarea
               disabled={!canCreate}
               id={`email-snapshot-${catererId}`}
-              placeholder="Record why this caterer email snapshot is being prepared."
+              placeholder="Optional note for why this snapshot is being prepared."
               {...form.register("reason")}
             />
             <FieldMessage message={form.formState.errors.reason?.message} />
@@ -235,6 +260,96 @@ export function CatererEmailSnapshotForm({
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+export function CatererEmailSnapshotsForm({
+  buttonLabel,
+  canCreate,
+  catererIds,
+  disabledReason,
+  orderRunId,
+  scopeLabel,
+  weekStart,
+}: {
+  buttonLabel: string;
+  canCreate: boolean;
+  catererIds: string[];
+  disabledReason?: string;
+  orderRunId: string;
+  scopeLabel: string;
+  weekStart: string;
+}) {
+  const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const form = useForm<CreateSnapshotsInput>({
+    resolver: zodResolver(snapshotsFormSchema),
+    defaultValues: { weekStart, orderRunId, catererIds, reason: "" },
+  });
+
+  function submit(values: CreateSnapshotsInput) {
+    startTransition(async () => {
+      const payload = {
+        ...values,
+        weekStart,
+        orderRunId,
+        catererIds,
+      };
+      const result = await createCatererEmailSnapshots(payload);
+
+      if (applyActionResult(form, result)) {
+        form.reset({ weekStart, orderRunId, catererIds, reason: "" });
+        setIsOpen(false);
+        router.refresh();
+      }
+    });
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button disabled={!canCreate} type="button" variant="primary">
+          <MailPlus className="size-4" aria-hidden="true" />
+          {buttonLabel}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create Email Snapshots</DialogTitle>
+          <DialogDescription>
+            Creates immutable email snapshots through the Python backend for
+            caterers that do not have one yet.
+          </DialogDescription>
+        </DialogHeader>
+        <form className="space-y-4" onSubmit={form.handleSubmit(submit)}>
+          <div className="rounded-md border border-border bg-muted p-3 text-sm">
+            <div className="font-medium">{scopeLabel}</div>
+            <div className="mt-1 text-muted-foreground">
+              {disabledReason ??
+                `${catererIds.length} missing snapshot(s) will be created.`}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="email-snapshots-reason">
+              Reason <span className="text-muted-foreground">(optional)</span>
+            </Label>
+            <Textarea
+              id="email-snapshots-reason"
+              placeholder="Optional note for creating these snapshots."
+              {...form.register("reason")}
+            />
+            <FieldMessage message={form.formState.errors.reason?.message} />
+          </div>
+          <FieldMessage message={form.formState.errors.catererIds?.message} />
+          <FieldMessage message={form.formState.errors.root?.message} />
+          <Button disabled={isPending || !canCreate} type="submit" variant="primary">
+            <MailPlus className="size-4" aria-hidden="true" />
+            {isPending ? "Creating" : "Create snapshots"}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

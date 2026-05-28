@@ -39,6 +39,7 @@ import {
   CatererEmailPreparationForm,
   CatererEmailSendForm,
   CatererEmailSnapshotForm,
+  CatererEmailSnapshotsForm,
 } from "./caterer-email-actions-client";
 
 function emailStatusToken(value: string | null): StatusToken {
@@ -418,6 +419,15 @@ export default async function WeekExportsPage({
   ).length;
   const canRecordPreparation =
     run.status === "approved" && run.issue_count === 0;
+  const missingSnapshotCatererIds = data.communications
+    .filter(
+      (communication) =>
+        communication.email_state === "not_exported" &&
+        communication.caterer_id,
+    )
+    .map((communication) => communication.caterer_id as string);
+  const canCreateAllSnapshots =
+    canRecordPreparation && missingSnapshotCatererIds.length > 0;
   const sendableCommunicationIds = data.communications
     .filter(
       (communication) =>
@@ -447,6 +457,19 @@ export default async function WeekExportsPage({
                 Open order
               </Link>
             </Button>
+            <CatererEmailSnapshotsForm
+              buttonLabel="Create all snapshots"
+              canCreate={canCreateAllSnapshots}
+              catererIds={missingSnapshotCatererIds}
+              disabledReason={
+                missingSnapshotCatererIds.length === 0
+                  ? "There are no missing email snapshots to create."
+                  : undefined
+              }
+              orderRunId={selectedOrderRunId}
+              scopeLabel={`${missingSnapshotCatererIds.length} missing snapshot(s)`}
+              weekStart={weekStart}
+            />
             <CatererEmailSendForm
               buttonLabel="Send all ready"
               canSend={canSendAll}

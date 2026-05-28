@@ -10,6 +10,14 @@ export type CatererEmailActionResult<T = undefined> =
   | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
 
 const reasonSchema = z.string().trim().min(10, "Enter at least 10 characters.");
+const optionalReasonSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) => value.length === 0 || value.length >= 10,
+    "Enter at least 10 characters, or leave blank.",
+  )
+  .optional();
 const uuidSchema = z.string().uuid("Expected a valid UUID.");
 const weekStartSchema = z
   .string()
@@ -26,7 +34,14 @@ const createSnapshotSchema = z.object({
   weekStart: weekStartSchema,
   orderRunId: uuidSchema,
   catererId: uuidSchema,
-  reason: reasonSchema,
+  reason: optionalReasonSchema,
+});
+
+const createSnapshotsSchema = z.object({
+  weekStart: weekStartSchema,
+  orderRunId: uuidSchema,
+  catererIds: z.array(uuidSchema).min(1, "Select at least one caterer."),
+  reason: optionalReasonSchema,
 });
 
 const sendEmailSchema = z.object({
@@ -57,6 +72,7 @@ const backendSendResponseSchema = z.object({
 
 export type RecordPreparationInput = z.infer<typeof recordPreparationSchema>;
 export type CreateSnapshotInput = z.infer<typeof createSnapshotSchema>;
+export type CreateSnapshotsInput = z.infer<typeof createSnapshotsSchema>;
 export type SendEmailInput = z.infer<typeof sendEmailSchema>;
 
 function fieldErrors(error: z.ZodError): Record<string, string[]> {
@@ -170,7 +186,7 @@ function backendConfig(): { url: string; secret: string } | { error: string } {
   return { url, secret };
 }
 
-function backendError(value: unknown): string {
+function backendError(value: unknown, fallback: string): string {
   if (
     value &&
     typeof value === "object" &&
@@ -180,7 +196,77 @@ function backendError(value: unknown): string {
     return value.detail;
   }
 
-  return "The Python backend rejected the caterer email snapshot request.";
+  return fallback;
+}
+
+async function callSnapshotBridge({
+  actorName,
+  catererId,
+  config,
+  orderRunId,
+  reason,
+}: {
+  actorName: string;
+  catererId: string;
+  config: { url: string; secret: string };
+  orderRunId: string;
+  reason?: string;
+}): Promise<
+  | {
+      ok: true;
+      data: z.infer<typeof backendSnapshotResponseSchema>;
+    }
+  | { ok: false; error: string }
+> {
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${config.url}/internal/caterer-email-snapshots`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.secret}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderRunId,
+          catererId,
+          actorName,
+          reason,
+        }),
+        cache: "no-store",
+      },
+    );
+  } catch {
+    return {
+      ok: false,
+      error: "The Python backend bridge could not be reached.",
+    };
+  }
+
+  const body: unknown = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: backendError(
+        body,
+        "The Python backend rejected the caterer email snapshot request.",
+      ),
+    };
+  }
+
+  const backendResult = backendSnapshotResponseSchema.safeParse(body);
+
+  if (!backendResult.success) {
+    return {
+      ok: false,
+      error: "The Python backend returned an unexpected snapshot response.",
+    };
+  }
+
+  return { ok: true, data: backendResult.data };
 }
 
 export async function createCatererEmailSnapshot(
@@ -214,46 +300,16 @@ export async function createCatererEmailSnapshot(
     return { ok: false, error: config.error };
   }
 
-  let response: Response;
+  const bridgeResult = await callSnapshotBridge({
+    actorName: operator.display_name,
+    catererId: parsed.data.catererId,
+    config,
+    orderRunId: parsed.data.orderRunId,
+    reason: parsed.data.reason,
+  });
 
-  try {
-    response = await fetch(
-      `${config.url}/internal/caterer-email-snapshots`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${config.secret}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          orderRunId: parsed.data.orderRunId,
-          catererId: parsed.data.catererId,
-          actorName: operator.display_name,
-          reason: parsed.data.reason,
-        }),
-        cache: "no-store",
-      },
-    );
-  } catch {
-    return {
-      ok: false,
-      error: "The Python backend bridge could not be reached.",
-    };
-  }
-
-  const body: unknown = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    return { ok: false, error: backendError(body) };
-  }
-
-  const backendResult = backendSnapshotResponseSchema.safeParse(body);
-
-  if (!backendResult.success) {
-    return {
-      ok: false,
-      error: "The Python backend returned an unexpected snapshot response.",
-    };
+  if (!bridgeResult.ok) {
+    return { ok: false, error: bridgeResult.error };
   }
 
   revalidateCatererEmailPaths(
@@ -264,10 +320,78 @@ export async function createCatererEmailSnapshot(
 
   return {
     ok: true,
-    data: backendResult.data,
-    message: backendResult.data.snapshotCreated
+    data: bridgeResult.data,
+    message: bridgeResult.data.snapshotCreated
       ? "Caterer email snapshot created and audited."
       : "Caterer email preparation recorded on the existing snapshot.",
+  };
+}
+
+export async function createCatererEmailSnapshots(
+  input: CreateSnapshotsInput,
+): Promise<
+  CatererEmailActionResult<{
+    created: number;
+    reused: number;
+    failed: { catererId: string; error: string }[];
+  }>
+> {
+  const parsed = createSnapshotsSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Check the email snapshot form.",
+      fieldErrors: fieldErrors(parsed.error),
+    };
+  }
+
+  const { operator, error } = await getOperatorClient();
+
+  if (error || !operator) {
+    return { ok: false, error: error ?? "Operator access is required." };
+  }
+
+  const config = backendConfig();
+
+  if ("error" in config) {
+    return { ok: false, error: config.error };
+  }
+
+  let created = 0;
+  let reused = 0;
+  const failed: { catererId: string; error: string }[] = [];
+
+  for (const catererId of parsed.data.catererIds) {
+    const bridgeResult = await callSnapshotBridge({
+      actorName: operator.display_name,
+      catererId,
+      config,
+      orderRunId: parsed.data.orderRunId,
+      reason: parsed.data.reason,
+    });
+
+    if (!bridgeResult.ok) {
+      failed.push({ catererId, error: bridgeResult.error });
+      continue;
+    }
+
+    if (bridgeResult.data.snapshotCreated) {
+      created += 1;
+    } else {
+      reused += 1;
+    }
+  }
+
+  revalidateCatererEmailPaths(parsed.data.weekStart, parsed.data.orderRunId);
+
+  return {
+    ok: true,
+    data: { created, reused, failed },
+    message:
+      failed.length > 0
+        ? `${created} snapshot(s) created; ${reused} already existed; ${failed.length} failed.`
+        : `${created} snapshot(s) created; ${reused} already existed.`,
   };
 }
 
@@ -328,7 +452,13 @@ export async function sendCatererEmails(
   const body: unknown = await response.json().catch(() => null);
 
   if (!response.ok) {
-    return { ok: false, error: backendError(body) };
+    return {
+      ok: false,
+      error: backendError(
+        body,
+        "The Python backend rejected the caterer email send request.",
+      ),
+    };
   }
 
   const backendResult = backendSendResponseSchema.safeParse(body);

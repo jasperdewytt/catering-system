@@ -56,6 +56,42 @@ def test_create_caterer_email_snapshot_success(
     }
 
 
+@pytest.mark.parametrize("payload_reason", [None, "   "])
+def test_create_caterer_email_snapshot_uses_default_reason(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    payload_reason: str | None,
+) -> None:
+    def fake_record_communication_export(*args, **kwargs):
+        assert kwargs["reason"] == "Created caterer email snapshot from website."
+        return {
+            "communication": {"id": "communication-1"},
+            "event": {"id": "event-1"},
+            "snapshot_created": True,
+        }
+
+    monkeypatch.setattr(
+        backend,
+        "record_communication_export",
+        fake_record_communication_export,
+    )
+    payload = {
+        "orderRunId": "run-1",
+        "catererId": "caterer-1",
+        "actorName": "Padea Operator",
+    }
+    if payload_reason is not None:
+        payload["reason"] = payload_reason
+
+    response = client.post(
+        "/internal/caterer-email-snapshots",
+        headers={"Authorization": "Bearer test-secret"},
+        json=payload,
+    )
+
+    assert response.status_code == 200
+
+
 @pytest.mark.parametrize(
     ("headers", "status_code"),
     [
