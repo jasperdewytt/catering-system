@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from padea_catering.communications import record_communication_export
+from padea_catering.communications import record_communication_export, send_caterer_emails
+from padea_catering.communications.actions import (
+    EmailDeliveryError,
+    EmailProvider,
+    email_provider_from_env,
+)
 from tests.test_operations import FakeClient, FakeTable
 
 
@@ -87,6 +92,45 @@ def _client_with_export_data() -> FakeClient:
             "order_communication_events": FakeTable("order_communication_events", []),
         }
     )
+    return client
+
+
+class FakeEmailProvider(EmailProvider):
+    provider_name = "fake"
+
+    def __init__(self, fail_ids: set[str] | None = None) -> None:
+        self.fail_ids = fail_ids or set()
+        self.sent_subjects: list[str] = []
+
+    def send(
+        self,
+        *,
+        subject: str,
+        body: str,
+        to_emails: list[str],
+    ) -> dict[str, object]:
+        self.sent_subjects.append(subject)
+        if subject in self.fail_ids:
+            raise EmailDeliveryError("SMTP rejected message")
+        return {
+            "provider": self.provider_name,
+            "requested_recipients": to_emails,
+            "actual_recipients": ["test@example.com"],
+            "message_id": f"message-{len(self.sent_subjects)}",
+        }
+
+
+def _client_with_send_data() -> FakeClient:
+    client = _client_with_export_data()
+    first = record_communication_export(
+        client,
+        order_run_id="run-1",
+        caterer_id="cat-1",
+        actor_name="Operator",
+        reason="Initial snapshot",
+    )
+    communication = client.tables["order_communications"].rows[0]
+    communication["id"] = first["communication"]["id"]
     return client
 
 
@@ -192,3 +236,189 @@ def test_record_communication_export_reuses_snapshot_on_repeated_export() -> Non
     assert len(client.tables["order_communication_recipients"].rows) == 1
     assert len(client.tables["order_communication_events"].rows) == 2
     assert client.tables["order_communication_recipients"].rows[0]["email"] == "primary@example.com"
+
+
+def test_send_caterer_emails_records_sent_event_metadata_and_audit() -> None:
+    client = _client_with_send_data()
+    communication_id = client.tables["order_communications"].rows[0]["id"]
+
+    result = send_caterer_emails(
+        client,
+        order_run_id="run-1",
+        communication_ids=[communication_id],
+        actor_name="Operator",
+        reason="Send reviewed snapshot",
+        provider=FakeEmailProvider(),
+    )
+
+    communication = client.tables["order_communications"].rows[0]
+    event = client.tables["order_communication_events"].rows[-1]
+    audit = client.tables["audit_log"].rows[-1]
+
+    assert len(result["sent"]) == 1
+    assert result["failed"] == []
+    assert communication["status"] == "sent"
+    assert event["event_type"] == "sent"
+    assert event["metadata"]["provider"] == "fake"
+    assert event["metadata"]["requested_recipients"] == ["primary@example.com"]
+    assert audit["action"] == "communication_sent"
+    assert audit["after_state"]["status"] == "sent"
+
+
+def test_send_caterer_emails_records_failed_event_error_and_audit() -> None:
+    client = _client_with_send_data()
+    communication = client.tables["order_communications"].rows[0]
+
+    result = send_caterer_emails(
+        client,
+        order_run_id="run-1",
+        communication_ids=[communication["id"]],
+        actor_name="Operator",
+        reason="Send reviewed snapshot",
+        provider=FakeEmailProvider(fail_ids={communication["subject"]}),
+    )
+
+    event = client.tables["order_communication_events"].rows[-1]
+    audit = client.tables["audit_log"].rows[-1]
+
+    assert result["sent"] == []
+    assert len(result["failed"]) == 1
+    assert client.tables["order_communications"].rows[0]["status"] == "failed"
+    assert event["event_type"] == "send_failed"
+    assert event["metadata"]["error"] == "SMTP rejected message"
+    assert audit["action"] == "communication_send_failed"
+
+
+def test_send_caterer_emails_returns_mixed_batch_results() -> None:
+    client = _client_with_send_data()
+    first = client.tables["order_communications"].rows[0]
+    second = {
+        **first,
+        "id": "communication-2",
+        "caterer_id": "cat-1",
+        "subject": "Fail me",
+        "status": "exported",
+    }
+    client.tables["order_communications"].rows.append(second)
+    client.tables["order_communication_recipients"].rows.append(
+        {
+            "id": "recipient-2",
+            "communication_id": "communication-2",
+            "email": "second@example.com",
+            "recipient_type": "to",
+        }
+    )
+
+    result = send_caterer_emails(
+        client,
+        order_run_id="run-1",
+        communication_ids=[first["id"], "communication-2"],
+        actor_name="Operator",
+        reason="Send reviewed snapshot",
+        provider=FakeEmailProvider(fail_ids={"Fail me"}),
+    )
+
+    assert [row["communication_id"] for row in result["sent"]] == [first["id"]]
+    assert [row["communication_id"] for row in result["failed"]] == ["communication-2"]
+    assert client.tables["order_communications"].rows[0]["status"] == "sent"
+    assert client.tables["order_communications"].rows[1]["status"] == "failed"
+
+
+@pytest.mark.parametrize("status", ["generated", "blocked", "superseded"])
+def test_send_caterer_emails_rejects_unapproved_runs(status: str) -> None:
+    client = _client_with_send_data()
+    client.tables["order_runs"].rows[0]["status"] = status
+    communication_id = client.tables["order_communications"].rows[0]["id"]
+
+    with pytest.raises(ValueError, match="Only approved"):
+        send_caterer_emails(
+            client,
+            order_run_id="run-1",
+            communication_ids=[communication_id],
+            actor_name="Operator",
+            reason="Send reviewed snapshot",
+            provider=FakeEmailProvider(),
+        )
+
+
+def test_send_caterer_emails_rejects_approved_run_with_issues() -> None:
+    client = _client_with_send_data()
+    client.tables["order_runs"].rows[0]["issue_count"] = 1
+    communication_id = client.tables["order_communications"].rows[0]["id"]
+
+    with pytest.raises(ValueError, match="allocation issues"):
+        send_caterer_emails(
+            client,
+            order_run_id="run-1",
+            communication_ids=[communication_id],
+            actor_name="Operator",
+            reason="Send reviewed snapshot",
+            provider=FakeEmailProvider(),
+        )
+
+
+def test_send_caterer_emails_rejects_missing_snapshot_missing_recipient_and_sent() -> None:
+    client = _client_with_send_data()
+    communication = client.tables["order_communications"].rows[0]
+
+    with pytest.raises(ValueError, match="persisted snapshots"):
+        send_caterer_emails(
+            client,
+            order_run_id="run-1",
+            communication_ids=["missing"],
+            actor_name="Operator",
+            reason="Send reviewed snapshot",
+            provider=FakeEmailProvider(),
+        )
+
+    client.tables["order_communication_recipients"].rows = []
+    with pytest.raises(ValueError, match="at least one to recipient"):
+        send_caterer_emails(
+            client,
+            order_run_id="run-1",
+            communication_ids=[communication["id"]],
+            actor_name="Operator",
+            reason="Send reviewed snapshot",
+            provider=FakeEmailProvider(),
+        )
+
+    client = _client_with_send_data()
+    communication = client.tables["order_communications"].rows[0]
+    communication["status"] = "sent"
+    with pytest.raises(ValueError, match="cannot be resent"):
+        send_caterer_emails(
+            client,
+            order_run_id="run-1",
+            communication_ids=[communication["id"]],
+            actor_name="Operator",
+            reason="Send reviewed snapshot",
+            provider=FakeEmailProvider(),
+        )
+
+
+def test_send_caterer_emails_requires_reason() -> None:
+    client = _client_with_send_data()
+    communication_id = client.tables["order_communications"].rows[0]["id"]
+
+    with pytest.raises(ValueError, match="reason is required"):
+        send_caterer_emails(
+            client,
+            order_run_id="run-1",
+            communication_ids=[communication_id],
+            actor_name="Operator",
+            reason="",
+            provider=FakeEmailProvider(),
+        )
+
+
+def test_email_provider_from_env_requires_test_recipient_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PADEA_EMAIL_PROVIDER", "gmail_smtp")
+    monkeypatch.setenv("PADEA_EMAIL_FROM", "orders@example.com")
+    monkeypatch.setenv("PADEA_GMAIL_SMTP_USERNAME", "orders@example.com")
+    monkeypatch.setenv("PADEA_GMAIL_SMTP_APP_PASSWORD", "app-password")
+    monkeypatch.delenv("PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE", raising=False)
+
+    with pytest.raises(ValueError, match="PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE"):
+        email_provider_from_env()

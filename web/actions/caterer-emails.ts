@@ -22,18 +22,61 @@ const recordPreparationSchema = z.object({
   reason: reasonSchema,
 });
 
+const createSnapshotSchema = z.object({
+  weekStart: weekStartSchema,
+  orderRunId: uuidSchema,
+  catererId: uuidSchema,
+  reason: reasonSchema,
+});
+
+const sendEmailSchema = z.object({
+  weekStart: weekStartSchema,
+  orderRunId: uuidSchema,
+  communicationIds: z.array(uuidSchema).min(1, "Select at least one email."),
+  reason: reasonSchema,
+});
+
+const backendSnapshotResponseSchema = z.object({
+  communicationId: uuidSchema,
+  eventId: uuidSchema,
+  snapshotCreated: z.boolean(),
+});
+
+const backendSendItemSchema = z.object({
+  communicationId: uuidSchema,
+  eventId: uuidSchema,
+  status: z.string(),
+  catererId: uuidSchema,
+  metadata: z.record(z.string(), z.unknown()),
+});
+
+const backendSendResponseSchema = z.object({
+  sent: z.array(backendSendItemSchema),
+  failed: z.array(backendSendItemSchema),
+});
+
 export type RecordPreparationInput = z.infer<typeof recordPreparationSchema>;
+export type CreateSnapshotInput = z.infer<typeof createSnapshotSchema>;
+export type SendEmailInput = z.infer<typeof sendEmailSchema>;
 
 function fieldErrors(error: z.ZodError): Record<string, string[]> {
   return error.flatten().fieldErrors as Record<string, string[]>;
 }
 
-function revalidateCatererEmailPaths(weekStart: string, orderRunId: string) {
+function revalidateCatererEmailPaths(
+  weekStart: string,
+  orderRunId: string,
+  catererId?: string,
+) {
   revalidatePath("/dashboard");
   revalidatePath(`/weeks/${weekStart}`);
   revalidatePath(`/weeks/${weekStart}/exports`);
   revalidatePath(`/weeks/${weekStart}/orders`);
   revalidatePath(`/weeks/${weekStart}/orders/${orderRunId}`);
+  revalidatePath("/caterers");
+  if (catererId) {
+    revalidatePath(`/caterers/${catererId}`);
+  }
   revalidatePath("/audit");
 }
 
@@ -45,7 +88,11 @@ async function getOperatorClient() {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    return { supabase, error: "Sign in as an operator before saving changes." };
+    return {
+      supabase,
+      operator: null,
+      error: "Sign in as an operator before saving changes.",
+    };
   }
 
   const { data: operator, error: operatorError } = await supabase
@@ -57,11 +104,12 @@ async function getOperatorClient() {
   if (operatorError || !operator) {
     return {
       supabase,
+      operator: null,
       error: "Your account is not registered as a Padea operator.",
     };
   }
 
-  return { supabase, error: null };
+  return { supabase, operator, error: null };
 }
 
 function rpcError(error: { message?: string } | null): string {
@@ -105,5 +153,207 @@ export async function recordCatererEmailPreparation(
     ok: true,
     data: { eventId: data },
     message: "Caterer email preparation recorded and audited.",
+  };
+}
+
+function backendConfig(): { url: string; secret: string } | { error: string } {
+  const url = process.env.PADEA_BACKEND_URL?.replace(/\/+$/, "");
+  const secret = process.env.PADEA_BACKEND_SHARED_SECRET;
+
+  if (!url || !secret) {
+    return {
+      error:
+        "The Python backend bridge is not configured for caterer email actions.",
+    };
+  }
+
+  return { url, secret };
+}
+
+function backendError(value: unknown): string {
+  if (
+    value &&
+    typeof value === "object" &&
+    "detail" in value &&
+    typeof value.detail === "string"
+  ) {
+    return value.detail;
+  }
+
+  return "The Python backend rejected the caterer email snapshot request.";
+}
+
+export async function createCatererEmailSnapshot(
+  input: CreateSnapshotInput,
+): Promise<
+  CatererEmailActionResult<{
+    communicationId: string;
+    eventId: string;
+    snapshotCreated: boolean;
+  }>
+> {
+  const parsed = createSnapshotSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Check the email snapshot form.",
+      fieldErrors: fieldErrors(parsed.error),
+    };
+  }
+
+  const { operator, error } = await getOperatorClient();
+
+  if (error || !operator) {
+    return { ok: false, error: error ?? "Operator access is required." };
+  }
+
+  const config = backendConfig();
+
+  if ("error" in config) {
+    return { ok: false, error: config.error };
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${config.url}/internal/caterer-email-snapshots`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.secret}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderRunId: parsed.data.orderRunId,
+          catererId: parsed.data.catererId,
+          actorName: operator.display_name,
+          reason: parsed.data.reason,
+        }),
+        cache: "no-store",
+      },
+    );
+  } catch {
+    return {
+      ok: false,
+      error: "The Python backend bridge could not be reached.",
+    };
+  }
+
+  const body: unknown = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    return { ok: false, error: backendError(body) };
+  }
+
+  const backendResult = backendSnapshotResponseSchema.safeParse(body);
+
+  if (!backendResult.success) {
+    return {
+      ok: false,
+      error: "The Python backend returned an unexpected snapshot response.",
+    };
+  }
+
+  revalidateCatererEmailPaths(
+    parsed.data.weekStart,
+    parsed.data.orderRunId,
+    parsed.data.catererId,
+  );
+
+  return {
+    ok: true,
+    data: backendResult.data,
+    message: backendResult.data.snapshotCreated
+      ? "Caterer email snapshot created and audited."
+      : "Caterer email preparation recorded on the existing snapshot.",
+  };
+}
+
+export async function sendCatererEmails(
+  input: SendEmailInput,
+): Promise<
+  CatererEmailActionResult<{
+    sent: z.infer<typeof backendSendItemSchema>[];
+    failed: z.infer<typeof backendSendItemSchema>[];
+  }>
+> {
+  const parsed = sendEmailSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Check the email send form.",
+      fieldErrors: fieldErrors(parsed.error),
+    };
+  }
+
+  const { operator, error } = await getOperatorClient();
+
+  if (error || !operator) {
+    return { ok: false, error: error ?? "Operator access is required." };
+  }
+
+  const config = backendConfig();
+
+  if ("error" in config) {
+    return { ok: false, error: config.error };
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${config.url}/internal/caterer-email-sends`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.secret}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        orderRunId: parsed.data.orderRunId,
+        communicationIds: parsed.data.communicationIds,
+        actorName: operator.display_name,
+        reason: parsed.data.reason,
+      }),
+      cache: "no-store",
+    });
+  } catch {
+    return {
+      ok: false,
+      error: "The Python backend bridge could not be reached.",
+    };
+  }
+
+  const body: unknown = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    return { ok: false, error: backendError(body) };
+  }
+
+  const backendResult = backendSendResponseSchema.safeParse(body);
+
+  if (!backendResult.success) {
+    return {
+      ok: false,
+      error: "The Python backend returned an unexpected send response.",
+    };
+  }
+
+  revalidateCatererEmailPaths(
+    parsed.data.weekStart,
+    parsed.data.orderRunId,
+  );
+
+  const sentCount = backendResult.data.sent.length;
+  const failedCount = backendResult.data.failed.length;
+
+  return {
+    ok: true,
+    data: backendResult.data,
+    message:
+      failedCount > 0
+        ? `${sentCount} email(s) sent; ${failedCount} send failed.`
+        : `${sentCount} caterer email(s) sent and audited.`,
   };
 }

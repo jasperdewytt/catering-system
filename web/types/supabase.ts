@@ -2537,8 +2537,10 @@ export type Database = {
           created_at: string | null;
           event_id: string | null;
           event_type: string | null;
+          error: string | null;
           metadata: Json | null;
           order_run_id: string | null;
+          provider: string | null;
           reason: string | null;
         };
         Relationships: [
@@ -2855,6 +2857,13 @@ export type Database = {
           exported_by: string | null;
           issue_count: number | null;
           latest_event_at: string | null;
+          latest_send_actor_name: string | null;
+          latest_send_error: string | null;
+          latest_send_event_at: string | null;
+          latest_send_event_id: string | null;
+          latest_send_event_type: string | null;
+          latest_send_metadata: Json | null;
+          latest_send_provider: string | null;
           line_count: number | null;
           order_run_id: string | null;
           order_run_status: string | null;

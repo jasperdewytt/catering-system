@@ -1,6 +1,6 @@
 # Website Implementation Stages
 
-**Status**: Planning guide; Stage 1 scaffold, menu setup, order review/approval, caterer email snapshots, audit read, validation read, caterer read, and student read slices implemented
+**Status**: Planning guide; Stage 1 scaffold, menu setup, order review/approval, caterer email snapshots, v1 test-routed email sending, audit read, validation read, caterer read, and student read slices implemented
 **Last updated**: 2026-05-25
 **Related docs**:
 
@@ -283,7 +283,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 ## Stage 8 - Caterer Email Workflow Writes
 
-**Status**: Implemented. The web UI displays existing immutable snapshots, can append audited preparation events for those snapshots, and can create missing first snapshots through the narrow Python email bridge.
+**Status**: Implemented. The web UI displays existing immutable snapshots, can append audited preparation events for those snapshots, can create missing first snapshots through the narrow Python email bridge, and can send reviewed snapshots through the v1 Gmail SMTP backend path with a mandatory test-recipient override.
 
 **Goal**: Port deterministic caterer email snapshot tracking into the web app.
 

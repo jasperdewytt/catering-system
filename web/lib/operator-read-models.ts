@@ -589,7 +589,11 @@ export async function getCatererEmailsReadModel(
         .from("operator_audit_events")
         .select("*")
         .eq("order_run_id", selectedRun.order_run_id)
-        .eq("action", "communication_exported")
+        .in("action", [
+          "communication_exported",
+          "communication_sent",
+          "communication_send_failed",
+        ])
         .order("created_at", { ascending: false }),
     ]);
 

@@ -19,7 +19,7 @@ pnpm --dir web install
 pnpm --dir web dev
 ```
 
-The Next.js app currently provides the authenticated operator shell, real authenticated reads for dashboard, weeks, menu setup, order review, validation, audit, caterers, students, and caterer emails. Audited writes exist for menu setup, order-run generation, order-run approval/reopen, follow-up/override notes, repeat email-preparation events, and first caterer email snapshot creation through the narrow Python backend bridge.
+The Next.js app currently provides the authenticated operator shell, real authenticated reads for dashboard, weeks, menu setup, order review, validation, audit, caterers, students, and caterer emails. Audited writes exist for menu setup, order-run generation, order-run approval/reopen, follow-up/override notes, repeat email-preparation events, first caterer email snapshot creation, and test-routed live email sending through the narrow Python backend bridge.
 
 ## Run the Python backend
 
@@ -29,10 +29,18 @@ Backend-only environment values are read from the repository root `.env` file:
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 PADEA_BACKEND_SHARED_SECRET=
+PADEA_EMAIL_PROVIDER=gmail_smtp
+PADEA_EMAIL_FROM=
+PADEA_GMAIL_SMTP_USERNAME=
+PADEA_GMAIL_SMTP_APP_PASSWORD=
+PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE=
 ```
 
 `PADEA_BACKEND_SHARED_SECRET` is any long random string shared with
-`web/.env.local`. Do not commit real `.env` files.
+`web/.env.local`. Gmail SMTP uses `smtp.gmail.com:587` with TLS and an app
+password. `PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE` is mandatory for v1, so reviewed
+caterer emails are sent only to the configured test recipient. Do not commit
+real `.env` files.
 
 ```bash
 uv sync

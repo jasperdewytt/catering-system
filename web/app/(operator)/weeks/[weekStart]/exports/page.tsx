@@ -35,9 +35,21 @@ import {
 } from "@/lib/operator-read-models";
 import { createClient } from "@/lib/supabase/server";
 
-import { CatererEmailPreparationForm } from "./caterer-email-actions-client";
+import {
+  CatererEmailPreparationForm,
+  CatererEmailSendForm,
+  CatererEmailSnapshotForm,
+} from "./caterer-email-actions-client";
 
 function emailStatusToken(value: string | null): StatusToken {
+  if (value === "sent") {
+    return "Sent";
+  }
+
+  if (value === "failed") {
+    return "Failed";
+  }
+
   if (value === "exported") {
     return "Exported";
   }
@@ -99,12 +111,17 @@ function EmailSnapshot({
   weekStart: string;
 }) {
   const communicationId = communication.communication_id;
+  const canSend =
+    canRecordPreparation &&
+    Boolean(communicationId) &&
+    (communication.email_state === "exported" ||
+      communication.email_state === "failed");
   const disabledReason =
-    communication.email_state !== "exported"
+    !["exported", "failed", "sent"].includes(communication.email_state ?? "")
       ? "A backend email snapshot is required before this email can be previewed."
       : canRecordPreparation
         ? undefined
-        : "Only approved, issue-free runs can record email preparation events.";
+        : "Only approved, issue-free runs can send or record email preparation events.";
 
   return (
     <Card>
@@ -123,7 +140,7 @@ function EmailSnapshot({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {communication.email_state === "exported" && communicationId ? (
+        {communicationId ? (
           <>
             <div className="grid gap-4 xl:grid-cols-[1fr_18rem]">
               <div className="space-y-4">
@@ -152,7 +169,33 @@ function EmailSnapshot({
                       <dt className="text-muted-foreground">Prepared by</dt>
                       <dd>{communication.exported_by ?? "Unknown operator"}</dd>
                     </div>
+                    <div>
+                      <dt className="text-muted-foreground">Latest send</dt>
+                      <dd>
+                        {communication.latest_send_event_at
+                          ? `${formatStatus(
+                              communication.latest_send_event_type,
+                            )} by ${
+                              communication.latest_send_actor_name ??
+                              "Unknown operator"
+                            }`
+                          : "Not sent"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Provider</dt>
+                      <dd>
+                        {communication.latest_send_provider
+                          ? formatStatus(communication.latest_send_provider)
+                          : "Not recorded"}
+                      </dd>
+                    </div>
                   </dl>
+                  {communication.latest_send_error ? (
+                    <p className="mt-3 rounded-md border border-[var(--err-border)] bg-[var(--err-bg)] p-3 text-sm text-[var(--err-fg)]">
+                      {communication.latest_send_error}
+                    </p>
+                  ) : null}
                 </section>
 
                 <section className="rounded-md border border-border bg-muted p-4">
@@ -188,13 +231,37 @@ function EmailSnapshot({
                 </section>
               </div>
 
-              <CatererEmailPreparationForm
-                canRecord={canRecordPreparation}
-                communicationId={communicationId}
-                disabledReason={disabledReason}
-                orderRunId={orderRunId}
-                weekStart={weekStart}
-              />
+              <div className="space-y-4">
+                <div className="rounded-md border border-border bg-card p-4">
+                  <h3 className="text-sm font-medium text-foreground">
+                    Send Email
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {communication.email_state === "sent"
+                      ? "This caterer email has already been sent. Resend is disabled for v1."
+                      : (disabledReason ??
+                        "Sends this reviewed snapshot through the Python backend. V1 uses the configured test recipient override.")}
+                  </p>
+                  <div className="mt-3">
+                    <CatererEmailSendForm
+                      buttonLabel="Send email"
+                      canSend={canSend}
+                      communicationIds={[communicationId]}
+                      disabledReason={disabledReason}
+                      orderRunId={orderRunId}
+                      scopeLabel={communication.caterer_name ?? "Caterer email"}
+                      weekStart={weekStart}
+                    />
+                  </div>
+                </div>
+                <CatererEmailPreparationForm
+                  canRecord={canRecordPreparation}
+                  communicationId={communicationId}
+                  disabledReason={disabledReason}
+                  orderRunId={orderRunId}
+                  weekStart={weekStart}
+                />
+              </div>
             </div>
 
             <section className="rounded-md border border-border bg-muted p-4">
@@ -218,13 +285,14 @@ function EmailSnapshot({
 
             <section>
               <h3 className="mb-3 text-sm font-medium text-foreground">
-                Preparation Events
+                Email Events
               </h3>
               {events.length ? (
                 <CompactTable>
                   <thead>
                     <tr>
                       <Th>When</Th>
+                      <Th>Event</Th>
                       <Th>Actor</Th>
                       <Th>Reason</Th>
                     </tr>
@@ -233,6 +301,7 @@ function EmailSnapshot({
                     {events.map((event) => (
                       <tr key={event.event_id}>
                         <Td>{formatDateTime(event.created_at)}</Td>
+                        <Td>{formatStatus(event.event_type)}</Td>
                         <Td>{event.actor_name ?? "Unknown operator"}</Td>
                         <Td>{event.reason ?? "No reason recorded"}</Td>
                       </tr>
@@ -249,14 +318,28 @@ function EmailSnapshot({
             </section>
           </>
         ) : (
-          <EmptyState
-            icon={Mail}
-            title={formatEmailState(communication.email_state)}
-            description={
-              disabledReason ??
-              "This caterer email is not ready for operator preparation."
-            }
-          />
+          <div className="grid gap-4 xl:grid-cols-[1fr_18rem]">
+            <EmptyState
+              icon={Mail}
+              title={formatEmailState(communication.email_state)}
+              description={
+                communication.email_state === "not_exported"
+                  ? "Create the immutable snapshot before previewing recipients, subject, body, and delivery notes."
+                  : (disabledReason ??
+                    "This caterer email is not ready for operator preparation.")
+              }
+            />
+            {communication.email_state === "not_exported" &&
+            communication.caterer_id ? (
+              <CatererEmailSnapshotForm
+                canCreate={canRecordPreparation}
+                catererId={communication.caterer_id}
+                disabledReason={disabledReason}
+                orderRunId={orderRunId}
+                weekStart={weekStart}
+              />
+            ) : null}
+          </div>
         )}
       </CardContent>
     </Card>
@@ -327,8 +410,24 @@ export default async function WeekExportsPage({
   const readyCount = data.communications.filter(
     (communication) => communication.email_state === "exported",
   ).length;
+  const sentCount = data.communications.filter(
+    (communication) => communication.email_state === "sent",
+  ).length;
+  const failedCount = data.communications.filter(
+    (communication) => communication.email_state === "failed",
+  ).length;
   const canRecordPreparation =
     run.status === "approved" && run.issue_count === 0;
+  const sendableCommunicationIds = data.communications
+    .filter(
+      (communication) =>
+        communication.communication_id &&
+        (communication.email_state === "exported" ||
+          communication.email_state === "failed"),
+    )
+    .map((communication) => communication.communication_id as string);
+  const canSendAll =
+    canRecordPreparation && sendableCommunicationIds.length > 0;
 
   return (
     <>
@@ -348,6 +447,19 @@ export default async function WeekExportsPage({
                 Open order
               </Link>
             </Button>
+            <CatererEmailSendForm
+              buttonLabel="Send all ready"
+              canSend={canSendAll}
+              communicationIds={sendableCommunicationIds}
+              disabledReason={
+                sendableCommunicationIds.length === 0
+                  ? "There are no ready or failed emails available to send."
+                  : undefined
+              }
+              orderRunId={selectedOrderRunId}
+              scopeLabel={`${sendableCommunicationIds.length} ready caterer email(s)`}
+              weekStart={weekStart}
+            />
             <StatusBadge status={statusToken(run.status)} />
           </>
         }
@@ -360,6 +472,22 @@ export default async function WeekExportsPage({
           </CardHeader>
           <CardContent className="text-2xl font-semibold">
             {readyCount}/{data.communications.length}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Sent</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">
+            {sentCount}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Failed Sends</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">
+            {failedCount}
           </CardContent>
         </Card>
         <Card>

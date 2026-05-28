@@ -38,7 +38,7 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 | `/weeks/[weekStart]/validation`          | `operator_validation_summary`, `operator_order_run_issues`; future `session_validation_findings`                                                                                                      | rerun validation only after job bridge                            | Stage 5 read, Stage 9 trigger       |
 | `/weeks/[weekStart]/orders`              | `operator_order_runs`                                                                                                                                                                                 | create order run through Python bridge                            | Stage 9 order generation implemented |
 | `/weeks/[weekStart]/orders/[orderRunId]` | `operator_order_runs`, `operator_order_run_lines`, `operator_order_run_allocations`, `operator_order_run_issues`, `operator_order_run_contacts`, `operator_manual_overrides`, `operator_audit_events` | approve, reopen, follow-up/override notes through RPCs            | Stage 7 implemented                 |
-| `/weeks/[weekStart]/exports`             | `operator_communications`, `operator_communication_recipients`, `operator_communication_events`, `operator_audit_events`                                                                              | first snapshot through Python bridge; repeat email-preparation event through RPC | Stage 8 implemented                 |
+| `/weeks/[weekStart]/exports`             | `operator_communications`, `operator_communication_recipients`, `operator_communication_events`, `operator_audit_events`                                                                              | first snapshot through Python bridge; repeat email-preparation event through RPC; send through Python bridge | Stage 8 + v1 sending implemented    |
 | `/caterers`                              | `operator_caterers`                                                                                                                                                                                   | none for submission                                               | Stage 9 implemented                 |
 | `/caterers/[catererId]`                  | `operator_caterer_detail`                                                                                                                                                                             | none for submission                                               | Stage 9 implemented                 |
 | `/students`                              | `operator_students`                                                                                                                                                                                   | none for submission                                               | Stage 9 implemented                 |
@@ -466,6 +466,7 @@ All website writes are called from Server Actions. The Server Action validates r
 | Record follow-up/override note | `operator_record_manual_override` RPC           | `manual_override_created`                                  | Implemented                        |
 | Create caterer email snapshot  | Python `POST /internal/caterer-email-snapshots` bridge | `communication_exported`                                   | Implemented                        |
 | Record prepared caterer email  | `operator_record_caterer_email_preparation` RPC | `communication_exported`                                   | Implemented for existing snapshots |
+| Send caterer email             | Python `POST /internal/caterer-email-sends` bridge | `communication_sent` or `communication_send_failed`         | Implemented with mandatory test-recipient override |
 | Trigger order generation       | Python `POST /internal/order-runs` bridge       | `order_run_generated`                                      | Implemented                        |
 | Trigger validation preflight   | Python job bridge                               | job audit/status row; future `session_validation_findings` | Deferred to Stage 9                |
 
@@ -485,6 +486,17 @@ The UI should handle both cases:
 
 - snapshot exists: display it
 - snapshot missing: show a reason form that creates the snapshot through the Python bridge
+
+### Caterer email sending
+
+The web UI can send persisted caterer email snapshots only through `POST /internal/caterer-email-sends`. Next.js validates `{ orderRunId, communicationIds, reason }`, resolves the operator display name from `public.operators`, and calls the bridge with `PADEA_BACKEND_SHARED_SECRET`.
+
+The Python backend owns service-role Supabase access, Gmail SMTP credentials, provider selection, and delivery-state writes. It validates that the run is approved and issue-free, every requested communication snapshot exists, each snapshot has recipient rows, status is `exported` or `failed`, and the reason is non-empty. It records either:
+
+- `order_communication_events.event_type = 'sent'` and `audit_log.action = 'communication_sent'`
+- `order_communication_events.event_type = 'send_failed'` and `audit_log.action = 'communication_send_failed'`
+
+`operator_communications` exposes `sent` and `failed` email states plus latest send event metadata/error for the exports page. `operator_communication_events` exposes provider/error metadata for event history. V1 requires `PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE`; real-recipient sending and website-editable SMTP settings are deferred until encrypted secret management exists.
 
 ### Website order generation
 

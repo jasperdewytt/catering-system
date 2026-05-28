@@ -48,6 +48,14 @@ export function formatMoney(value: number | null): string {
 }
 
 export function formatEmailState(value: string | null): string {
+  if (value === "sent") {
+    return "Sent";
+  }
+
+  if (value === "failed") {
+    return "Send failed";
+  }
+
   if (value === "exported") {
     return "Email ready";
   }
@@ -79,6 +87,14 @@ export function formatAuditAction(
     return "Email prepared";
   }
 
+  if (action === "communication_sent") {
+    return "Email sent";
+  }
+
+  if (action === "communication_send_failed") {
+    return "Email send failed";
+  }
+
   return displayAction ?? formatStatus(action);
 }
 
@@ -93,6 +109,14 @@ export function statusToken(value: string | boolean | null): StatusToken {
 
   if (value === "exported") {
     return "Exported";
+  }
+
+  if (value === "sent") {
+    return "Sent";
+  }
+
+  if (value === "failed") {
+    return "Failed";
   }
 
   if (value === "generated" || value === "pending_approval") {

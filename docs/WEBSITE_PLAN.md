@@ -264,6 +264,7 @@ Key content:
 Primary actions:
 
 - record prepared email for a caterer
+- send one reviewed caterer email or all ready emails through the backend bridge
 - view previous email preparation events
 
 Safety requirements:
@@ -272,7 +273,7 @@ Safety requirements:
 - display persisted communication snapshots and recipient snapshots; do not render caterer email templates in TypeScript
 - first email-preparation recording creates or displays the immutable communication snapshot through a Python/backend contract; the persisted-first web slice displays existing snapshots and records repeated preparation events
 - repeated email-preparation recordings append events without mutating the original snapshot
-- live email sending is out of scope until a separate sent/delivery model exists
+- live email sending uses the Python backend bridge, records `sent`/`failed` delivery state and provider metadata, and is test-routed through `PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE` for v1
 
 ### Caterers
 

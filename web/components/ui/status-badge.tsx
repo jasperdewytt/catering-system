@@ -6,6 +6,8 @@ export const STATUS_TOKENS = [
   "Generated",
   "Approved",
   "Exported",
+  "Sent",
+  "Failed",
   "Blocked",
   "Superseded",
 ] as const;
@@ -20,6 +22,8 @@ const statusStyles: Record<StatusToken, string> = {
     "border-[var(--info-border)] bg-[var(--info-bg)] text-[var(--info-fg)]",
   Approved: "border-[var(--ok-border)] bg-[var(--ok-bg)] text-[var(--ok-fg)]",
   Exported: "border-[var(--ok-border)] bg-[var(--ok-bg)] text-[var(--ok-fg)]",
+  Sent: "border-[var(--ok-border)] bg-[var(--ok-bg)] text-[var(--ok-fg)]",
+  Failed: "border-[var(--err-border)] bg-[var(--err-bg)] text-[var(--err-fg)]",
   Blocked: "border-[var(--err-border)] bg-[var(--err-bg)] text-[var(--err-fg)]",
   Superseded:
     "border-[var(--muted-border)] bg-[var(--muted-bg)] text-[var(--muted-fg)]",
@@ -31,6 +35,8 @@ const statusLabels: Record<StatusToken, string> = {
   Generated: "Generated",
   Approved: "Approved",
   Exported: "Email ready",
+  Sent: "Sent",
+  Failed: "Send failed",
   Blocked: "Blocked",
   Superseded: "Superseded",
 };

@@ -126,6 +126,168 @@ def test_create_caterer_email_snapshot_returns_operation_failure(
     assert response.json()["detail"] == "Only approved order runs can be exported."
 
 
+def test_send_caterer_emails_success(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_send_caterer_emails(*args, **kwargs):
+        assert kwargs == {
+            "order_run_id": "run-1",
+            "communication_ids": ["communication-1"],
+            "actor_name": "Padea Operator",
+            "reason": "Reviewed and ready to send",
+        }
+        return {
+            "sent": [
+                {
+                    "communication_id": "communication-1",
+                    "event_id": "event-1",
+                    "status": "sent",
+                    "caterer_id": "caterer-1",
+                    "metadata": {"provider": "fake"},
+                }
+            ],
+            "failed": [],
+        }
+
+    monkeypatch.setattr(backend, "send_caterer_emails", fake_send_caterer_emails)
+
+    response = client.post(
+        "/internal/caterer-email-sends",
+        headers={"Authorization": "Bearer test-secret"},
+        json={
+            "orderRunId": "run-1",
+            "communicationIds": ["communication-1"],
+            "actorName": "Padea Operator",
+            "reason": "Reviewed and ready to send",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "sent": [
+            {
+                "communicationId": "communication-1",
+                "eventId": "event-1",
+                "status": "sent",
+                "catererId": "caterer-1",
+                "metadata": {"provider": "fake"},
+            }
+        ],
+        "failed": [],
+    }
+
+
+def test_send_caterer_emails_returns_mixed_results(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_send_caterer_emails(*args, **kwargs):
+        return {
+            "sent": [
+                {
+                    "communication_id": "communication-1",
+                    "event_id": "event-1",
+                    "status": "sent",
+                    "caterer_id": "caterer-1",
+                    "metadata": {"provider": "fake"},
+                }
+            ],
+            "failed": [
+                {
+                    "communication_id": "communication-2",
+                    "event_id": "event-2",
+                    "status": "failed",
+                    "caterer_id": "caterer-2",
+                    "metadata": {"provider": "fake", "error": "SMTP rejected message"},
+                }
+            ],
+        }
+
+    monkeypatch.setattr(backend, "send_caterer_emails", fake_send_caterer_emails)
+
+    response = client.post(
+        "/internal/caterer-email-sends",
+        headers={"Authorization": "Bearer test-secret"},
+        json={
+            "orderRunId": "run-1",
+            "communicationIds": ["communication-1", "communication-2"],
+            "actorName": "Padea Operator",
+            "reason": "Reviewed and ready to send",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["sent"][0]["status"] == "sent"
+    assert response.json()["failed"][0]["status"] == "failed"
+
+
+@pytest.mark.parametrize(
+    ("headers", "status_code"),
+    [
+        ({}, 401),
+        ({"Authorization": "Basic test-secret"}, 401),
+        ({"Authorization": "Bearer wrong-secret"}, 403),
+    ],
+)
+def test_send_caterer_emails_rejects_invalid_bearer_token(
+    client: TestClient,
+    headers: dict[str, str],
+    status_code: int,
+) -> None:
+    response = client.post(
+        "/internal/caterer-email-sends",
+        headers=headers,
+        json={
+            "orderRunId": "run-1",
+            "communicationIds": ["communication-1"],
+            "actorName": "Padea Operator",
+            "reason": "Reviewed and ready to send",
+        },
+    )
+
+    assert response.status_code == status_code
+
+
+def test_send_caterer_emails_rejects_invalid_payload(client: TestClient) -> None:
+    response = client.post(
+        "/internal/caterer-email-sends",
+        headers={"Authorization": "Bearer test-secret"},
+        json={
+            "orderRunId": "run-1",
+            "communicationIds": [],
+            "actorName": "Padea Operator",
+            "reason": "Reviewed and ready to send",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_send_caterer_emails_returns_operation_failure(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_send_caterer_emails(*args, **kwargs):
+        raise ValueError("Already-sent caterer emails cannot be resent in v1.")
+
+    monkeypatch.setattr(backend, "send_caterer_emails", fake_send_caterer_emails)
+
+    response = client.post(
+        "/internal/caterer-email-sends",
+        headers={"Authorization": "Bearer test-secret"},
+        json={
+            "orderRunId": "run-1",
+            "communicationIds": ["communication-1"],
+            "actorName": "Padea Operator",
+            "reason": "Reviewed and ready to send",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Already-sent caterer emails cannot be resent in v1."
+
+
 def test_create_order_run_success_invokes_generator_and_writes_audit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

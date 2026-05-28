@@ -284,3 +284,21 @@ Python remains the authority for allocation, dietary safety, absence/exclusion h
 No order deletion, queue, retry, cancellation, or separate job table is included in this v1. `order_runs` plus `audit_log` are the persisted status trail. Approved and historical runs remain inspectable.
 
 **Why this shape**: Operators need a website path to create order runs, but importing Python from Next.js, shelling out, or duplicating ordering rules would blur the safety boundary. A synchronous bridge is enough for the current fixture-sized generation workflow while preserving reproducibility and auditability.
+
+---
+
+## D-19 - V1 caterer email sending is reviewed and test-routed
+
+**Decision**: Live caterer email sending is an audited operator action after a persisted communication snapshot exists. Snapshot readiness remains distinct from delivery state:
+
+- `exported` means the immutable email snapshot is ready for review.
+- `sent` means the backend accepted a provider send attempt and recorded provider metadata.
+- `failed` means a provider send attempt failed and the error was recorded.
+
+The Next.js app may request sends through `POST /internal/caterer-email-sends`, but it must not hold SMTP credentials, render email templates, or mutate communication state directly. The Python backend validates the approved, issue-free run; existing snapshot ids; recipient snapshots; status eligibility; actor; and reason, then records one communication event and one audit row for every attempted send.
+
+V1 uses Gmail SMTP (`smtp.gmail.com:587` with TLS and an app password) and requires `PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE`. The backend sends to that override while preserving requested caterer recipients in provider metadata. Already-sent communications cannot be resent in v1.
+
+Website-editable Gmail settings are deferred until there is encrypted secret storage, rotation policy, and a deliberate real-recipient rollout.
+
+**Why this shape**: Operators need to verify persisted snapshots before sending, and the system needs provider/audit evidence without exposing credentials to the browser-facing app. The mandatory test override prevents accidental real caterer delivery while the first send path is being validated.
