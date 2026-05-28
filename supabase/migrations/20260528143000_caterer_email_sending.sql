@@ -89,17 +89,17 @@ select
     oc.template_version,
     oc.exported_at,
     oc.exported_by,
+    rc.line_count,
+    rc.total_quantity,
+    coalesce(ec.event_count, 0)::integer as event_count,
+    ec.latest_event_at,
     lse.latest_send_event_id,
     lse.latest_send_event_type,
     lse.latest_send_event_at,
     lse.latest_send_actor_name,
     lse.latest_send_provider,
     lse.latest_send_error,
-    lse.latest_send_metadata,
-    rc.line_count,
-    rc.total_quantity,
-    coalesce(ec.event_count, 0)::integer as event_count,
-    ec.latest_event_at
+    lse.latest_send_metadata
 from run_caterers rc
 join public.order_runs oru
     on oru.id = rc.order_run_id
@@ -124,9 +124,9 @@ select
     oce.actor_name,
     oce.reason,
     oce.metadata,
+    oce.created_at,
     oce.metadata ->> 'provider' as provider,
-    oce.metadata ->> 'error' as error,
-    oce.created_at
+    oce.metadata ->> 'error' as error
 from public.order_communication_events oce
 join public.order_communications oc
     on oc.id = oce.communication_id
