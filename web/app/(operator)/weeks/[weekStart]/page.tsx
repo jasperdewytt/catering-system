@@ -324,7 +324,7 @@ export default async function WeekOverviewPage({
               <EmptyState
                 icon={History}
                 title="No order runs generated"
-                description="Order generation remains a backend/CLI operation until the job bridge is added."
+                description="Generate a persisted run from the orders page when this week is ready."
               >
                 <Button asChild variant="secondary">
                   <Link href={`/weeks/${weekStart}/orders`}>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ClipboardList, DatabaseZap, History } from "lucide-react";
+import { ArrowRight, ClipboardList, DatabaseZap } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
@@ -16,6 +16,7 @@ import {
 } from "@/lib/operator-display";
 import { getOrdersIndexReadModel } from "@/lib/operator-read-models";
 import { createClient } from "@/lib/supabase/server";
+import { GenerateOrderRunClient } from "./generate-order-run-client";
 
 export default async function WeekOrdersPage({
   params,
@@ -56,10 +57,11 @@ export default async function WeekOrdersPage({
             ? `${formatStatus(latestRun.status)} latest run, ${formatEmailState(
                 latestRun.exported_caterer_count ? "partial" : "not_exported",
               )}`
-            : "Order generation remains a backend CLI operation until the job bridge lands."
+            : "Generate a persisted run from Python-owned ordering logic."
         }
         actions={
           <>
+            <GenerateOrderRunClient weekStart={weekStart} />
             <Button asChild variant="secondary">
               <Link href={`/weeks/${weekStart}/exports`}>Caterer emails</Link>
             </Button>
@@ -148,23 +150,11 @@ export default async function WeekOrdersPage({
             <EmptyState
               icon={ClipboardList}
               title="No order runs generated"
-              description="Run order generation from the backend CLI, then return here to review persisted lines, allocations, issues, and approval state."
-            >
-              <code className="rounded-md border border-border bg-muted px-2 py-1 text-xs">
-                uv run python -m padea_catering.ordering --week-start{" "}
-                {weekStart}
-              </code>
-            </EmptyState>
+              description="Generate an order run to persist allocations, order lines, issues, and review state for this week."
+            />
           )}
         </CardContent>
       </Card>
-
-      <EmptyState
-        className="text-left"
-        icon={History}
-        title="Generation stays backend-owned"
-        description="The website does not generate order runs. It reviews persisted order output and records audited operator decisions."
-      />
     </>
   );
 }

@@ -2,7 +2,7 @@
 
 Operational catering system for weekly school tutoring meal ordering.
 
-Current stage: **Phase 4 menu setup and order review usability workflows are implemented; caterer email workflow is next.**
+Current stage: **Next.js operator surface is primary; UX and advisory LLM refinement next.**
 
 ## Architecture
 
@@ -10,7 +10,7 @@ Current stage: **Phase 4 menu setup and order review usability workflows are imp
 - **Business logic** (`src/padea_catering/`): Python — ingestion, deterministic ordering, validation, audited backend operations.
 - **Database** (`supabase/migrations/`): Supabase / PostgreSQL is the source of truth.
 - **LLM**: provider-neutral, advisory only (see `docs/LLM_INTEGRATION_PLAN.md`).
-- **Legacy MVP** (`app/`): Streamlit verification harnesses, retained until the Next.js app reaches parity.
+- **Retired MVP** (`app/`): Streamlit verification harnesses retained only as deprecated historical reference; the Next.js app is now the operator surface.
 
 ## Run the Next.js operator UI
 
@@ -19,25 +19,35 @@ pnpm --dir web install
 pnpm --dir web dev
 ```
 
-The Next.js app currently provides the authenticated operator shell, real authenticated reads for `/dashboard`, `/weeks`, `/weeks/[weekStart]`, menu setup, and order review, plus audited Server Actions for menu setup, order-run approval/reopen, and follow-up/override notes. Caterer emails and other operational routes remain deliberate placeholders until their read models or audited write contracts land.
+The Next.js app currently provides the authenticated operator shell, real authenticated reads for dashboard, weeks, menu setup, order review, validation, audit, caterers, students, and caterer emails. Audited writes exist for menu setup, order-run generation, order-run approval/reopen, follow-up/override notes, repeat email-preparation events, and first caterer email snapshot creation through the narrow Python backend bridge.
 
 ## Run the Python backend
+
+Backend-only environment values are read from the repository root `.env` file:
+
+```bash
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+PADEA_BACKEND_SHARED_SECRET=
+```
+
+`PADEA_BACKEND_SHARED_SECRET` is any long random string shared with
+`web/.env.local`. Do not commit real `.env` files.
 
 ```bash
 uv sync
 uv run python -m padea_catering.ingestion
 uv run python -m padea_catering.validation
 uv run python -m padea_catering.ordering --week-start 2026-05-01 --dry-run
+uv run uvicorn padea_catering.backend:app --reload
 ```
 
-## Legacy Streamlit MVPs (verification only)
+## Retired Streamlit MVPs
 
-```bash
-uv run streamlit run app/menu_setup_mvp.py
-uv run streamlit run app/order_review_mvp.py
-```
-
-These pages are intentionally minimal and will be retired once `web/` reaches feature parity. Do not add new operator-facing features here.
+The old Streamlit MVPs in `app/` have been replaced by the Next.js operator UI
+in `web/`. They are retained only as deprecated historical reference until a
+separate cleanup removes them and the unused Streamlit dependency. Do not use or
+extend them for operator workflows.
 
 ## Documentation
 

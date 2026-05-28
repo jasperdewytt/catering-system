@@ -161,7 +161,7 @@ export default async function DashboardPage() {
                   ? `${latestOrderRun.line_count ?? 0} lines, ${
                       latestOrderRun.issue_count ?? 0
                     } issues`
-                  : "Run generation remains a backend/CLI operation."}
+                  : "Generate a run from the week orders page."}
               </p>
             </div>
 

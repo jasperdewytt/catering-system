@@ -36,15 +36,15 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 | `/weeks/[weekStart]`                     | `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                                                                                                      | none                                                              | Stage 5 first slice implemented     |
 | `/weeks/[weekStart]/menu`                | `operator_menu_setup`, `operator_validation_summary`                                                                                                                                                  | menu offers, variant create/review/availability through RPCs      | Stage 6 implemented                 |
 | `/weeks/[weekStart]/validation`          | `operator_validation_summary`, `operator_order_run_issues`; future `session_validation_findings`                                                                                                      | rerun validation only after job bridge                            | Stage 5 read, Stage 9 trigger       |
-| `/weeks/[weekStart]/orders`              | `operator_order_runs`                                                                                                                                                                                 | generate run only after job bridge                                | Stage 7 read implemented            |
+| `/weeks/[weekStart]/orders`              | `operator_order_runs`                                                                                                                                                                                 | create order run through Python bridge                            | Stage 9 order generation implemented |
 | `/weeks/[weekStart]/orders/[orderRunId]` | `operator_order_runs`, `operator_order_run_lines`, `operator_order_run_allocations`, `operator_order_run_issues`, `operator_order_run_contacts`, `operator_manual_overrides`, `operator_audit_events` | approve, reopen, follow-up/override notes through RPCs            | Stage 7 implemented                 |
-| `/weeks/[weekStart]/exports`             | `operator_communications`, `operator_communication_recipients`, `operator_communication_events`, `operator_audit_events`                                                                              | repeat email-preparation event through RPC for existing snapshots | Stage 8 persisted-first implemented |
+| `/weeks/[weekStart]/exports`             | `operator_communications`, `operator_communication_recipients`, `operator_communication_events`, `operator_audit_events`                                                                              | first snapshot through Python bridge; repeat email-preparation event through RPC | Stage 8 implemented                 |
 | `/caterers`                              | `operator_caterers`                                                                                                                                                                                   | none for submission                                               | Stage 9 implemented                 |
 | `/caterers/[catererId]`                  | `operator_caterer_detail`                                                                                                                                                                             | none for submission                                               | Stage 9 implemented                 |
 | `/students`                              | `operator_students`                                                                                                                                                                                   | none for submission                                               | Stage 9 implemented                 |
 | `/students/[studentId]`                  | `operator_student_detail`                                                                                                                                                                             | none for submission                                               | Stage 9 implemented                 |
 | `/audit`                                 | `operator_audit_events`                                                                                                                                                                               | none                                                              | Stage 5 implemented                 |
-| `/settings`                              | session user, `operators`, build metadata                                                                                                                                                             | none for submission                                               | Stage 3/5                           |
+| `/settings`                              | session user, `operators`, build metadata                                                                                                                                                             | none for submission                                               | Hidden/deferred                     |
 
 ## Implemented Phase 4 Read Models
 
@@ -464,8 +464,9 @@ All website writes are called from Server Actions. The Server Action validates r
 | Approve order run              | `operator_approve_order_run` RPC                | `order_run_approved`                                       | Implemented                        |
 | Reopen order run               | `operator_reopen_order_run` RPC                 | stored `order_run_unapproved`, displayed as "Reopen run"   | Implemented                        |
 | Record follow-up/override note | `operator_record_manual_override` RPC           | `manual_override_created`                                  | Implemented                        |
+| Create caterer email snapshot  | Python `POST /internal/caterer-email-snapshots` bridge | `communication_exported`                                   | Implemented                        |
 | Record prepared caterer email  | `operator_record_caterer_email_preparation` RPC | `communication_exported`                                   | Implemented for existing snapshots |
-| Trigger order generation       | Python job bridge                               | job audit/status row                                       | Deferred to Stage 9                |
+| Trigger order generation       | Python `POST /internal/order-runs` bridge       | `order_run_generated`                                      | Implemented                        |
 | Trigger validation preflight   | Python job bridge                               | job audit/status row; future `session_validation_findings` | Deferred to Stage 9                |
 
 ## Deferred Data Contracts
@@ -478,12 +479,18 @@ When added, it should be written by `src/padea_catering.validation`, not by the 
 
 ### Communication draft pre-generation / missing snapshot creation
 
-The current web UI can preview persisted communication snapshots and record repeat preparation events for existing snapshots. Creating a missing immutable snapshot from the web remains deferred because the deterministic communication template builder is Python-owned.
+The web UI can preview persisted communication snapshots, record repeat preparation events for existing snapshots, and create a missing immutable snapshot through the narrow Python backend bridge. The bridge is intentionally email-only: Next.js validates the operator request, resolves the database-owned operator display name, then calls `POST /internal/caterer-email-snapshots` with `PADEA_BACKEND_SHARED_SECRET`. The Python backend owns service-role Supabase access and calls `record_communication_export(...)`, so subject/body/rendered text and safety checks stay out of TypeScript.
 
 The UI should handle both cases:
 
 - snapshot exists: display it
-- snapshot missing: show a clear state that a Python/backend email preparation contract is required
+- snapshot missing: show a reason form that creates the snapshot through the Python bridge
+
+### Website order generation
+
+The web UI can create a new persisted order run through the narrow Python backend bridge. Next.js validates `{ weekStart, reason? }`, resolves the operator display name from `public.operators`, and calls `POST /internal/order-runs` with `PADEA_BACKEND_SHARED_SECRET`. The Python backend owns service-role Supabase access, calls `generate_order_run(...)`, supersedes prior `blocked`/`generated` runs through existing ordering logic, and writes one `order_run_generated` audit row with actor, reason, result counts, week start, and the previously supersedable run ids.
+
+This is generation-only. The web UI does not delete order runs, run validation preflight, shell out, queue background jobs, or recalculate allocations in TypeScript.
 
 ### Manual override application
 

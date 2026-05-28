@@ -71,6 +71,10 @@ export function formatAuditAction(
   displayAction: string | null,
   action: string | null,
 ): string {
+  if (action === "order_run_generated") {
+    return "Order generated";
+  }
+
   if (action === "communication_exported") {
     return "Email prepared";
   }

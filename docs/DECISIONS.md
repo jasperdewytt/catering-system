@@ -117,7 +117,7 @@ If no safe offered option remains for a student after all filters run, the order
 
 Every ingested dish receives one default `Standard` variant that inherits the source and keyword-inferred flags. Customisable items such as `Cali Burrito` must be split by the operator into concrete variants such as `Vegetarian`, `Chicken`, `Beef`, or any other caterer-confirmed option. Menu offers, allocation, and order lines operate on `dish_variants`, while retaining the parent `dish_id` for traceability to the raw menu item.
 
-The Streamlit MVP currently supports creating variants and reviewing their GF/DF/NF/VO/halal and ingredient-exclusion flags; the equivalent workflow will be ported into the Next.js operator UI in `web/` under D-14. A generic customisable parent item should not be marked as safe for restricted students unless the specific orderable variant is safe.
+The retired Streamlit MVP first proved the variant creation and GF/DF/NF/VO/halal plus ingredient-exclusion review workflow. The equivalent workflow now lives in the Next.js operator UI in `web/` under D-14. A generic customisable parent item should not be marked as safe for restricted students unless the specific orderable variant is safe.
 
 **Why this shape**: A single boolean set on `dishes` cannot correctly represent a meal that may contain beef, chicken, or no meat depending on how it is ordered. Variants let the operator describe the exact option being offered without LLM guessing, and the generated caterer order can name the concrete option rather than a vague parent dish.
 
@@ -171,7 +171,7 @@ Operator-facing copy should use "Caterer emails", "Email ready", and "Not emaile
 
 ## D-14 - Operator UI is Next.js + Supabase, not Streamlit
 
-**Decision**: The final operator interface is a Next.js 16 (App Router) + TypeScript app in `web/`, backed by Supabase Auth and the existing PostgreSQL schema. The Streamlit MVPs (`app/menu_setup_mvp.py`, `app/order_review_mvp.py`) become legacy verification harnesses and will be removed once `web/` reaches parity.
+**Decision**: The final operator interface is a Next.js 16 (App Router) + TypeScript app in `web/`, backed by Supabase Auth and the existing PostgreSQL schema. The Streamlit MVPs (`app/menu_setup_mvp.py`, `app/order_review_mvp.py`) are now deprecated historical harnesses after operator-confirmed web parity.
 
 **Stack**:
 
@@ -205,7 +205,7 @@ Supabase SSR helpers should be isolated behind `web/lib/supabase/*` and package 
 1. Scaffold `web/` (Next.js, Tailwind, shadcn/ui, Supabase clients, generated types) with auth shell and mocked/static or server-only dev data.
 2. Phase 4 RLS policies and `security_invoker` views land before real browser-facing Supabase reads.
 3. Port menu setup, order review, approval, and caterer email workflows from the Streamlit MVPs into `web/`.
-4. Once parity is verified end-to-end on the existing approved run, the Streamlit MVPs in `app/` are removed.
+4. After parity is verified end-to-end, retire the Streamlit MVPs from active use. Physical file/dependency removal may happen as a separate cleanup.
 
 **Why this shape**: the competition target is a finished, taste-forward catering product. Next.js + Supabase is the natural pairing for that level of polish without abandoning the deterministic Python core, the audit model, or the existing migrations.
 
@@ -272,3 +272,15 @@ For the existing stored token `order_run_unapproved`, the operator UI should dis
 Menu-offer updates should normally be logged as one audit row per caterer-week save with before/after JSON arrays of selected `dish_variant_id` values. That is easier to read than one audit row per checkbox toggle and still preserves reproducibility.
 
 **Why this shape**: The website needs audited writes without moving safety-critical logic into TypeScript. RPC/write contracts keep validation, mutation, and audit insertion transactionally close to the data source.
+
+---
+
+## D-18 - Stage 9 v1 uses a synchronous order-generation bridge
+
+**Decision**: The first website-triggered Python job is order generation only, implemented as a narrow synchronous FastAPI bridge at `POST /internal/order-runs`. The Next.js Server Action validates the week/note, resolves the operator display name from `public.operators`, calls the bridge with `PADEA_BACKEND_SHARED_SECRET`, and revalidates affected week/order/validation/export/audit pages after Python persists the run.
+
+Python remains the authority for allocation, dietary safety, absence/exclusion handling, quantities, and persistence. The bridge calls `generate_order_run(...)`, which creates the new `order_runs` row and supersedes prior `blocked`/`generated` runs. The backend then writes one `order_run_generated` audit row containing actor, reason, week start, new run id, result counts, and the prior supersedable run ids captured before generation.
+
+No order deletion, queue, retry, cancellation, or separate job table is included in this v1. `order_runs` plus `audit_log` are the persisted status trail. Approved and historical runs remain inspectable.
+
+**Why this shape**: Operators need a website path to create order runs, but importing Python from Next.js, shelling out, or duplicating ordering rules would blur the safety boundary. A synchronous bridge is enough for the current fixture-sized generation workflow while preserving reproducibility and auditability.

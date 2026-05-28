@@ -17,7 +17,21 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 ```
 
-Do not place service-role, database, or backend-only keys in `web/`.
+Do not expose service-role or database keys to `web/`, and do not commit
+backend-only secrets.
+
+Server-side caterer email snapshot creation also requires server-only values in
+the deployment environment or an untracked local env file. Website-triggered
+order generation uses the same backend bridge values:
+
+```bash
+PADEA_BACKEND_URL=
+PADEA_BACKEND_SHARED_SECRET=
+```
+
+`PADEA_BACKEND_SHARED_SECRET` must match the Python backend's environment and
+must never be referenced from client components. The Supabase service-role key
+belongs only in the Python backend environment, not in `web/`.
 
 ## Commands
 
@@ -41,5 +55,8 @@ data through Supabase SSR helpers and RLS-safe operator views. Order review
 includes searchable/sortable order-line and allocation tables.
 
 Audited domain writes currently exist for menu setup, order-run approval,
-order-run reopen, and follow-up/override notes. Other operational routes remain
-deliberate placeholders until their read models or audited write contracts land.
+order-run reopen, follow-up/override notes, and caterer email preparation.
+Missing caterer email snapshots are created through the narrow Python backend
+bridge so deterministic email rendering and service-role Supabase access stay
+outside Next.js. Order generation is also created through that bridge so
+allocation, dietary, absence, exclusion, and quantity rules stay Python-owned.

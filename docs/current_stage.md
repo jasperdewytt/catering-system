@@ -2,9 +2,9 @@
 
 _Update this file whenever a significant phase completes or the active focus shifts._
 
-## Status: Student Read Pages Implemented — Backend Bridge Next
+## Status: Website Order Generation Bridge Implemented — UX And Advisory LLM Refinement Next
 
-**Last updated**: 2026-05-25
+**Last updated**: 2026-05-28
 
 ---
 
@@ -63,13 +63,13 @@ _Update this file whenever a significant phase completes or the active focus shi
 - [x] **Order generation implemented** — `uv run python -m padea_catering.ordering --week-start 2026-05-01 --dry-run` builds a deterministic plan without writing; normal mode writes blocked/generated order runs.
 - [x] **Validation updated for Phase 2** — validation now checks `menu_offers`, offered variant review status, and ordering dry-run readiness. Current live validation has no blocking errors after operator menu review; remaining findings are operational warnings.
 - [x] **Tests expanded** — unit tests cover normalisation helpers, deterministic ordering rules, and menu setup helper rules.
-- [x] **Narrow Menu Setup MVP implemented** — `uv run streamlit run app/menu_setup_mvp.py` provides a temporary UI for:
+- [x] **Narrow Menu Setup MVP implemented and superseded** — `app/menu_setup_mvp.py` provided the temporary UI for:
   - creating concrete orderable variants for customisable dishes such as burritos
   - selecting weekly `menu_offers` per active caterer by variant
   - reviewing variant dietary/ingredient flags and saving `operator_reviewed` metadata
   - running validation and order-generation dry runs
 - [x] **Generated order run achieved** — `order_run_id=9b23f6a1-38f1-4ec7-a933-d4f6a1d2d6f0`, `status=generated`, 320 allocations, 33 order lines, 0 issues.
-- [x] **Narrow Order Review MVP implemented** — `uv run streamlit run app/order_review_mvp.py` provides a read-only/caterer-email-only UI for:
+- [x] **Narrow Order Review MVP implemented and superseded** — `app/order_review_mvp.py` provided the temporary read-only/caterer-email-only UI for:
   - selecting generated order runs
   - reviewing order lines, allocations, contacts, and delivery notes
   - preparing deterministic copy-ready caterer email drafts
@@ -78,7 +78,7 @@ _Update this file whenever a significant phase completes or the active focus shi
 - [x] **Phase 3 communications persistence implemented** — approved, issue-free runs can record send-ready caterer email snapshots before any live sending. The first persisted snapshot per `(order_run_id, caterer_id)` captures subject/body/rendered text, delivery notes, recipient snapshots, template version, actor/timestamps, and an audit-log row. Repeated recordings reuse the snapshot and append events. D-13 now separates internal snapshot/audit tokens from operator-facing "Caterer emails" language.
 - [x] **Approved-run caterer email workflow verified** — the approved zero-issue run has persisted email snapshots for all four caterers, with recipient snapshots, email preparation events, and matching `communication_exported` audit-log rows.
 - [x] **LLM integration plan written** — `docs/LLM_INTEGRATION_PLAN.md` defines advisory-only LLM use cases, forbidden safety-critical uses, provider boundaries, and the recommended order after communications persistence.
-- [x] **Operator UI direction decided** — see [D-14](DECISIONS.md#d-14---operator-ui-is-nextjs--supabase-not-streamlit). The final operator interface is Next.js 16 + TypeScript in `web/`, using shadcn/ui, Tailwind, and `@supabase/ssr`. Streamlit MVPs in `app/` become legacy verification harnesses and are scheduled for removal once `web/` reaches parity.
+- [x] **Operator UI direction decided** — see [D-14](DECISIONS.md#d-14---operator-ui-is-nextjs--supabase-not-streamlit). The final operator interface is Next.js 16 + TypeScript in `web/`, using shadcn/ui, Tailwind, and `@supabase/ssr`. Streamlit MVPs in `app/` are now deprecated after operator-confirmed parity.
 - [x] **Operator UI planning tightened after architecture review** — `docs/WEBSITE_IMPLEMENTATION_STAGES.md` now stages the build, `docs/WEBSITE_DATA_CONTRACTS.md` maps screens to views/write contracts, and D-15..D-17 decide operator identity, active-week derivation, and audited website write boundaries.
 - [x] **Stage 1 operator website foundation scaffolded** — `web/` now contains a Next.js 16 App Router TypeScript app with Tailwind, shadcn-compatible primitives, Supabase SSR auth helpers, `/login`, protected operator shell routes, and Phase 4 read-model placeholders. The shell has no operational browser reads and no domain writes beyond Supabase Auth sign-in/sign-out.
 - [x] **Phase 4 first read-model slice implemented** — `public.operators` now maps Supabase Auth users to durable operator display names; authenticated operator RLS policies guard the operational tables needed by the first website slice; `operator_current_week`, `operator_weeks`, `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, and `operator_audit_events` are `security_invoker` views for Dashboard and Weeks. `audit_log.action` now permits the future menu setup audit tokens from D-17.
@@ -94,44 +94,50 @@ _Update this file whenever a significant phase completes or the active focus shi
 - [x] **Audited order review RPCs implemented** — `operator_approve_order_run`, `operator_reopen_order_run`, and `operator_record_manual_override` require Supabase Auth plus a matching `public.operators` row, enforce reason text, update only permitted order-run states, record manual override intent without allocation mutation, and write central audit-log rows.
 - [x] **Next.js order review workflow wired** — `/weeks/[weekStart]/orders` and `/weeks/[weekStart]/orders/[orderRunId]` now read real order run data and support approval, reopen, and manual override intent through Zod-validated Server Actions backed by audited RPCs.
 - [x] **Order review usability refined** — order-line and allocation tables now support search, filters, counts, reset controls, and sortable headers. The override-note form uses human-readable allocation/order-line/contact selectors instead of raw UUID entry, while still submitting row ids internally to the audited RPC.
-- [x] **Caterer email persisted-first web workflow implemented** — `/weeks/[weekStart]/exports` now reads real communication snapshots through `operator_communications`, `operator_communication_recipients`, and `operator_communication_events`; displays persisted recipients, rendered text, delivery notes, and email-preparation history; and records repeat email-preparation events through the audited `operator_record_caterer_email_preparation` RPC without rendering Python-owned templates in TypeScript.
+- [x] **Caterer email web workflow implemented** — `/weeks/[weekStart]/exports` now reads real communication snapshots through `operator_communications`, `operator_communication_recipients`, and `operator_communication_events`; displays persisted recipients, rendered text, delivery notes, and email-preparation history; creates missing first snapshots through the narrow Python backend bridge; and records repeat email-preparation events through the audited `operator_record_caterer_email_preparation` RPC without rendering Python-owned templates in TypeScript.
 - [x] **Stage 8 advisors reviewed** — Supabase now reports `operator_record_caterer_email_preparation` as an authenticated `SECURITY DEFINER` function, which is intentional for the audited operator write boundary from D-17. Other remaining security/performance advisor items are the previously documented deferred-table RLS INFOs, deliberate `citext` warning, Auth leaked-password warning, and unused-index INFOs on the small fixture database.
 - [x] **Audit read page implemented** — `/audit` now reads `operator_audit_events` through the typed Supabase SSR helper, shows summary counts, provides search/action/actor/entity filters, links order-run audit rows back to order details, and exposes before/after JSON snapshots without adding writes or recomputing domain logic.
 - [x] **Validation read page implemented** — `/weeks/[weekStart]/validation` reads `operator_week_status`, `operator_validation_summary`, `operator_order_runs`, and latest `operator_order_run_issues` through the typed Supabase SSR helper. The page shows stored readiness summaries and latest persisted allocation issues without triggering Python jobs, adding writes, or claiming full validation-history coverage before `session_validation_findings` exists.
 - [x] **Caterer read pages implemented** — `operator_caterers` and `operator_caterer_detail` are browser-safe `security_invoker` views for caterer directory/detail inspection. `/caterers` and `/caterers/[catererId]` now show assigned schools, contacts, weekly minimums, stored menu review counts, latest persisted order totals, and communication readiness without contact-verification writes or TypeScript recomputation of catering rules.
 - [x] **Student read pages implemented** — `operator_students` and `operator_student_detail` are browser-safe `security_invoker` views for student directory/detail inspection. `/students` and `/students/[studentId]` now show profile/contact fields, opt-out state, stored dietary tags and warnings, enrolments, absences, latest persisted allocations, and relevant override/audit context without student edits or TypeScript recomputation of attendance, exclusions, dietary safety, allocation, or quantities.
+- [x] **Narrow caterer-email Python bridge implemented** — FastAPI `POST /internal/caterer-email-snapshots` calls Python-owned `record_communication_export(...)` with service-role Supabase access behind `PADEA_BACKEND_SHARED_SECRET`. `/weeks/[weekStart]/exports` now lets operators create missing immutable snapshots through a Zod-validated Server Action while repeat preparation events still use the existing audited RPC.
+- [x] **Narrow order-generation Python bridge implemented** — FastAPI `POST /internal/order-runs` calls Python-owned `generate_order_run(...)` with service-role Supabase access behind `PADEA_BACKEND_SHARED_SECRET`. `/weeks/[weekStart]/orders` now lets operators create a persisted run through a Zod-validated Server Action, refreshes affected week/order/validation/export/audit routes, and records `order_run_generated` with actor, reason, counts, week start, and prior supersedable run ids.
+- [x] **Missing snapshot web path manually verified** — a fresh approved, issue-free order run was created, `/weeks/2026-05-01/exports` showed `not_exported` caterer cards, and creating a first snapshot from the website refreshed the card into the persisted email-ready preview.
+- [x] **Next.js parity confirmed by operator review** — the website can replace the old Streamlit MVPs for menu setup, order review/approval, persisted caterer email preparation, audit inspection, validation summary review, caterer inspection, and student inspection.
+- [x] **Streamlit MVPs retired in project direction** — `app/menu_setup_mvp.py` and `app/order_review_mvp.py` are no longer active operator surfaces. They remain in the tree only as deprecated historical harnesses until a separate cleanup removes the files and dependency.
 
 ## Active Focus
 
-**Add a backend/Python bridge for missing web-triggered job and email snapshot creation, while keeping Streamlit only as a temporary verification harness.**
+**Refine the Next.js operator UX and plan advisory LLM features while preserving deterministic catering rules.**
 
-The deterministic Python backend can write generated order runs end-to-end, and communications persistence captures recipient snapshots and email preparation events. The Streamlit MVPs have proven the workflow against the live DB, and the first Next.js pages now read real authenticated operational data. The implemented allocation algorithm remains:
+The deterministic Python backend can write generated order runs end-to-end, and the website can now request that narrow generation path without shelling out or reimplementing ordering rules. Communications persistence captures recipient snapshots and email preparation events. The Next.js website is now the primary operator interface and has replaced the Streamlit MVP workflow. The implemented allocation algorithm remains:
 
 1. For each non-cancelled session, walk the enrolled students minus opted-out, year-excluded, and absent.
 2. For each student, pick a safe offered variant given their dietary tags.
 3. Aggregate per-session into variant-aware `order_lines`, per-student into `order_allocations`.
 4. Reproducibility: the same DB state should always produce the same order_run output.
 
-The current approved run has no allocation issues and the web caterer-email page shows all four persisted snapshots as email-ready. The menu setup view currently surfaces one stored offer on an unavailable variant as a blocking menu-readiness finding, which the web workflow can resolve by changing availability or saving a revised offer set with an audited reason. Building-only delivery locations and suspicious/free-webmail caterer addresses are documented as expected competition-data artefacts, not blockers. Communications preserve recipient snapshots and delivery-note content for audit before any live email sending is added.
+The current approved fixture run has no allocation issues and the web caterer-email page can show persisted snapshots as email-ready. The manually verified bridge path also handles fresh approved runs with missing communication rows by creating the first immutable snapshot from the website. Website order generation creates a new persisted run and supersedes prior `blocked`/`generated` runs; it does not delete approved or historical runs. The menu setup view may surface stored offers on unavailable variants as blocking menu-readiness findings, which the web workflow can resolve by changing availability or saving a revised offer set with an audited reason. Building-only delivery locations and suspicious/free-webmail caterer addresses are documented as expected competition-data artefacts, not blockers. Communications preserve recipient snapshots and delivery-note content for audit before any live email sending or LLM-assisted wording is added.
 
 ## Up Next (in order)
 
-1. **Add a backend/Python bridge for creating missing email snapshots from the web**, if needed; the current web workflow can record repeat preparation events only for existing persisted snapshots.
-2. **Retire Streamlit MVPs** once parity is verified.
-3. Live email sending only after the persisted caterer email workflow is operator-confirmed in `web/`.
-4. `session_validation_findings` table to persist full Python validation output before live validation-history UI, if needed beyond the submission readiness summary.
-5. Submission artefacts.
+1. **Collect and implement operator UX refinement notes** from real website use.
+2. **Plan the first advisory LLM layer** without changing deterministic ordering, dietary, quantity, attendance, or approval rules.
+3. Remove deprecated Streamlit files and the unused dependency in a separate cleanup if no historical reference is needed.
+4. Live email sending only after the persisted caterer email workflow is operator-confirmed in `web/`.
+5. Broader Python job bridge for ingestion or validation only after job status/audit semantics are designed.
+6. `session_validation_findings` table to persist full Python validation output before live validation-history UI, if needed beyond the submission readiness summary.
+7. Submission artefacts.
 
 ## Known schema follow-ups (Phase 2+)
 
-- backend/Python bridge for creating missing caterer email snapshots from the web; the implemented Stage 8 web action records repeat preparation events for existing immutable snapshots only
-- final retirement of the caterer-email portions of `app/order_review_mvp.py` and `app/streamlit_app.py`; menu setup, order review/approval, and persisted caterer email review now have Next.js parity for their core workflows, but the Streamlit apps remain legacy verification harnesses until end-to-end web parity is confirmed
+- physical removal of deprecated Streamlit MVP files and the `streamlit` Python dependency; the website has parity, but this cleanup is intentionally separate from the docs/status update
 - manual override application logic — Phase 3 records follow-up/override notes but does not yet mutate generated allocations/order lines
 - audited individual meal editing — future backend/RPC contract should validate eligible replacement variants, update allocation and order-line facts transactionally, record before/after state, and mark the edited run as diverged from generated output
 - live email sending — intentionally deferred until persisted email snapshots have been operator-reviewed in `web/`
-- web-callable audited RPC/write contract for repeat communication email preparation recording is implemented; first-snapshot creation from web remains deferred to a Python-owned bridge
+- web-callable broader Python job bridge for ingestion and validation remains deferred; implemented FastAPI bridges are limited to caterer email snapshot creation and synchronous order generation
 - contact verification workflow is no longer a priority for the competition dataset; suspicious addresses should remain visible and auditable, but not block communications persistence
-- LLM integration is planned but intentionally deferred until communications persistence exists; first likely LLM feature is advisory order-review storage
+- advisory LLM integration can now be planned on top of persisted order and communication records; likely first candidates are order review suggestions, email polish beside deterministic drafts, and operator-facing summaries
 - `caterer_school_capacity` — E-06 deferred fallback routing data (Phase 2)
 - `session_validation_findings` — persisted Python validation output for full validation-history UI; not required before Stage 1 scaffold
 
@@ -142,3 +148,4 @@ The current approved run has no allocation issues and the web caterer-email page
 - `web/` will need its own test strategy — Playwright for end-to-end, Vitest for unit/component, and a shared fixture seed against a Supabase branch DB. Defer wiring until the scaffold lands.
 - Decide whether `web/` lives at the repository root or under a `web/` directory of a future pnpm workspace. Current direction: single Next.js project at `web/` for now; promote to a workspace only if a shared TypeScript package emerges.
 - Keep the Python/Next.js boundary narrow: Next.js may perform explicit audited database writes through Server Actions, but Python-owned jobs should stay CLI/service-triggered unless a deliberate HTTP/queue bridge is added.
+- UX refinement notes should be collected as concrete operator workflow friction: confusing states, excess clicks, missing cross-links, table density, copy clarity, mobile layout issues, and empty/error states. Implement them as small website slices rather than broad redesigns.

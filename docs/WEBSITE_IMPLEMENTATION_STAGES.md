@@ -1,6 +1,6 @@
 # Website Implementation Stages
 
-**Status**: Planning guide; Stage 1 scaffold, menu setup, order review/approval, persisted-first caterer email, audit read, validation read, caterer read, and student read slices implemented
+**Status**: Planning guide; Stage 1 scaffold, menu setup, order review/approval, caterer email snapshots, audit read, validation read, caterer read, and student read slices implemented
 **Last updated**: 2026-05-25
 **Related docs**:
 
@@ -238,7 +238,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 ## Stage 7 - Order Review And Approval Writes
 
-**Status**: Implemented for order-run list/detail, searchable review tables, approval, reopen, and audited follow-up/override notes. Caterer email preparation remains Stage 8.
+**Status**: Implemented for order-run list/detail, searchable review tables, approval, reopen, and audited follow-up/override notes. Caterer email preparation is implemented in Stage 8.
 
 **Goal**: Port order review, approval, reopen, and manual-override intent workflows.
 
@@ -283,7 +283,7 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 ## Stage 8 - Caterer Email Workflow Writes
 
-**Status**: Persisted-first slice implemented. The web UI displays existing immutable snapshots and can append audited preparation events for those snapshots. Creating missing snapshots from the web remains deferred to a Python/backend bridge.
+**Status**: Implemented. The web UI displays existing immutable snapshots, can append audited preparation events for those snapshots, and can create missing first snapshots through the narrow Python email bridge.
 
 **Goal**: Port deterministic caterer email snapshot tracking into the web app.
 
@@ -292,12 +292,14 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Render persisted caterer communication snapshots only.
 - Show recipient snapshots, delivery notes, subject/body/rendered text, template version, and email preparation events.
 - Add Server Action to record a prepared caterer email through an audited RPC/backend contract for existing snapshots.
+- Add Server Action to create missing first snapshots through `POST /internal/caterer-email-snapshots`.
 - Preserve first-snapshot immutability and append repeated email preparation events.
 
 **Exit criteria**
 
 - Persisted caterer email workflow parity with the snapshot-review portions of `app/order_review_mvp.py`.
 - Email preparation events are persisted and visible in the audit trail.
+- Missing first snapshots can be created without rendering Python-owned email templates in TypeScript.
 - UI language uses "Caterer emails" as the operator workflow name.
 
 **Do not**
@@ -309,20 +311,22 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 ## Stage 9 - Python Job Bridge
 
-**Goal**: Add optional UI triggers for Python-owned jobs only after an explicit bridge is designed.
+**Status**: v1 order-generation bridge implemented. Ingestion, validation preflight, queues, cancellation, retries, and job-status history remain deferred.
+
+**Goal**: Add optional UI triggers for broader Python-owned jobs only after an explicit bridge is designed. The first slice is intentionally narrow and synchronous: website order generation calls FastAPI, Python persists the run, and `order_runs` plus `audit_log` are the persisted status trail.
 
 **Tasks**
 
-- Choose a bridge pattern: small HTTP service, queue, or manually triggered backend job.
-- Trigger ingestion, validation, or order generation through the bridge.
-- Store job status, actor, requested parameters, started/finished timestamps, and failure output.
-- Surface job status in the UI.
+- Use a small authenticated FastAPI endpoint for order generation.
+- Trigger order generation through the bridge without importing or duplicating Python logic in Next.js.
+- Record actor, reason, requested week, generated run id, result counts, and prior supersedable run ids in `audit_log`.
+- Surface the generated order run immediately in the UI after persistence.
 - Keep deterministic rules in `src/padea_catering/`.
 
 **Exit criteria**
 
-- The UI can request supported jobs without importing or duplicating Python logic.
-- Operators can see job state and failures.
+- The UI can request supported order generation without importing or duplicating Python logic.
+- Operators can see generated/blocked/superseded run state and audit history through existing read models.
 - Generated outcomes remain reproducible from database state.
 
 **Do not**
@@ -331,6 +335,8 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 - Reimplement ingestion, validation, or ordering algorithms in TypeScript.
 
 ## Stage 10 - QA, Accessibility, And Parity
+
+**Status**: Parity confirmed by operator review. Additional automated Playwright/Vitest coverage remains a future hardening task, not a blocker for retiring the MVP workflow.
 
 **Goal**: Prove the website is reliable enough to replace the Streamlit MVPs.
 
@@ -346,16 +352,18 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 **Exit criteria**
 
-- Website workflows reach parity with the retained MVPs.
+- Website workflows reach parity with the retained MVPs. Complete by operator confirmation.
 - Tests cover core operator paths.
 - Accessibility and responsive issues are resolved or documented.
 
 **Do not**
 
-- Retire Streamlit before parity is verified.
+- Use deprecated Streamlit harnesses as active operator surfaces after parity confirmation.
 - Declare completion with untested audited writes.
 
 ## Stage 11 - Streamlit Retirement Prep
+
+**Status**: Complete for project direction. The Streamlit MVPs are retired/deprecated in docs; physical file/dependency removal is a separate cleanup task.
 
 **Goal**: Remove the MVP dependency once the web app owns the operator workflow.
 
@@ -369,13 +377,13 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 **Exit criteria**
 
-- The web app is the primary operator surface.
-- Legacy MVP status is explicit.
-- Current stage docs reflect the new focus.
+- The web app is the primary operator surface. Complete.
+- Legacy MVP status is explicit. Complete.
+- Current stage docs reflect the new focus. Complete.
 
 **Do not**
 
-- Delete verification harnesses before the user has accepted parity.
+- Reintroduce Streamlit as an operator workflow once parity has been accepted.
 
 ## Suggested Build Prompt
 

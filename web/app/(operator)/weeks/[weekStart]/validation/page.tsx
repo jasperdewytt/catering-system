@@ -292,13 +292,8 @@ export default async function WeekValidationPage({
             <EmptyState
               icon={ClipboardList}
               title="No order run generated"
-              description="Order generation remains a backend CLI operation until the job bridge lands."
-            >
-              <code className="rounded-md border border-border bg-muted px-2 py-1 text-xs">
-                uv run python -m padea_catering.ordering --week-start{" "}
-                {weekStart}
-              </code>
-            </EmptyState>
+              description="Generate a persisted run from the orders page to inspect allocation issues here."
+            />
           ) : latestOrderRunIssues.length ? (
             <CompactTable>
               <thead>

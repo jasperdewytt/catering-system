@@ -1,6 +1,6 @@
 # Operator Website Plan
 
-**Status**: Draft for Next.js operator UI design; menu setup, order review, persisted-first caterer email, audit read, validation read, and caterer read slices implemented
+**Status**: Draft for Next.js operator UI design; menu setup, order review, caterer email snapshots, audit read, validation read, caterer read, and student read slices implemented
 **Last updated**: 2026-05-25
 **Related decisions**:
 
@@ -59,7 +59,6 @@ Recommended top-level routes:
 /students
 /students/[studentId]
 /audit
-/settings
 ```
 
 The default authenticated route should be `/dashboard`, which points operators to the active week and its next required action.
@@ -340,7 +339,7 @@ Initial content:
 - app version/build metadata
 - links to docs or operational runbooks if needed
 
-For this submission, Settings is a read-only placeholder for signed-in operator identity and build/environment metadata. Do not put core workflows or write functionality in Settings.
+For this submission, Settings is hidden from the main navigation and remains a deferred internal route only. Do not put core workflows or write functionality in Settings.
 
 ## Route Build Order
 
@@ -353,7 +352,7 @@ For this submission, Settings is a read-only placeholder for signed-in operator 
 7. **Validation read page**: implemented from readiness summaries and persisted latest order-run issues; full validation history waits for `session_validation_findings`.
 8. **Audit and drilldowns**: audit, caterer detail, and student detail pages implemented; richer cross-links remain.
 9. **Caterer and student inspection**: caterer and student inspection implemented.
-10. **Streamlit retirement**: remove legacy MVPs only after the Next.js workflows are verified against the existing approved run.
+10. **Streamlit retirement**: parity is confirmed and the Next.js app is now the primary operator surface; physical MVP file removal is a separate cleanup task.
 
 ## Data Access Shape
 
@@ -391,16 +390,18 @@ Writes should go through Server Actions with Zod validation that call audited da
 - approve order run
 - reopen order run
 - record follow-up/override notes
-- record prepared caterer email for an existing immutable snapshot
+- create missing caterer email snapshots through the narrow Python backend bridge
+- record repeat prepared-caterer-email events for existing immutable snapshots
+- create order runs through the narrow Python backend bridge
 - future audited individual meal edits through a backend-owned contract
 
 Individual meal editing is intentionally separate from follow-up notes. A future meal-edit workflow must call a backend/RPC contract that validates eligible variants, applies allocation and order-line changes transactionally, and records before/after audit state; the Next.js UI must not directly recalculate or mutate generated order facts.
 
-Python-owned jobs should remain outside the request path unless a deliberate job bridge is added:
+Python-owned jobs should remain outside the request path unless a deliberate job bridge is added. Order generation now has a narrow synchronous bridge:
 
 - ingestion
 - validation preflight
-- order generation
+- order generation through `POST /internal/order-runs`
 - future live email sending job, if implemented
 
 Server Actions may shape form data, enforce user-interface validation, call `supabase.rpc(...)`, trigger route revalidation, and map database errors into user-facing messages. They must not independently decide safety, allocation, order quantities, caterer minimum compliance, or communication template contents.
@@ -491,6 +492,14 @@ Initial navigation labels:
 3. Operator records a repeat preparation event with reason for an existing snapshot.
 4. Event history and audit rows update without mutating the original snapshot.
 5. Missing snapshot creation remains a Python/backend bridge concern.
+
+### Order Generation Path
+
+1. Operator opens Order Runs for a week.
+2. Operator confirms generation and may add an audit note.
+3. Server Action resolves the operator display name and calls `POST /internal/order-runs`.
+4. Python runs `generate_order_run(...)`, persists the new run, supersedes prior `blocked`/`generated` runs, and inserts `order_run_generated`.
+5. The page refreshes and links to the new run detail page.
 
 ## Initial Design Targets
 
