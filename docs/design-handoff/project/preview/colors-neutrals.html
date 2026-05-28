@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 20px; background: var(--surface-card); }
+  .row { display: flex; gap: 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-1); }
+  .chip { flex: 1; height: 56px; display: flex; flex-direction: column; justify-content: flex-end; padding: 6px 8px; }
+  .num { font: 500 11px/1 var(--font-mono); }
+  .light { color: var(--fg-3); }
+  .dark { color: rgba(255,255,255,0.8); }
+  .labels { display: flex; gap: 0; margin-top: 6px; }
+  .labels span { flex: 1; font: 400 10px/1 var(--font-mono); color: var(--fg-4); text-align: left; padding: 0 8px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="chip" style="background:var(--n-50)"><span class="num light">50</span></div>
+    <div class="chip" style="background:var(--n-100)"><span class="num light">100</span></div>
+    <div class="chip" style="background:var(--n-150)"><span class="num light">150</span></div>
+    <div class="chip" style="background:var(--n-200)"><span class="num light">200</span></div>
+    <div class="chip" style="background:var(--n-300)"><span class="num light">300</span></div>
+    <div class="chip" style="background:var(--n-400)"><span class="num dark">400</span></div>
+    <div class="chip" style="background:var(--n-500)"><span class="num dark">500</span></div>
+    <div class="chip" style="background:var(--n-600)"><span class="num dark">600</span></div>
+    <div class="chip" style="background:var(--n-700)"><span class="num dark">700</span></div>
+    <div class="chip" style="background:var(--n-800)"><span class="num dark">800</span></div>
+    <div class="chip" style="background:var(--n-900)"><span class="num dark">900</span></div>
+    <div class="chip" style="background:var(--n-950)"><span class="num dark">950</span></div>
+  </div>
+  <div class="labels">
+    <span>#FAFAF9</span><span>F4F4F2</span><span>ECECE9</span><span>E2E2DE</span><span>CCCCC6</span><span>A8A8A1</span><span>82827B</span><span>5F5F58</span><span>44443F</span><span>2D2D2A</span><span>1C1C1A</span><span>111110</span>
+  </div>
+</body>
+</html>

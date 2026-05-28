@@ -122,7 +122,7 @@ Files inspected directly: structures, headers, row counts, and sample values bel
   | Guzman y Gomez | Central Brisbane | 20 | 25 | 30 |
 
 - **Footer note (row 7, column A)**: `"*order quantity means total number of ordered meals for the week across all schools"` — defines the unit of the minimum as weekly meals aggregated across schools, not per session. See [E-04](EDGE_CASES.md#e-04-caterer-weekly-minimum-vs-realised-demand).
-- **Structural quirks**: The three minimum columns are not normalised — they imply a `(caterer, menu_item_count, min_meals)` shape that may want flattening during ingestion. The "menu item count" is now interpreted as the number of distinct orderable options the operator chooses to offer that week. See [E-17](EDGE_CASES.md#e-17-meaning-of-menu-item-count) and [D-09](DECISIONS.md#d-09--customisable-dishes-are-split-into-orderable-variants-e-24).
+- **Structural quirks**: The three minimum columns are not normalised — they imply a `(caterer, menu_item_count, min_meals)` shape that may want flattening during ingestion. The "menu item count" is now interpreted as the number of distinct orderable options the operator chooses to offer that week. See [E-17](EDGE_CASES.md#e-17-meaning-of-menu-item-count) and [D-09](DECISIONS.md#d-09---customisable-dishes-are-split-into-orderable-variants-e-24).
 
 ### 2.4 `data/raw/caterer-menus.pdf`
 

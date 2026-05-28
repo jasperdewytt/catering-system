@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 22px; background: var(--surface-card); display: flex; gap: 32px; align-items: stretch; }
+  .col { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .tag { font: 500 10px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-4); }
+  .specimen-sans { font-family: var(--font-sans); font-size: 34px; line-height: 1; color: var(--fg-1); letter-spacing: -0.015em; }
+  .specimen-mono { font-family: var(--font-mono); font-size: 28px; line-height: 1; color: var(--fg-1); }
+  .specimen-serif { font-family: var(--font-serif); font-style: italic; font-size: 36px; line-height: 1; color: var(--padea-ink); letter-spacing: -0.01em; }
+  .stack { font: 400 11px/1.4 var(--font-mono); color: var(--fg-4); }
+  .row { display: flex; gap: 8px; align-items: baseline; font-size: 13px; color: var(--fg-3); }
+  .row span:first-child { font-weight: 600; color: var(--fg-2); }
+</style>
+</head>
+<body>
+  <div class="col">
+    <span class="tag">Sans · UI</span>
+    <div class="specimen-sans">Aa Bb 1234</div>
+    <span class="stack">Geist · 400 / 500 / 600 / 700</span>
+    <div class="row"><span>400</span> Regular body</div>
+    <div class="row"><span>500</span> Medium labels</div>
+    <div class="row"><span>600</span> Headings</div>
+  </div>
+  <div class="col">
+    <span class="tag">Mono · IDs &amp; figures</span>
+    <div class="specimen-mono">24-W18-03</div>
+    <span class="stack">Geist Mono · 400 / 500</span>
+    <div class="row"><span>tnum</span> 1,432 · $284.50</div>
+    <div class="row"><span>zero</span> 09:14:22Z</div>
+  </div>
+  <div class="col">
+    <span class="tag">Serif · Wordmark only</span>
+    <div class="specimen-serif">Padea</div>
+    <span class="stack">Instrument Serif italic</span>
+    <div class="row" style="color:var(--fg-4)">Not used for body or headings.</div>
+  </div>
+</body>
+</html>

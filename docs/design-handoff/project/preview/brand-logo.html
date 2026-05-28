@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Brand — Logo & wordmark</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 24px; background: var(--surface-card); }
+  .row { display: flex; align-items: center; gap: 28px; }
+  .lockup { display: flex; align-items: center; gap: 12px; }
+  .mark { width: 56px; height: 56px; border-radius: 10px; display: block; }
+  .word { font-family: var(--font-serif); font-style: italic; font-size: 34px; color: var(--padea-ink); letter-spacing: -0.015em; line-height: 1; }
+  .sub { font: 500 11px/1 var(--font-sans); letter-spacing: var(--ls-caps); text-transform: uppercase; color: var(--fg-4); margin-top: 6px; }
+  .divider { width: 1px; height: 56px; background: var(--border-1); }
+  .crimson-chip {
+    width: 56px; height: 56px; border-radius: 10px;
+    background: var(--padea-crimson);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .crimson-chip .w { color: white; font: 600 11px/1 var(--font-mono); letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="lockup">
+      <img class="mark" src="../assets/padea-logo.jpg" alt="Padea">
+      <div>
+        <div class="word">Padea</div>
+        <div class="sub">Catering Ops</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="lockup">
+      <img class="mark" src="../assets/padea-logo.jpg" alt="">
+      <div class="crimson-chip"><span class="w">#A51C30</span></div>
+    </div>
+  </div>
+</body>
+</html>

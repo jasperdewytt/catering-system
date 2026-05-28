@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; padding: 22px; background: var(--surface-card); }
+  .row { display: flex; align-items: flex-end; gap: 8px; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .box { background: var(--padea-crimson-tint); border: 1px solid var(--padea-crimson-border); border-radius: 4px; }
+  .lbl { font: 500 11px/1 var(--font-mono); color: var(--fg-3); }
+  .px { font: 400 10px/1 var(--font-mono); color: var(--fg-5); }
+  .radii { display: flex; gap: 14px; margin-top: 22px; align-items: flex-end; }
+  .r { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .r .swatch { width: 56px; height: 56px; background: var(--n-200); border: 1px solid var(--border-1); }
+  h4 { margin: 0 0 12px; font: 500 11px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-4); }
+</style>
+</head>
+<body>
+  <h4>Spacing scale (4px base)</h4>
+  <div class="row">
+    <div class="item"><div class="box" style="width:4px;height:32px"></div><span class="lbl">s-1</span><span class="px">4</span></div>
+    <div class="item"><div class="box" style="width:8px;height:32px"></div><span class="lbl">s-2</span><span class="px">8</span></div>
+    <div class="item"><div class="box" style="width:12px;height:32px"></div><span class="lbl">s-3</span><span class="px">12</span></div>
+    <div class="item"><div class="box" style="width:16px;height:32px"></div><span class="lbl">s-4</span><span class="px">16</span></div>
+    <div class="item"><div class="box" style="width:20px;height:32px"></div><span class="lbl">s-5</span><span class="px">20</span></div>
+    <div class="item"><div class="box" style="width:24px;height:32px"></div><span class="lbl">s-6</span><span class="px">24</span></div>
+    <div class="item"><div class="box" style="width:32px;height:32px"></div><span class="lbl">s-8</span><span class="px">32</span></div>
+    <div class="item"><div class="box" style="width:40px;height:32px"></div><span class="lbl">s-10</span><span class="px">40</span></div>
+    <div class="item"><div class="box" style="width:48px;height:32px"></div><span class="lbl">s-12</span><span class="px">48</span></div>
+    <div class="item"><div class="box" style="width:64px;height:32px"></div><span class="lbl">s-16</span><span class="px">64</span></div>
+  </div>
+
+  <h4 style="margin-top:24px">Corner radii</h4>
+  <div class="radii">
+    <div class="r"><div class="swatch" style="border-radius:3px"></div><span class="lbl">xs · 3</span></div>
+    <div class="r"><div class="swatch" style="border-radius:5px"></div><span class="lbl">sm · 5</span></div>
+    <div class="r"><div class="swatch" style="border-radius:7px"></div><span class="lbl">md · 7</span></div>
+    <div class="r"><div class="swatch" style="border-radius:10px"></div><span class="lbl">lg · 10</span></div>
+    <div class="r"><div class="swatch" style="border-radius:14px"></div><span class="lbl">xl · 14</span></div>
+    <div class="r"><div class="swatch" style="border-radius:999px"></div><span class="lbl">pill</span></div>
+  </div>
+</body>
+</html>

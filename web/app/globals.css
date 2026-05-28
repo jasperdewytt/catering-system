@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+:root {
+  --padea-crimson: #a51c30;
+  --padea-crimson-press: #871726;
+  --padea-crimson-hover: #b82236;
+  --padea-crimson-tint: #fbedef;
+  --padea-crimson-border: #f0cfd4;
+  --padea-ink: #1a1416;
+
+  --n-50: #fafaf9;
+  --n-100: #f4f4f2;
+  --n-150: #ecece9;
+  --n-200: #e2e2de;
+  --n-300: #ccccc6;
+  --n-400: #a8a8a1;
+  --n-500: #82827b;
+  --n-600: #5f5f58;
+  --n-700: #44443f;
+  --n-800: #2d2d2a;
+  --n-900: #1c1c1a;
+  --n-950: #111110;
+
+  --ok-fg: #1f6b3a;
+  --ok-bg: #e8f4ec;
+  --ok-border: #bfe0cb;
+  --warn-fg: #7a4a06;
+  --warn-bg: #fdf1dc;
+  --warn-border: #f2d89c;
+  --err-fg: #8a1f1f;
+  --err-bg: #fbe9e9;
+  --err-border: #f2c3c3;
+  --info-fg: #1f4b7a;
+  --info-bg: #e7effa;
+  --info-border: #bcd2ee;
+  --muted-fg: #5f5f58;
+  --muted-bg: #f0f0ec;
+  --muted-border: #dfdfda;
+
+  --background: var(--n-100);
+  --foreground: var(--n-900);
+  --card: #ffffff;
+  --card-foreground: var(--n-900);
+  --muted: var(--n-50);
+  --muted-foreground: var(--n-600);
+  --border: var(--n-200);
+  --input: var(--n-200);
+  --ring: var(--padea-crimson);
+  --radius: 7px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-brand: var(--padea-crimson);
+  --color-brand-hover: var(--padea-crimson-hover);
+  --color-brand-tint: var(--padea-crimson-tint);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "cv11", "ss01", "ss03";
+  letter-spacing: 0;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+::selection {
+  background: var(--padea-crimson-tint);
+  color: var(--padea-crimson-press);
+}
