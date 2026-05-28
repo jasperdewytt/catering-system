@@ -8,11 +8,10 @@ operations product for catering coordinators and reviewers.
 
 **Padea** is a tutoring company. Its catering operations team runs a weekly
 service cycle: source-data ingestion → menu setup → validation → order
-generation → review → approval → caterer emails → audit. The current
-operator surface is a set of Streamlit MVPs (`app/menu_setup_mvp.py`,
-`app/order_review_mvp.py`); the next surface is a Next.js + Supabase web app
-(see decision **D-14**), and this design system is the visual + interaction
-foundation for that app.
+generation → review → approval → caterer emails → audit. The current operator
+surface is the Next.js + Supabase web app (see decision **D-14**); the old
+Streamlit MVPs are deprecated historical harnesses. This design system is the
+visual + interaction foundation for the web app.
 
 The audience for this UI is small (operations coordinator, reviewer/manager)
 and the workflow is high-stakes (real students with dietary restrictions, real

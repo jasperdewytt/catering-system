@@ -4,13 +4,18 @@ import type { ReactNode } from "react";
 import { signOut } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { ShellNavigation } from "@/components/shell/navigation";
+import type { ShellWorkflowData } from "@/lib/operator-workflow";
 
 export function OperatorShell({
   children,
   userEmail,
+  workflow,
+  workflowError,
 }: {
   children: ReactNode;
   userEmail: string;
+  workflow: ShellWorkflowData | null;
+  workflowError: string | null;
 }) {
   return (
     <div className="flex min-h-screen bg-background">
@@ -25,7 +30,7 @@ export function OperatorShell({
           </div>
         </div>
         <div className="py-3">
-          <ShellNavigation />
+          <ShellNavigation workflow={workflow} workflowError={workflowError} />
         </div>
       </aside>
 

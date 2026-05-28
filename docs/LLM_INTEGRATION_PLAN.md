@@ -427,8 +427,12 @@ This plan does not add:
 
 ## Near-Term Recommendation
 
-Do not implement LLM features immediately.
+The Next.js operator workflow and persisted communication snapshots are now in place, so LLM work can move from deferred architecture to a small advisory planning slice.
 
-The next backend stage should remain communications persistence and email snapshot tracking. Once email-ready communications are durable and auditable, LLM email polish becomes a clean optional layer because the system can store both the deterministic draft and any accepted polished variant.
+Start with features that explain or polish already-deterministic facts without changing operational decisions:
 
-The first LLM feature worth implementing is probably **LLM order review storage**, because it is low-risk, advisory, and exercises the audit pattern without changing production decisions.
+1. **Advisory order review storage** — low-risk summaries and possible concerns beside the human approval workflow. This should never approve, block, or mutate an order run.
+2. **Email polish beside deterministic drafts** — show deterministic and polished text side by side, persist both, validate facts before acceptance, and require an explicit operator action.
+3. **Operator-facing summaries** — concise explanations of validation findings, audit history, or caterer/student context, sourced from persisted records only.
+
+Do not add provider-specific API calls or mandatory LLM dependencies until the provider-neutral adapter, storage, audit, and fallback behavior are implemented. UX refinement notes from operator review should drive which advisory feature is worth building first.

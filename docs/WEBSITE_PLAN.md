@@ -42,6 +42,8 @@ The app should use a persistent shell with:
 - signed-in operator menu
 - page-level actions grouped on the right side of headers
 
+The sidebar's Week Workflow panel should be dynamic, not instructional. It reads the current route week when the operator is inside `/weeks/[weekStart]`, otherwise falls back to `operator_current_week`, and shows one primary next action from stored read-model state. It must not calculate catering rules or trigger jobs.
+
 Recommended top-level routes:
 
 ```text

@@ -28,6 +28,10 @@ export type OperatorCaterer = Tables<"operator_caterers">;
 export type OperatorCatererDetail = Tables<"operator_caterer_detail">;
 export type OperatorStudent = Tables<"operator_students">;
 export type OperatorStudentDetail = Tables<"operator_student_detail">;
+export type OperatorShellCommunication = Pick<
+  OperatorCommunication,
+  "email_state" | "order_run_id" | "week_start"
+>;
 
 export type ReadModelResult<T> =
   | { data: T; error: null }
@@ -53,6 +57,55 @@ export async function getOperatorProfile(
   }
 
   return { data, error: null };
+}
+
+export async function getShellWorkflowReadModel(
+  supabase: OperatorSupabaseClient,
+): Promise<
+  ReadModelResult<{
+    currentWeekStart: string | null;
+    weekStatuses: OperatorWeekStatus[];
+    communications: OperatorShellCommunication[];
+  }>
+> {
+  const [currentWeekResult, statusesResult, communicationsResult] =
+    await Promise.all([
+      supabase.from("operator_current_week").select("week_start").maybeSingle(),
+      supabase.from("operator_week_status").select("*"),
+      supabase
+        .from("operator_communications")
+        .select("week_start,order_run_id,email_state"),
+    ]);
+
+  if (currentWeekResult.error) {
+    return {
+      data: null,
+      error: readError("Current week", currentWeekResult.error),
+    };
+  }
+
+  if (statusesResult.error) {
+    return {
+      data: null,
+      error: readError("Week status", statusesResult.error),
+    };
+  }
+
+  if (communicationsResult.error) {
+    return {
+      data: null,
+      error: readError("Caterer emails", communicationsResult.error),
+    };
+  }
+
+  return {
+    data: {
+      currentWeekStart: currentWeekResult.data?.week_start ?? null,
+      weekStatuses: statusesResult.data ?? [],
+      communications: communicationsResult.data ?? [],
+    },
+    error: null,
+  };
 }
 
 export async function getDashboardReadModel(

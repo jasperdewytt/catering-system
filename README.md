@@ -19,7 +19,7 @@ pnpm --dir web install
 pnpm --dir web dev
 ```
 
-The Next.js app currently provides the authenticated operator shell, real authenticated reads for dashboard, weeks, menu setup, order review, validation, audit, caterers, students, and caterer emails. Audited writes exist for menu setup, order-run generation, order-run approval/reopen, follow-up/override notes, repeat email-preparation events, first caterer email snapshot creation, and test-routed live email sending through the narrow Python backend bridge.
+The Next.js app currently provides the authenticated operator shell, dynamic next-step workflow guidance, and real authenticated reads for dashboard, weeks, menu setup, order review, validation, audit, caterers, students, and caterer emails. Audited writes exist for menu setup, order-run generation, order-run approval/reopen, follow-up/override notes, repeat email-preparation events, first caterer email snapshot creation, and test-routed live email sending through the narrow Python backend bridge.
 
 ## Run the Python backend
 

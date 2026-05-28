@@ -22,7 +22,7 @@ This is not just an email automation project. The system must make catering bett
   - Batch CLI commands for ingestion, ordering generation, and validation
   - Reads/writes Supabase via the service-role key in backend-only contexts; never expose this key to `web/`
 - **LLM**: provider-neutral adapter; advisory only. See `docs/LLM_INTEGRATION_PLAN.md`.
-- **Legacy MVP UI**: Streamlit apps under `app/` are retained only as internal verification harnesses while `web/` is built. They are not the final product and will be retired once `web/` reaches parity.
+- **Retired MVP UI**: Streamlit apps under `app/` are deprecated historical harnesses. The Next.js app in `web/` is the operator surface.
 
 ## Non-Negotiables
 
@@ -112,14 +112,9 @@ Generate Supabase TypeScript types:
 pnpm --dir web supabase:types
 ```
 
-### Legacy MVP (do not extend)
+### Retired MVP (do not use or extend)
 
-```bash
-uv run streamlit run app/menu_setup_mvp.py
-uv run streamlit run app/order_review_mvp.py
-```
-
-These are retained for internal verification only; new operator-facing functionality should land in `web/`.
+These are deprecated historical harnesses. New operator-facing functionality must land in `web/`.
 
 ## Repository Boundaries
 
@@ -129,7 +124,7 @@ These are retained for internal verification only; new operator-facing functiona
   * `web/lib/`: Supabase clients (`server.ts`, `client.ts`), shared utilities.
   * `web/actions/`: server actions that wrap deterministic backend operations.
   * `web/types/supabase.ts`: generated database types (do not edit by hand).
-* `app/`: legacy Streamlit MVPs (`menu_setup_mvp.py`, `order_review_mvp.py`) — retained for internal verification only, replaced by `web/`.
+* `app/`: retired Streamlit MVPs (`menu_setup_mvp.py`, `order_review_mvp.py`) — deprecated historical harnesses, replaced by `web/`.
 * `src/padea_catering/`: core Python application logic (batch and shared rules).
   * `src/padea_catering/ingestion/`: parse and normalise source files.
   * `src/padea_catering/ordering/`: attendance resolution, menu filtering, meal allocation, and order generation.

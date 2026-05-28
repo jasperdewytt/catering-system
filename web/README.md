@@ -51,7 +51,8 @@ pnpm --dir web supabase:types
 
 ## Current Scope
 
-This app has the Stage 1 foundation, authenticated operator shell, and the
+This app has the Stage 1 foundation, authenticated operator shell with dynamic
+next-step workflow guidance, and the
 implemented Phase 4 menu setup plus order review slices. `/dashboard`,
 `/weeks`, `/weeks/[weekStart]`, `/weeks/[weekStart]/menu`,
 `/weeks/[weekStart]/orders`, and

@@ -1,7 +1,7 @@
 # Website Implementation Stages
 
-**Status**: Planning guide; Stage 1 scaffold, menu setup, order review/approval, caterer email snapshots, v1 test-routed email sending, audit read, validation read, caterer read, and student read slices implemented
-**Last updated**: 2026-05-25
+**Status**: Planning guide; Stage 1 scaffold, menu setup, order review/approval, caterer email snapshots, v1 test-routed email sending, audit read, validation read, caterer read, student read, and dynamic workflow-sidebar slices implemented
+**Last updated**: 2026-05-28
 **Related docs**:
 
 - [Operator Website Plan](WEBSITE_PLAN.md)
@@ -360,6 +360,22 @@ The production website lives in `web/`. The Claude Design export in `docs/design
 
 - Use deprecated Streamlit harnesses as active operator surfaces after parity confirmation.
 - Declare completion with untested audited writes.
+
+## UX Refinement - Dynamic Workflow Sidebar
+
+**Status**: Implemented as a read-only operator guidance slice.
+
+**Goal**: Replace static Week Workflow instructions with one next action derived from existing read-model state.
+
+**Tasks**
+
+- Read `operator_current_week`, `operator_week_status`, and latest-run communication states through the authenticated shell.
+- Prefer the route week for `/weeks/[weekStart]`; otherwise use the current week view.
+- Show one compact next-step card in the sidebar with a status badge, short explanation, and route link.
+
+**Do not**
+
+- Add a write path, migration, Python job trigger, or TypeScript implementation of catering rules.
 
 ## Stage 11 - Streamlit Retirement Prep
 

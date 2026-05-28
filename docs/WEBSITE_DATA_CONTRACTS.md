@@ -1,7 +1,7 @@
 # Website Data Contracts
 
-**Status**: Phase 4 student read pages implemented
-**Last updated**: 2026-05-25
+**Status**: Dynamic workflow sidebar implemented
+**Last updated**: 2026-05-28
 **Related docs**:
 
 - [Operator Website Plan](WEBSITE_PLAN.md)
@@ -30,6 +30,7 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 
 | Screen                                   | Initial reads                                                                                                                                                                                         | Writes                                                            | Stage status                        |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------- |
+| authenticated shell                      | Supabase Auth session; `operators` profile; `operator_current_week`, `operator_week_status`, `operator_communications` for next-step guidance                                                        | sign out                                                          | UX refinement implemented           |
 | `/login`                                 | Supabase Auth session; `operators` profile for shell display                                                                                                                                          | sign in, sign out                                                 | Stage 3 scaffolded                  |
 | `/dashboard`                             | `operator_current_week`, `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                                                                             | none                                                              | Stage 5 first slice implemented     |
 | `/weeks`                                 | `operator_weeks`                                                                                                                                                                                      | none                                                              | Stage 5 first slice implemented     |
@@ -92,6 +93,10 @@ Derive from `sessions` for the current dataset. Do not create a configurable act
 - `missing_offer_caterer_count integer`
 
 The view may summarize stored facts. It must not reimplement Python validation rules.
+
+The authenticated shell uses this view with `operator_current_week` to derive a read-only Week Workflow next action. When the current pathname includes `/weeks/[weekStart]`, the route week takes precedence over `operator_current_week`; otherwise the shell uses the current week view.
+
+The shell may also read `operator_communications.week_start`, `order_run_id`, and `email_state` so it can distinguish a fully sent latest run from email-ready or failed snapshots. This is display guidance only: the shell must not send email, generate runs, run validation, render communication templates, or recompute menu, attendance, dietary, allocation, or quantity rules.
 
 ### `operator_week_sessions`
 
