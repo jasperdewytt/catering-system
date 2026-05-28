@@ -265,7 +265,13 @@ export function CatererEmailSendForm({
 
   function submit(values: SendEmailInput) {
     startTransition(async () => {
-      const result = await sendCatererEmails(values);
+      const payload = {
+        ...values,
+        weekStart,
+        orderRunId,
+        communicationIds,
+      };
+      const result = await sendCatererEmails(payload);
 
       if (applyActionResult(form, result)) {
         form.reset({ weekStart, orderRunId, communicationIds, reason: "" });
