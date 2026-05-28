@@ -138,6 +138,3 @@ extend them for operator workflows.
 - `docs/WEBSITE_IMPLEMENTATION_STAGES.md` — historical website build record and safety boundaries.
 - `docs/WEBSITE_DATA_CONTRACTS.md` — browser-safe data and write contract map.
 - `docs/design.md` — design handoff index and production implementation notes.
-
-Local submission drafts and generated PDFs live under `docs/submission/` and
-are intentionally ignored so they are not shared in the GitHub repository.
