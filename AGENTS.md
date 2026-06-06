@@ -2,9 +2,11 @@
 
 ## Project Mission
 
-Build a robust catering operations system for Padea that handles weekly school tutoring meal ordering from source data ingestion through order generation, validation, delivery readiness, and operator review.
+Build a robust catering operations system for Padea that handles weekly school tutoring meal ordering from source data ingestion through order generation, validation, delivery readiness, operator review, and final-round autopilot automation.
 
-This is not just an email automation project. The system must make catering better: correct quantities, safe exclusion handling, less coordinator effort, better student fit, and a visible audit trail.
+This is not just an email automation project. The system must make catering better: correct quantities, safe exclusion handling, less coordinator effort, better student fit, caterer quality visibility, and a visible audit trail.
+
+Final-round direction: the system should behave like a catering autopilot. Normal weeks should run end-to-end with zero human input; humans should only see exceptions when deterministic safety gates, low-confidence AI interpretation, caterer quality issues, reply handling, or operational ambiguity require review.
 
 ## Core Tech Stack
 
@@ -21,7 +23,8 @@ This is not just an email automation project. The system must make catering bett
 - **Business Logic / Orchestration**: Native Python in `src/padea_catering/`
   - Batch CLI commands for ingestion, ordering generation, and validation
   - Reads/writes Supabase via the service-role key in backend-only contexts; never expose this key to `web/`
-- **LLM**: provider-neutral adapter; advisory only. See `docs/LLM_INTEGRATION_PLAN.md`.
+- **Autopilot / final-round automation**: Python-owned orchestration and preference-aware offer selection. It runs routine weeks end-to-end, reuses deterministic validation/order findings for its safety gates, and raises human-review exceptions when automation reaches its boundary.
+- **LLM**: provider-neutral/Anthropic-compatible adapter; advisory and parsing-oriented only. See `docs/LLM_INTEGRATION_PLAN.md`.
 - **Retired MVP UI**: Streamlit apps under `app/` are deprecated historical harnesses. The Next.js app in `web/` is the operator surface.
 
 ## Non-Negotiables
@@ -32,9 +35,13 @@ This is not just an email automation project. The system must make catering bett
 - Do not silently patch around messy data.
 - Record unresolved ambiguity in `docs/EDGE_CASES.md`.
 - Prefer deterministic Python rules over LLM judgement for quantities, absences, exclusions, and order generation.
-- LLMs may assist with parsing, summarisation, explanations, and draft communications, but they must not be the sole authority for safety-critical catering decisions.
+- LLMs may assist with parsing, summarisation, explanations, student/manager feedback extraction, caterer reply interpretation, and draft communications, but they must not be the sole authority for safety-critical catering decisions.
+- Preference/style tags may be AI-suggested from a closed taxonomy; safety/dietary flags must remain deterministic/operator-owned.
+- Meal-fit scoring may directly affect offer selection/allocation only after deterministic safety filters pass.
+- Autopilot gates must reuse existing validation findings and order allocation issues where possible; do not duplicate Python validation logic in new layers.
+- Autopilot actions with side effects must be idempotent and must not double-approve, duplicate communication snapshots, or double-send emails on retry.
 - Every generated order should be reproducible from database state.
-- Every manual override should preserve a reason and timestamp.
+- Every automated action, manual override, and human-review exception should preserve actor/source, reason/context, and timestamp.
 
 ## Common Commands
 
@@ -61,7 +68,7 @@ uv run python -m padea_catering.validation
 Generate weekly orders (dry-run shown):
 
 ```bash
-uv run python -m padea_catering.ordering --week-start 2026-05-01 --dry-run
+uv run python -m padea_catering.ordering --week-start 2026-06-01 --dry-run
 ```
 
 Run Python tests / lint / format:
@@ -147,6 +154,8 @@ Before creating a new table, check whether it is a true entity, a relationship, 
 
 Before using an LLM, ask whether the same decision can be made deterministically.
 
+Before implementing final-round autopilot work, check `docs/current_stage.md` and keep the current stage scope. Do not jump ahead from schema/spec work into UI or runtime automation unless the stage explicitly calls for it.
+
 Keep `docs/current_stage.md` up to date. Update it whenever:
 - A significant phase completes (inventory, schema, ingestion, validation, UI, etc.)
 - The active focus shifts to a new area
@@ -171,6 +180,8 @@ When normalising source files, write outputs to `data/processed/`.
 
 When a value is inferred rather than directly present in the source material, preserve provenance or record the assumption in `docs/EDGE_CASES.md`.
 
+When using seeded final-round demo preference/quality/reply history, keep it out of raw data and out of migrations unless explicitly documented as a seed/demo artifact. Do not mutate `data/raw/`.
+
 ## Conceptual Agent Roles
 
 The system may be described using five conceptual agents. These are architectural roles, not necessarily separate autonomous runtime processes.
@@ -185,7 +196,7 @@ Implementation: Python ingestion pipeline, with optional LLM support only for am
 
 Responsibility: Match active, non-absent students to caterer dishes while enforcing allergy, exclusion, and attendance rules.
 
-Implementation: Deterministic Python first. LLM support may be used later for preference summarisation, not safety-critical allocation.
+Implementation: Deterministic Python first. Final-round meal-fit scoring may use stored preference/style signals, fit debt, novelty, prior allocations, leftovers, and caterer quality after safety filters pass. LLM support may extract preference/style tags from feedback, but must not decide dietary safety.
 
 ### 3. Logistics & Communications Agent
 
@@ -197,13 +208,19 @@ Implementation: Template-driven Python with optional LLM polish for human-readab
 
 Responsibility: Convert post-session feedback into structured caterer/menu quality signals.
 
-Implementation: Structured form inputs first; LLM extraction only for free-text feedback.
+Implementation: Structured form inputs first; LLM extraction only for free-text feedback and caterer replies. Preference/style tags must come from the canonical closed taxonomy.
 
 ### 5. Operational Co-Pilot
 
 Responsibility: Let operators inspect order status, resolve validation issues, and make manual overrides.
 
 Implementation: Next.js 16 App Router UI in `web/`. Server components and server actions call Supabase directly for RLS-protected reads, and use explicit audited database contracts for simple operator writes. Deterministic jobs such as ingestion, validation, and order generation stay in `src/padea_catering/`; if the UI needs to trigger them live, add a small HTTP/queue bridge rather than importing Python from Next.js.
+
+### 6. Catering Autopilot
+
+Responsibility: Run routine weeks end-to-end, select offer sets, generate preference-aware orders, prepare/send caterer communications, process caterer replies where safe, and create human-readable exceptions where automation reaches its boundary.
+
+Implementation: Python-owned orchestration. It must be idempotent, consume existing validation/order issue outputs for gates, preserve deterministic safety boundaries, and record audit/exception state for automated and human actions.
 
 ## Skills
 

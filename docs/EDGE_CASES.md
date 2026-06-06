@@ -205,10 +205,10 @@ When an item is decided, leave it in this file with the decision summarised inli
 ## E-23 — `day` and `date` columns disagree with the Gregorian calendar
 
 - **Where**: `sessions.xlsx`. Surfaced during ingestion.
-- **Observation**: The previous inventory claim ("`day` is always `date.strftime('%A')`") is incorrect. The source labels `2026-05-02` as Tuesday, but in the real Gregorian calendar that date is a Saturday. The dates and day labels are internally consistent under the operational assumption that May 1 = Monday → May 4 = Thursday, but they do not match real-world weekdays. Likely this dataset has dates transposed from a 2023 week (when 2023-05-01 was a Monday).
-- **Risk**: a Python-derived `date.strftime('%A')` would mislabel every session. `students.xlsx` sheets use the source day labels (e.g. `"JPC - Tuesday"`), so any matching by computed weekday silently fails.
+- **Observation**: The previous inventory claim ("`day` is always `date.strftime('%A')`") is incorrect for the raw files. The source labels the week as May 1-4 2026, but those weekdays only line up if the intended operational week is June 1-4 2026. This was a source-data transcription issue, not a real scheduling choice.
+- **Risk**: using the raw May dates would display the wrong weekdays and make the final demo look inconsistent. `students.xlsx` sheets also use the source day labels (e.g. `"JPC - Tuesday"`), so matching must stay aware of the source labels while persisting the corrected real dates.
 - **Status**: decided — see `docs/DECISIONS.md` D-03.
-- **Decision**: treat the **source `day` column as authoritative** for day-label semantics during ingestion (used to map sheets → sessions). The schema does not store it (D-03 holds), and downstream delivery scheduling remains date-based.
+- **Decision**: preserve raw files unchanged, but correct the narrow fixture dates `2026-05-01` through `2026-05-04` to `2026-06-01` through `2026-06-04` at parser boundaries. Keep using the source `day` label to map student sheets to sessions; downstream delivery scheduling remains date-based using the corrected June dates.
 
 ## E-24 — Customisable dishes cannot be represented by one safety flag set
 
@@ -217,3 +217,11 @@ When an item is decided, leave it in this file with the decision summarised inli
 - **Risk**: Marking the generic parent dish as vegetarian-safe or meat-containing is both overbroad and under-specific. Restricted students could be allocated a vague parent item whose actual preparation violates their requirements, or safe variants could be unnecessarily blocked.
 - **Status**: decided — see `docs/DECISIONS.md` D-09.
 - **Decision**: keep the source `dishes` row as the parent menu item and create concrete `dish_variants` for orderable options. Menu offers and generated orders operate on variants, each with its own reviewed dietary and ingredient flags.
+
+## E-25 — Public feedback links must not expose operational writes
+
+- **Where**: student/session-manager feedback collection.
+- **Observation**: feedback needs to come from people who are not authenticated operators, but Supabase anon access to operational tables remains forbidden.
+- **Risk**: a public form that writes directly to Supabase would bypass the operator/RLS boundary and could be abused or accidentally submit duplicate feedback.
+- **Status**: decided — see `docs/DECISIONS.md` D-23.
+- **Decision**: feedback forms use signed backend-verified request tokens. The Python backend validates audience, expiry, and one-submission state before inserting `student_meal_feedback` or `session_catering_feedback`, and queues any preference/quality processing through durable automation jobs.

@@ -34,9 +34,9 @@ The order generator filters out any student whose year level appears in the excl
 
 **Decision**: `day` is not stored in the schema. `date` is the authoritative column for delivery scheduling.
 
-**Update (during ingestion)**: The original rationale ("`day` always matches `date.strftime('%A')`") turned out to be wrong — see [E-23](EDGE_CASES.md#e-23--day-and-date-columns-disagree-with-the-gregorian-calendar). `2026-05-02` is labelled Tuesday in the source but is actually a Saturday. The decision still stands — we don't store `day` in `sessions` — but the **ingestion pipeline reads the source `day` column** to match `students.xlsx` sheet labels (e.g. `"JPC - Tuesday"`) to sessions. Python's `strftime('%A')` would give the wrong answer for this dataset.
+**Update (during ingestion)**: The original rationale ("`day` always matches `date.strftime('%A')`") turned out to be wrong — see [E-23](EDGE_CASES.md#e-23--day-and-date-columns-disagree-with-the-gregorian-calendar). The raw fixture was transcribed as May 1-4 2026, but the source weekday labels match June 1-4 2026. The decision still stands — we don't store `day` in `sessions` — but the parser corrects the narrow fixture date range to June and the ingestion pipeline still reads the source `day` column to match `students.xlsx` sheet labels (e.g. `"JPC - Tuesday"`) to sessions.
 
-**Why the decision still holds**: the schema only needs the date for delivery, and downstream queries that want to display a weekday should still derive from the date (which describes when delivery happens in real-world time). The source `day` label is an operational sheet-naming artefact, not a calendrical fact worth persisting.
+**Why the decision still holds**: the schema only needs the corrected date for delivery, and downstream queries that want to display a weekday should derive from that date. The source `day` label is an operational sheet-naming artefact used during ingestion, not a calendrical fact worth persisting.
 
 ---
 
@@ -233,7 +233,7 @@ Do not use `raw_user_meta_data` or other user-editable metadata for authorizatio
 
 **Decision**: For the current submission dataset, the active week is derived from source `sessions` data rather than stored in a separate configuration table.
 
-The database-owned operator week data should expose an active-week value based on the earliest available session date in the operational dataset, grouped into a service-week range. The current fixture data has one service week, `2026-05-01` through `2026-05-04`, so this avoids adding configuration state before it is needed.
+The database-owned operator week data should expose an active-week value based on the earliest available session date in the operational dataset, grouped into a service-week range. The current fixture data has one corrected operational service week, `2026-06-01` through `2026-06-04`, so this avoids adding configuration state before it is needed.
 
 The UI week switcher should read from the same browser-safe week view used by Dashboard and Weeks. It should not infer the active week independently in React.
 
@@ -302,3 +302,92 @@ The current send path uses Gmail SMTP (`smtp.gmail.com:587` with TLS and an app 
 Website-editable Gmail settings are deferred until there is encrypted secret storage, rotation policy, and a deliberate real-recipient rollout.
 
 **Why this shape**: Operators need to verify persisted snapshots before sending, and the system needs provider/audit evidence without exposing credentials to the browser-facing app. The mandatory test override prevents accidental real caterer delivery while the first send path is being validated.
+
+---
+
+## D-20 - Stage 4 meal-fit engine is backend-only
+
+**Decision**: The first preference-aware allocation path lives in Python under `src/padea_catering/meal_fit/` and is invoked by CLI/backend code, not by the existing website order-generation button.
+
+Stage 4 selects per-caterer weekly offer sets in memory from reviewed, available dish variants; it does not overwrite operator-owned `menu_offers`. Persisted reproducibility comes from `order_runs.input_snapshot`, normal `order_allocations`/`order_lines`, and one `order_allocation_fit_explanations` row per allocated student when the run is persisted.
+
+All preference scoring happens only after deterministic safety filters pass. Dietary tags, absences, exclusions, opt-outs, pending warnings, and order blocking remain Python-owned deterministic checks.
+
+**Why this shape**: The final autopilot needs preference-aware generation, but the current website path is already a stable operator workflow. Keeping Stage 4 as an alternate backend path avoids surprising operators or mutating saved menu setup state before Stage 5 adds idempotent autopilot orchestration.
+
+---
+
+## D-21 - Caterer email threading uses RFC headers, not subject UUIDs
+
+**Decision**: New caterer order subjects are human-readable and stable per caterer/service week:
+
+`Padea catering order - {Caterer} - Week of {D Month YYYY}`
+
+Outbound sends generate and persist `Message-ID` before SMTP, and retries reuse that value. Revised orders use `Re:`, set `In-Reply-To` to the triggering caterer reply, and append that reply to the deduplicated ordered `References` chain. Incoming replies link by exact `In-Reply-To`, then `References`, then historical `[Padea:run:caterer]` tokens, then a unique normalized-subject fallback. Ambiguous subject-only replies remain unlinked.
+
+Historical snapshots are not rewritten.
+
+**Why this shape**: Standard email threading keeps operator-facing and caterer-facing subjects readable while providing stronger identity than embedded database UUIDs. Persisting headers before send also makes retries auditable and idempotent.
+
+---
+
+## D-22 - Caterer reply exceptions use persisted preview-and-apply resolutions
+
+**Decision**: Open `caterer_reply` exceptions may be resolved through a persisted
+operator-guided preview. The operator provides a plain-language outcome, the LLM
+produces a strict advisory proposal, and Python resolves proposal names to current
+database rows and validates availability, operator review, same-caterer ownership,
+dietary safety, removals, merged lines, and source-order freshness.
+
+No order or email side effect occurs during preview generation or editing. Apply
+revalidates the preview, creates at most one approved revised run when required,
+persists one idempotent threaded reply communication, sends through the existing
+test-recipient override, and resolves the exception only after required side
+effects succeed. Reply-only resolutions never mutate operational order facts.
+Dismissal requires a note and records the operator identity.
+
+Canonical order snapshots remain unique per `(order_run_id, caterer_id)`.
+Additional `exception_reply` communications are separately idempotent by
+resolution and retain RFC threading headers.
+
+**Why this shape**: Operators need a safe way to handle reply ambiguity without
+manually editing operational tables or allowing an LLM to execute catering
+decisions. Durable previews make edits, retries, validation evidence, and final
+side effects auditable.
+
+---
+
+## D-23 - Feedback forms are tokenized Python-backed workflows
+
+**Decision**: Student and session-manager feedback is collected through
+Padea-hosted public routes with signed one-use request tokens:
+
+- `/feedback/student/[token]`
+- `/feedback/session/[token]`
+
+The public forms never write through Supabase anon access. They call the
+Python backend bridge, which verifies the HMAC token, checks expiry/submission
+state, inserts the feedback row, marks the request submitted, writes audit
+evidence, and queues backend-owned processing.
+
+Student invitations are created for allocated attended meals and become eligible
+after the session meal window. They are emailed through the same backend-only
+Gmail SMTP provider and mandatory test-recipient override used for caterer
+emails. Session-manager requests are created per session and surfaced in the
+operator `/feedback` page as signed copy/open/QR links; manager SMS/email is
+deferred.
+
+Feedback processing is deterministic-first:
+
+- ratings and exact requested dish matches can update preference signals without
+  an LLM
+- Claude may extract closed-taxonomy preference/style tags from free text
+- AI-derived tags are accepted only with sufficient confidence and no review flag
+- dietary/safety facts are never inferred from feedback text
+- serious manager delivery problems create quality events and quality exceptions
+
+**Why this shape**: feedback needs to affect future catering quality, but public
+forms cannot become a browser-side data-write surface and AI cannot become the
+authority for safety. Tokenized backend contracts keep submissions simple for
+students/managers while preserving auditability, RLS boundaries, and the
+Python-owned quality/preference materialization path.

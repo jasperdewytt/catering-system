@@ -17,9 +17,18 @@ make sure the order behind each email is correct.
   restrictions, dish variants, and quantities.
 - Generates one meal allocation for each eligible attending student.
 - Aggregates allocations into caterer order lines and delivery notes.
+- Runs routine weeks as a catering autopilot: selects offer sets, generates
+  preference-aware orders, prepares and sends caterer emails, and resolves safe
+  caterer replies without human input.
+- Escalates only genuine exceptions — low-confidence interpretation, unsafe or
+  ambiguous replies, caterer quality issues, or failed safety gates — as
+  human-review items with the context needed to decide.
 - Gives operators a web console to review readiness, menus, generated orders,
-  student/caterer context, caterer emails, and audit history.
-- Records operator decisions with actor, reason, and timestamp metadata.
+  student/caterer context, caterer emails, autopilot status, and audit history.
+- Collects student and session-manager feedback through signed forms and turns
+  that feedback into preference signals and caterer quality events.
+- Records every automated action and operator decision with actor, reason, and
+  timestamp metadata.
 
 ## Architecture
 
@@ -27,7 +36,9 @@ make sure the order behind each email is correct.
   It is the primary interface for reviewing and operating the weekly workflow.
 - **Python backend**: `src/padea_catering/` contains ingestion, validation,
   order generation, email preparation/sending support, and backend-only audited
-  operations.
+  operations. It also owns the final-round automation: the autopilot runner,
+  meal-fit preference scoring, caterer reply handling, the feedback loop, and a
+  durable background worker that runs queued jobs.
 - **Database**: `supabase/migrations/` defines the Supabase/PostgreSQL schema,
   read views, RPC contracts, audit tables, and communication records.
 - **AI/LLM plan**: `docs/LLM_INTEGRATION_PLAN.md` describes future advisory AI
@@ -36,21 +47,31 @@ make sure the order behind each email is correct.
 
 ## Demo Workflow
 
-The intended review path through the app is:
+A normal week is designed to run end-to-end through the autopilot with no human
+input. The numbered surfaces below let an operator inspect, override, or run
+each step manually, and are also where exceptions surface when automation
+reaches its boundary.
 
-1. **Dashboard** — inspect the active week, readiness state, next suggested
-   workflow step, sessions, generated runs, and recent audit activity.
-2. **Menu setup** — review caterer offers, create concrete dish variants for
+1. **Dashboard** — inspect the active week, readiness state, autopilot status,
+   sessions, generated runs, and recent audit activity.
+2. **Autopilot** — run a week end-to-end (offer selection, preference-aware
+   order generation, validation, caterer email preparation and test-routed
+   sending), watch live job progress, fetch and auto-resolve safe caterer
+   replies, and review human-review exceptions with their interpreted summary,
+   reason, and recommended action.
+3. **Menu setup** — review caterer offers, create concrete dish variants for
    customisable meals, and confirm dietary/ingredient flags.
-3. **Validation** — check readiness summaries and latest persisted order issues.
-4. **Orders** — generate a weekly order run through the Python backend, then
+4. **Validation** — check readiness summaries and latest persisted order issues.
+5. **Orders** — generate a weekly order run through the Python backend, then
    inspect order lines, student allocations, contacts, and delivery notes.
-5. **Approval and notes** — approve or reopen runs and record follow-up or
+6. **Approval and notes** — approve or reopen runs and record follow-up or
    override intent with an audit reason.
-6. **Caterer emails** — create or review saved email snapshots, inspect
+7. **Caterer emails** — create or review saved email snapshots, inspect
    recipients and delivery notes, and use the test-recipient send path.
-7. **Audit** — review order generation, approval, email preparation, send
-   attempts, and manual decision history.
+8. **Feedback** — inspect response trends, caterer performance, recent
+   submissions, student invitation status, and manager link/QR forms.
+9. **Audit** — review order generation, approval, email preparation, send
+   attempts, autopilot actions, reply handling, and manual decision history.
 
 Important data edge cases are documented in `docs/EDGE_CASES.md`, including
 missing student IDs, similar student names, partial year-level cancellations,
@@ -86,6 +107,8 @@ repository root:
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 PADEA_BACKEND_SHARED_SECRET=
+PADEA_FEEDBACK_LINK_SECRET=
+PADEA_WEB_PUBLIC_URL=http://localhost:3000
 PADEA_EMAIL_PROVIDER=gmail_smtp
 PADEA_EMAIL_FROM=
 PADEA_GMAIL_SMTP_USERNAME=
@@ -103,9 +126,27 @@ Run backend commands:
 uv sync
 uv run python -m padea_catering.ingestion
 uv run python -m padea_catering.validation
-uv run python -m padea_catering.ordering --week-start 2026-05-01 --dry-run
+uv run python -m padea_catering.ordering --week-start 2026-06-01 --dry-run
 uv run uvicorn padea_catering.backend:app --reload
 ```
+
+The FastAPI server starts the durable automation worker by default, so the
+normal backend command is sufficient for queued runs and automatic reply
+checks, feedback invitation dispatch, and feedback processing.
+
+For a dedicated worker deployment, disable the embedded worker on the API and
+run the worker separately:
+
+```bash
+PADEA_EMBEDDED_AUTOMATION_WORKER=false uv run uvicorn padea_catering.backend:app
+uv run python -m padea_catering.automation
+```
+
+The worker executes queued autopilot runs, checks Gmail for caterer replies
+every 2 minutes from 7am to 9pm Australia/Brisbane time and every 10 minutes
+overnight, and checks feedback invitations every 5 minutes by day and every
+15 minutes overnight. For a one-job deployment/health check, use
+`uv run python -m padea_catering.automation --once`.
 
 The current email send path requires `PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE`.
 Reviewed caterer emails are sent only to that test recipient while preserving
@@ -133,6 +174,10 @@ caterer email records also need:
 PADEA_BACKEND_URL=
 PADEA_BACKEND_SHARED_SECRET=
 ```
+
+Public feedback links are generated by the Python backend with
+`PADEA_FEEDBACK_LINK_SECRET` and should use `PADEA_WEB_PUBLIC_URL` as their
+external base URL.
 
 Run the web app:
 

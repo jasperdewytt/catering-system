@@ -6,7 +6,8 @@ Files inspected directly: structures, headers, row counts, and sample values bel
 
 ## 1. Overview
 
-- **Operational week**: 2026-05-01 (Mon) → 2026-05-04 (Thu). 4 weekdays, no Friday session present.
+- **Raw source week**: entered as 2026-05-01 → 2026-05-04.
+- **Corrected operational week**: 2026-06-01 (Mon) → 2026-06-04 (Thu). The raw files were transcribed as May, but their weekday labels match June 1-4 2026. Ingestion preserves raw files and corrects the operational dates at parser boundaries; see [E-23](EDGE_CASES.md#e-23--day-and-date-columns-disagree-with-the-gregorian-calendar).
 - **Schools (5)**: Moreton Bay Boys' College (MBBC), John Paul College (JPC), MacGregor State High School (MSHS), Indooroopilly State High School (ISHS), Loreto College (LC), Cannon Hill Anglican College (CHAC). Six names, but MSHS appears only in sessions / contacts overlap, so the student roster covers 5 schools and 11 distinct school-day sessions.
 - **Caterers (4)**: Lakehouse Victoria Point, Terrific Noodles, Kenko Sushi House, Guzman y Gomez.
 - **Sessions (11)**: tabulated in `sessions.xlsx`.
@@ -105,7 +106,7 @@ Files inspected directly: structures, headers, row counts, and sample values bel
 
 - **Structural quirks**:
   - 2 of the 11 sessions overlap with exclusions (rows 7 and 9 fully cancelled; row 11 partially cancelled — see exclusions.pdf).
-  - **Correction (see [E-23](EDGE_CASES.md#e-23--day-and-date-columns-disagree-with-the-gregorian-calendar))**: the earlier claim that `day` matches `date.strftime('%A')` on every row is **wrong**. `2026-05-02` is labelled `Tuesday` in the source but is actually a Saturday in the Gregorian calendar. The `day` column is internally consistent with the operational week (May 1 = Monday → May 4 = Thursday), but it cannot be derived from `date`. Ingestion must treat the source `day` column as authoritative for sheet→session matching.
+  - **Correction (see [E-23](EDGE_CASES.md#e-23--day-and-date-columns-disagree-with-the-gregorian-calendar))**: the earlier claim that `day` matches `date.strftime('%A')` on every row is **wrong for the raw May dates**. The source was entered as May 1-4, but the labels match June 1-4 2026. Ingestion corrects the operational dates to June and uses the source `day` column for sheet→session matching.
 
 ### 2.3 `data/raw/caterers.xlsx`
 
