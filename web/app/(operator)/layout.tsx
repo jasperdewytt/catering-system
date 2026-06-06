@@ -36,8 +36,7 @@ export default async function OperatorLayout({
   return (
     <OperatorShell
       userEmail={displayName}
-      workflow={workflow.data}
-      workflowError={workflow.error}
+      openExceptionCount={workflow.data?.openExceptionCount ?? 0}
     >
       {children}
     </OperatorShell>
