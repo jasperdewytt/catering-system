@@ -28,6 +28,7 @@ web/.next/
 web/.turbo/
 web/.vercel/
 web/out/
+web/supabase/.temp/
 
 # Local agent/tooling state
 .mcp.json
@@ -41,3 +42,15 @@ skills-lock.json
 Thumbs.db
 .vscode/
 .idea/
+
+# Stray WSL home-dir device files (not part of the project)
+.bashrc
+.zshrc
+.bash_profile
+.zprofile
+.profile
+.gitconfig
+.gitmodules
+.ripgreprc
+.idea
+.vscode
