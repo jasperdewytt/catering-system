@@ -101,6 +101,7 @@ class FakeEmailProvider(EmailProvider):
     def __init__(self, fail_ids: set[str] | None = None) -> None:
         self.fail_ids = fail_ids or set()
         self.sent_subjects: list[str] = []
+        self.sent_messages: list[dict[str, object]] = []
 
     def send(
         self,
@@ -108,8 +109,21 @@ class FakeEmailProvider(EmailProvider):
         subject: str,
         body: str,
         to_emails: list[str],
+        message_id: str | None = None,
+        in_reply_to: str | None = None,
+        references: list[str] | None = None,
     ) -> dict[str, object]:
         self.sent_subjects.append(subject)
+        self.sent_messages.append(
+            {
+                "subject": subject,
+                "body": body,
+                "to_emails": to_emails,
+                "message_id": message_id,
+                "in_reply_to": in_reply_to,
+                "references": references or [],
+            }
+        )
         if subject in self.fail_ids:
             raise EmailDeliveryError("SMTP rejected message")
         return {
@@ -201,8 +215,11 @@ def test_record_communication_export_creates_snapshot_event_and_audit() -> None:
     audit = client.tables["audit_log"].rows[0]
 
     assert result["snapshot_created"] is True
-    assert communication["subject"] == "Padea catering order - Example Caterer"
-    assert communication["template_version"] == "caterer-order-v2"
+    assert communication["subject"] == (
+        "Padea catering order - Example Caterer - Week of 1 May 2026"
+    )
+    assert "[Padea:" not in communication["subject"]
+    assert communication["template_version"] == "caterer-order-v3"
     assert "Example School - Fri 1 May - dinner 6pm" in communication["rendered_text"]
     assert "3 x Cali Burrito - Vegetarian" in communication["rendered_text"]
     assert "Total meals: 3" in communication["rendered_text"]
@@ -248,6 +265,7 @@ def test_record_communication_export_reuses_snapshot_on_repeated_export() -> Non
 def test_send_caterer_emails_records_sent_event_metadata_and_audit() -> None:
     client = _client_with_send_data()
     communication_id = client.tables["order_communications"].rows[0]["id"]
+    provider = FakeEmailProvider()
 
     result = send_caterer_emails(
         client,
@@ -255,7 +273,7 @@ def test_send_caterer_emails_records_sent_event_metadata_and_audit() -> None:
         communication_ids=[communication_id],
         actor_name="Operator",
         reason="Send reviewed snapshot",
-        provider=FakeEmailProvider(),
+        provider=provider,
     )
 
     communication = client.tables["order_communications"].rows[0]
@@ -265,11 +283,45 @@ def test_send_caterer_emails_records_sent_event_metadata_and_audit() -> None:
     assert len(result["sent"]) == 1
     assert result["failed"] == []
     assert communication["status"] == "sent"
+    assert communication["outbound_message_id"].startswith("<")
+    assert provider.sent_messages[0]["message_id"] == communication["outbound_message_id"]
+    assert provider.sent_messages[0]["in_reply_to"] is None
+    assert provider.sent_messages[0]["references"] == []
     assert event["event_type"] == "sent"
     assert event["metadata"]["provider"] == "fake"
     assert event["metadata"]["requested_recipients"] == ["primary@example.com"]
     assert audit["action"] == "communication_sent"
     assert audit["after_state"]["status"] == "sent"
+
+
+def test_send_retry_reuses_persisted_outbound_message_id() -> None:
+    client = _client_with_send_data()
+    communication = client.tables["order_communications"].rows[0]
+    provider = FakeEmailProvider(fail_ids={communication["subject"]})
+
+    first = send_caterer_emails(
+        client,
+        order_run_id="run-1",
+        communication_ids=[communication["id"]],
+        actor_name="Operator",
+        reason="First attempt",
+        provider=provider,
+    )
+    persisted_message_id = communication["outbound_message_id"]
+    provider.fail_ids.clear()
+    second = send_caterer_emails(
+        client,
+        order_run_id="run-1",
+        communication_ids=[communication["id"]],
+        actor_name="Operator",
+        reason="Retry",
+        provider=provider,
+    )
+
+    assert len(first["failed"]) == 1
+    assert len(second["sent"]) == 1
+    assert provider.sent_messages[0]["message_id"] == persisted_message_id
+    assert provider.sent_messages[1]["message_id"] == persisted_message_id
 
 
 def test_send_caterer_emails_records_failed_event_error_and_audit() -> None:
