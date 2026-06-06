@@ -8,6 +8,7 @@ import pytest
 
 from padea_catering.ingestion.normalisation import (
     canonicalise_school_name,
+    correct_source_operational_date,
     infer_ingredient_flags,
     is_halal,
     parse_dietary,
@@ -53,6 +54,17 @@ class TestParseOrdinalDate:
 
     def test_no_match(self) -> None:
         assert parse_ordinal_english_date("nope", 2026) is None
+
+
+class TestCorrectSourceOperationalDate:
+    def test_corrects_fixture_may_dates_to_intended_june_week(self) -> None:
+        assert correct_source_operational_date(date(2026, 5, 1)) == date(2026, 6, 1)
+        assert correct_source_operational_date(date(2026, 5, 4)) == date(2026, 6, 4)
+
+    def test_leaves_other_dates_unchanged(self) -> None:
+        assert correct_source_operational_date(date(2026, 5, 5)) == date(2026, 5, 5)
+        assert correct_source_operational_date(date(2026, 6, 1)) == date(2026, 6, 1)
+        assert correct_source_operational_date(date(2027, 5, 1)) == date(2027, 5, 1)
 
 
 class TestParseYearLevels:

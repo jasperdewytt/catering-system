@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  Bot,
   CalendarDays,
   ClipboardCheck,
   Clock3,
@@ -15,6 +16,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { CompactTable, Td, Th } from "@/components/ui/table";
 import {
   formatAuditAction,
+  formatAutopilotStatus,
   formatDate,
   formatDateTime,
   formatEmailState,
@@ -62,8 +64,14 @@ export default async function DashboardPage() {
     );
   }
 
-  const { currentWeek, weekStatus, sessions, latestOrderRun, auditEvents } =
-    result.data;
+  const {
+    currentWeek,
+    weekStatus,
+    sessions,
+    latestOrderRun,
+    autopilotStatus,
+    auditEvents,
+  } = result.data;
 
   if (!currentWeek?.week_start) {
     return (
@@ -229,6 +237,78 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Autopilot</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge
+                status={statusToken(autopilotStatus?.status ?? null)}
+              />
+              <span className="text-lg font-semibold text-foreground">
+                {formatAutopilotStatus(autopilotStatus?.status ?? null)}
+              </span>
+            </div>
+            <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+              {autopilotStatus?.summary ??
+                "No current-week autopilot run has been recorded yet."}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="rounded-md border border-border bg-muted p-3">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Open exceptions
+                </div>
+                <div className="mt-2 text-xl font-semibold">
+                  {autopilotStatus?.open_exception_count ?? 0}
+                </div>
+              </div>
+              <div className="rounded-md border border-border bg-muted p-3">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Blocking
+                </div>
+                <div className="mt-2 text-xl font-semibold">
+                  {autopilotStatus?.blocking_exception_count ?? 0}
+                </div>
+              </div>
+              <div className="rounded-md border border-border bg-muted p-3">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Prepared
+                </div>
+                <div className="mt-2 text-xl font-semibold">
+                  {autopilotStatus?.emails_prepared_count ?? 0}
+                </div>
+              </div>
+              <div className="rounded-md border border-border bg-muted p-3">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Sent / failed
+                </div>
+                <div className="mt-2 text-xl font-semibold">
+                  {autopilotStatus?.sent_communication_count ?? 0}/
+                  {autopilotStatus?.failed_communication_count ?? 0}
+                </div>
+              </div>
+              <div className="rounded-md border border-border bg-muted p-3">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                  AI rows
+                </div>
+                <div className="mt-2 text-xl font-semibold">
+                  {autopilotStatus?.ai_interpretation_count ?? 0}
+                </div>
+              </div>
+            </div>
+          </div>
+          <Button asChild variant="primary">
+            <Link href="/autopilot">
+              <Bot className="size-4" aria-hidden="true" />
+              Open autopilot
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
         <Card>

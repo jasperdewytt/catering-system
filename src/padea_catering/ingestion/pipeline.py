@@ -430,10 +430,9 @@ def ingest_session_enrolments(
     short_to_canonical = SCHOOL_CANONICAL
     canonical_to_short = {v: k for k, v in short_to_canonical.items()}
 
-    # Build the matching map from the SOURCE day_label, not from the Gregorian
-    # calendar derivation of the date. The two disagree in this dataset
-    # (2026-05-02 is labelled Tuesday but is actually a Saturday). The
-    # operationally meaningful day-of-week is what the source declares.
+    # Build the matching map from the source day_label. The raw fixture dates
+    # are corrected from May 1-4 to the intended June 1-4 week in the parser,
+    # but the label remains useful for matching students.xlsx sheet suffixes.
     sessions_by_short: dict[str, list[tuple[str, date, str]]] = {}
     for ps in parsed_sessions:
         short = canonical_to_short.get(ps.school_name)

@@ -1,7 +1,7 @@
 # Website Data Contracts
 
 **Status**: Implemented operator data and write contract reference
-**Last updated**: 2026-05-28
+**Last updated**: 2026-06-06
 **Related docs**:
 
 - [Operator Website Plan](WEBSITE_PLAN.md)
@@ -32,7 +32,7 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
 | authenticated shell                      | Supabase Auth session; `operators` profile; `operator_current_week`, `operator_week_status`, `operator_communications` for next-step guidance                                                         | sign out                                                                                                     | UX refinement implemented             |
 | `/login`                                 | Supabase Auth session; `operators` profile for shell display                                                                                                                                          | sign in, sign out                                                                                            | Stage 3 scaffolded                    |
-| `/dashboard`                             | `operator_current_week`, `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                                                                             | none                                                                                                         | Implemented                           |
+| `/dashboard`                             | `operator_current_week`, `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_autopilot_status`, `operator_audit_events`                                                | none                                                                                                         | Stage 8 autopilot card implemented    |
 | `/weeks`                                 | `operator_weeks`                                                                                                                                                                                      | none                                                                                                         | Implemented                           |
 | `/weeks/[weekStart]`                     | `operator_week_status`, `operator_week_sessions`, `operator_order_runs`, `operator_audit_events`                                                                                                      | none                                                                                                         | Implemented                           |
 | `/weeks/[weekStart]/menu`                | `operator_menu_setup`, `operator_validation_summary`                                                                                                                                                  | menu offers, variant create/review/availability through RPCs                                                 | Stage 6 implemented                   |
@@ -45,11 +45,15 @@ Keep this file current whenever a browser-facing view, RPC, Server Action, or ro
 | `/students`                              | `operator_students`                                                                                                                                                                                   | none for submission                                                                                          | Stage 9 implemented                   |
 | `/students/[studentId]`                  | `operator_student_detail`                                                                                                                                                                             | none for submission                                                                                          | Stage 9 implemented                   |
 | `/audit`                                 | `operator_audit_events`                                                                                                                                                                               | none                                                                                                         | Stage 5 implemented                   |
+| `/autopilot`                             | `operator_current_week`, `operator_autopilot_status`, `operator_autopilot_exceptions`, `operator_exception_resolutions`, `operator_exception_resolution_options`, `operator_meal_fit_signals`, `operator_feedback_events`, `operator_caterer_quality_signals`, `operator_caterer_replies`, `operator_ai_interpretations`, `operator_audit_events`; run-owned panels are scoped to the latest autopilot/generated order run, while reply cards are anchored to the latest persisted order-run revision chain | current-week manual demo trigger; reply polling; persisted exception preview/edit/apply and dismissal through Python backend contracts; no browser-side catering rules | Stage 8D implemented                  |
+| `/feedback`                              | `operator_feedback_overview`, `operator_feedback_weekly_trends`, `operator_caterer_feedback_performance`, `operator_feedback_requests`, `operator_feedback_events`, `operator_caterer_quality_signals`                                                              | queue feedback dispatch; generate signed student/manager links; refresh demo request rows through Python backend | Implemented                           |
+| `/feedback/student/[token]`              | Python `GET /internal/feedback/student/{token}`                                                                                                                                                | Python `POST /internal/feedback/student/{token}` records one student feedback row and queues processing       | Implemented                           |
+| `/feedback/session/[token]`              | Python `GET /internal/feedback/session/{token}`                                                                                                                                                | Python `POST /internal/feedback/session/{token}` records one manager feedback row and queues processing       | Implemented                           |
 | `/settings`                              | session user, `operators`, safe app metadata                                                                                                                                                          | none for submission                                                                                          | Read-only profile implemented         |
 
 ## Implemented Operator Data Models
 
-The first Dashboard/Weeks group below is implemented in `supabase/migrations/20260524130454_phase_4_operator_read_models.sql`. The menu setup group is implemented in `supabase/migrations/20260524154500_menu_setup_read_models_and_rpcs.sql`. The order review group is implemented in `supabase/migrations/20260524171000_order_review_read_models_and_rpcs.sql`. The caterer-email persisted-first group is implemented in `supabase/migrations/20260525100000_caterer_email_read_models_and_rpc.sql`. The caterer directory/detail group is implemented in `supabase/migrations/20260525113000_caterer_read_models.sql`. The student directory/detail group is implemented in `supabase/migrations/20260525124500_student_read_models.sql`. These views use `WITH (security_invoker = true)` and are granted only to `authenticated`; underlying table access is guarded by RLS policies requiring a row in `public.operators`.
+The first Dashboard/Weeks group below is implemented in `supabase/migrations/20260524130454_phase_4_operator_read_models.sql`. The menu setup group is implemented in `supabase/migrations/20260524154500_menu_setup_read_models_and_rpcs.sql`. The order review group is implemented in `supabase/migrations/20260524171000_order_review_read_models_and_rpcs.sql`. The caterer-email persisted-first group is implemented in `supabase/migrations/20260525100000_caterer_email_read_models_and_rpc.sql`. The caterer directory/detail group is implemented in `supabase/migrations/20260525113000_caterer_read_models.sql`. The student directory/detail group is implemented in `supabase/migrations/20260525124500_student_read_models.sql`. The autopilot data-foundation group is implemented in `supabase/migrations/20260605120000_autopilot_schema_and_read_models.sql`, with advisor-driven FK index coverage in `supabase/migrations/20260605123000_autopilot_fk_indexes.sql`. These views use `WITH (security_invoker = true)` and are granted only to `authenticated`; underlying table access is guarded by RLS policies requiring a row in `public.operators`.
 
 `web/types/supabase.ts` is generated from the linked Supabase project and includes the full current database type surface.
 
@@ -282,6 +286,10 @@ This view exposes follow-up/override note records only. The UI should let operat
 - `rendered_text text`
 - `delivery_note_text text`
 - `template_version text`
+- `outbound_message_id text null`
+- `in_reply_to_message_id text null`
+- `reference_message_ids text[] null`
+- `thread_status text`
 - `exported_at timestamptz null`
 - `exported_by text null`
 - `line_count integer`
@@ -289,7 +297,7 @@ This view exposes follow-up/override note records only. The UI should let operat
 - `event_count integer`
 - `latest_event_at timestamptz null`
 
-One row per order-run/caterer represented in persisted order lines. Communication fields are nullable when a snapshot is missing. This view displays persisted snapshots only; it does not build communication text.
+One row per order-run/caterer represented in persisted order lines. Communication fields are nullable when a snapshot is missing. `thread_status` is display-only evidence derived from persisted RFC `Message-ID`, `In-Reply-To`, and `References` fields. This view displays persisted snapshots only; it does not build communication text.
 
 ### `operator_communication_recipients`
 
@@ -452,6 +460,277 @@ Includes all `operator_students` profile/contact columns plus:
 
 One row per student with JSON arrays for operator drilldown sections. Allocation rows are the latest persisted order-run allocations only. Override and audit arrays include records directly tied to the student id in `entity_id`, `before_state.student_id`, or `after_state.student_id`. The detail view remains read-only and does not expose raw source JSON.
 
+### `operator_autopilot_status`
+
+- `autopilot_run_id uuid`
+- `week_start date`
+- `idempotency_key text`
+- `status text`
+- `trigger_source text`
+- `started_at timestamptz`
+- `completed_at timestamptz null`
+- `summary text null`
+- `generated_order_run_id uuid null`
+- `exception_count integer`
+- `open_exception_count integer`
+- `blocking_exception_count integer`
+- `emails_prepared_count integer`
+- `emails_sent_count integer`
+- `ai_interpretation_count integer`
+- `communication_count integer`
+- `sent_communication_count integer`
+- `failed_communication_count integer`
+- `requires_human_review boolean`
+- `metadata jsonb`
+
+One row per latest autopilot run/week. This view exposes stored run status, persisted exception counts, and persisted communication state. It does not execute gates, approve runs, create snapshots, send email, or recompute ordering rules.
+
+### `operator_automation_jobs`
+
+One browser-safe row per durable automation job, exposing job type, lifecycle
+status, current stage, real progress percentage, stored counters/results,
+failure detail, actor, linked autopilot run, attempts, and timestamps. The
+operator UI polls this view while work is active; Python workers exclusively
+claim and mutate jobs.
+
+### `operator_automation_job_events`
+
+Append-only stage history for queued jobs. Events record queued, started,
+stage-changed, retry, completion, and failure states without duplicating
+ordering or reply-handling decisions.
+
+### `operator_automation_schedule`
+
+One row for the caterer-reply schedule, exposing the Brisbane timezone,
+daytime/overnight intervals, last check/success, next check, latest result or
+error, and worker heartbeat. The browser uses these persisted timestamps for
+the countdown and worker-offline state.
+
+### `operator_autopilot_exceptions`
+
+- `exception_id uuid`
+- `autopilot_run_id uuid null`
+- `week_start date`
+- `severity text`
+- `category text`
+- `title text`
+- `detail text`
+- `recommended_action text null`
+- `status text`
+- `ai_confidence numeric null`
+- `student_id uuid null`
+- `student_name text null`
+- `session_id uuid null`
+- `session_date date null`
+- `school_name text null`
+- `caterer_id uuid null`
+- `caterer_name text null`
+- `order_run_id uuid null`
+- `dish_variant_id uuid null`
+- `dish_variant_name text null`
+- `metadata jsonb`
+- `created_at timestamptz`
+- `resolved_at timestamptz null`
+- `resolved_by uuid null`
+- `resolved_by_name text null`
+- `resolved_note text null`
+
+This is the operator exception inbox for autopilot failures, accepted-cost warnings, refused AI/reply handling, validation blocks, and meal-fit review cases. It displays stored exception facts only.
+
+Reply exceptions additionally expose `caterer_reply_id`,
+`complete_interpreted_summary`, `original_reply_body`,
+`deterministic_block_reason`, latest resolution status/message, and resulting
+run/communication references. Historical summary fallback is AI summary,
+exception detail, stored handling summary, then subject.
+
+### `operator_exception_resolutions`
+
+One browser-safe row per durable resolution preview, including proposed/edited
+actions, proposed/final message text, deterministic validation report, lifecycle
+status, creator/applier identity, failure detail, and resulting run/communication
+references.
+
+### `operator_exception_resolution_options`
+
+One row per current order item or same-caterer dish variant available to the
+resolution editor. The view exposes availability and operator-review state only;
+Python remains responsible for safety and apply eligibility.
+
+### `operator_meal_fit_signals`
+
+- `order_run_id uuid`
+- `week_start date`
+- `allocation_id uuid`
+- `student_id uuid`
+- `student_name text`
+- `school_id uuid`
+- `school_name text`
+- `session_id uuid`
+- `session_date date`
+- `chosen_dish_variant_id uuid null`
+- `chosen_display_name text null`
+- `scoring_version text`
+- `chosen_score numeric null`
+- `top_feasible_variant_id uuid null`
+- `top_feasible_display_name text null`
+- `top_feasible_score numeric null`
+- `constrained_by text[]`
+- `positive_factors jsonb`
+- `negative_factors jsonb`
+- `fit_debt_applied numeric`
+- `novelty_applied numeric`
+- `explanation text`
+- `latest_fit_debt_score numeric null`
+- `latest_fit_debt_reason text null`
+- `preference_signals jsonb`
+- `created_at timestamptz`
+
+One row per persisted meal-fit allocation explanation. Preference summaries and latest fit debt are read for display only; SQL does not score candidates, check safety, or choose meals.
+
+### `operator_feedback_events`
+
+- `feedback_id uuid`
+- `feedback_type text`
+- `created_at timestamptz`
+- `source text`
+- `student_id uuid null`
+- `student_name text null`
+- `session_id uuid null`
+- `session_date date null`
+- `school_name text null`
+- `dish_variant_id uuid null`
+- `dish_variant_name text null`
+- `caterer_id uuid null`
+- `caterer_name text null`
+- `rating smallint null`
+- `liked boolean null`
+- `delivery_status text null`
+- `leftover_level text null`
+- `free_text text null`
+- `requested_food text null`
+- `issue_tags text[]`
+- `metadata jsonb`
+
+Combined student meal feedback and session-manager catering feedback stream. Feedback parsing and derived preference updates are backend-owned, not performed in this view.
+
+### `operator_feedback_requests`
+
+- `request_id uuid`
+- `audience text`
+- `status text`
+- `order_run_id uuid null`
+- `week_start date null`
+- `session_id uuid`
+- `session_date date`
+- `dinner_time time null`
+- `manager_name text null`
+- `school_name text`
+- `student_id uuid null`
+- `student_name text null`
+- `caterer_id uuid null`
+- `caterer_name text null`
+- `order_allocation_id uuid null`
+- `email_to text null`
+- `eligible_at timestamptz`
+- `expires_at timestamptz`
+- `sent_at timestamptz null`
+- `submitted_at timestamptz null`
+- `send_count integer`
+- `response_student_feedback_id uuid null`
+- `response_session_feedback_id uuid null`
+- `last_error text null`
+- `metadata jsonb`
+
+Browser-safe invitation status. Signed tokens are not stored or exposed; the operator page asks the Python backend to sign a manager link for a specific request id.
+
+### `operator_feedback_overview`
+
+Weekly aggregate counts for request volume, submissions, student ratings, manager issues, and quality events. This view aggregates stored facts only; it does not calculate preference weights or caterer penalties.
+
+### `operator_feedback_weekly_trends`
+
+Weekly request/submission counts and response rate for the `/feedback` trend panel.
+
+### `operator_caterer_feedback_performance`
+
+One row per caterer combining stored student feedback, manager feedback, and quality event counts. Python-owned scoring still consumes the base feedback/quality tables, not this display view.
+
+### `operator_caterer_quality_signals`
+
+- `caterer_id uuid`
+- `caterer_name text`
+- `quality_event_count integer`
+- `serious_event_count integer`
+- `review_event_count integer`
+- `latest_event_at timestamptz null`
+- `recent_events jsonb`
+
+One row per caterer with stored quality events. The view does not calculate caterer penalties or meal-fit weights.
+
+### `operator_caterer_replies`
+
+- `reply_id uuid`
+- `communication_id uuid null`
+- `order_run_id uuid null`
+- `week_start date null`
+- `caterer_id uuid null`
+- `caterer_name text null`
+- `provider text null`
+- `provider_thread_id text null`
+- `provider_message_id text null`
+- `in_reply_to_message_id text null`
+- `reference_message_ids text[]`
+- `linked_outbound_message_id text null`
+- `from_email text null`
+- `subject text null`
+- `received_at timestamptz`
+- `parsed_intent text null`
+- `handled_status text`
+- `confidence numeric null`
+- `handled_at timestamptz null`
+- `handling_summary text null`
+- `ai_interpretation_id uuid null`
+- `ai_model text null`
+- `ai_prompt_version text null`
+- `ai_needs_human_review boolean null`
+- `ai_parsed_output jsonb null`
+- `revised_communication_id uuid null`
+- `revised_email_state text null`
+- `revised_outbound_message_id text null`
+- `revised_parent_message_id text null`
+- `revised_reference_message_ids text[] null`
+- `revised_thread_status text`
+- `metadata jsonb`
+- `created_at timestamptz`
+- `updated_at timestamptz`
+
+Reply intake display for real inbound caterer email handling. The view exposes parsed status, AI provenance, inbound threading headers, and persisted evidence that a revised email was sent in the original thread. It does not auto-handle replies or recompute threading in TypeScript.
+
+### `operator_ai_interpretations`
+
+- `ai_interpretation_id uuid`
+- `purpose text`
+- `provider text`
+- `model text`
+- `prompt_version text`
+- `schema_version text`
+- `input_hash text`
+- `parsed_output jsonb`
+- `confidence numeric null`
+- `needs_human_review boolean`
+- `student_meal_feedback_id uuid null`
+- `session_catering_feedback_id uuid null`
+- `caterer_reply_id uuid null`
+- `autopilot_exception_id uuid null`
+- `exception_week_start date null`
+- `exception_title text null`
+- `reply_caterer_id uuid null`
+- `reply_caterer_name text null`
+- `metadata jsonb`
+- `created_at timestamptz`
+
+AI provenance display for closed-taxonomy tagging, feedback parsing, reply interpretation, and exception explanation. Full raw inputs/outputs remain in the operational table for backend audit; this view exposes parsed output and provenance for operators.
+
 ## Deferred Data Models
 
 The following contracts remain planned and should be added only when the corresponding page slice or audited write contract is ready.
@@ -473,6 +752,16 @@ All website writes are called from Server Actions. The Server Action validates r
 | Record prepared caterer email  | `operator_record_caterer_email_preparation` RPC        | `communication_exported`                                   | Implemented for existing snapshots                 |
 | Send caterer email             | Python `POST /internal/caterer-email-sends` bridge     | `communication_sent` or `communication_send_failed`        | Implemented with mandatory test-recipient override |
 | Trigger order generation       | Python `POST /internal/order-runs` bridge              | `order_run_generated`                                      | Implemented                                        |
+| Queue autopilot run            | Python `POST /internal/automation-jobs/autopilot`      | `automation_job_queued`, terminal job audit                | Implemented                                        |
+| Check caterer replies now      | Python `POST /internal/automation-jobs/caterer-reply-poll` | queued/terminal job audit; reply handling retains its own audit | Implemented                                    |
+| Check feedback now             | Python `POST /internal/automation-jobs/feedback-dispatch` | queued/terminal job audit; request creation/send audits    | Implemented                                        |
+| Submit student feedback        | Python `POST /internal/feedback/student/{token}`       | `feedback_recorded`, queued processing job                 | Implemented; public token route, no Supabase anon writes |
+| Submit manager feedback        | Python `POST /internal/feedback/session/{token}`       | `feedback_recorded`, queued processing job                 | Implemented; public token route, no Supabase anon writes |
+| Generate manager feedback link | Python `GET /internal/feedback-requests/{requestId}/link` | none                                                       | Implemented; operator-only Server Action           |
+| Generate exception preview     | Python `POST /internal/exception-resolution-previews`  | `exception_resolution_proposed`                            | Implemented                                        |
+| Edit/revalidate preview        | Python `PUT /internal/exception-resolution-previews/{id}` | persisted validation report                             | Implemented                                        |
+| Apply exception preview        | Python `POST /internal/exception-resolution-previews/{id}/apply` | `order_run_revised` when needed, communication audit, resolution/failure audit | Implemented |
+| Dismiss reply exception        | Python `POST /internal/autopilot-exceptions/{id}/dismiss` | `autopilot_exception_dismissed`                         | Implemented                                        |
 | Trigger validation preflight   | Python job bridge                                      | job audit/status row; future `session_validation_findings` | Deferred to Stage 9                                |
 
 ## Deferred Data Contracts

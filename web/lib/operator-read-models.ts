@@ -22,6 +22,24 @@ export type OperatorOrderRunIssue = Tables<"operator_order_run_issues">;
 export type OperatorOrderRunContact = Tables<"operator_order_run_contacts">;
 export type OperatorManualOverride = Tables<"operator_manual_overrides">;
 export type OperatorAuditEvent = Tables<"operator_audit_events">;
+export type OperatorAiInterpretation = Tables<"operator_ai_interpretations">;
+export type OperatorAutopilotException =
+  Tables<"operator_autopilot_exceptions">;
+export type OperatorAutopilotStatus = Tables<"operator_autopilot_status">;
+export type OperatorCatererQualitySignal =
+  Tables<"operator_caterer_quality_signals">;
+export type OperatorCatererReply = Tables<"operator_caterer_replies">;
+export type OperatorFeedbackEvent = Tables<"operator_feedback_events">;
+export type OperatorFeedbackOverview = Tables<"operator_feedback_overview">;
+export type OperatorFeedbackRequest = Tables<"operator_feedback_requests">;
+export type OperatorFeedbackTrend = Tables<"operator_feedback_weekly_trends">;
+export type OperatorCatererFeedbackPerformance =
+  Tables<"operator_caterer_feedback_performance">;
+export type OperatorMealFitSignal = Tables<"operator_meal_fit_signals">;
+export type OperatorExceptionResolution =
+  Tables<"operator_exception_resolutions">;
+export type OperatorExceptionResolutionOption =
+  Tables<"operator_exception_resolution_options">;
 export type OperatorMenuSetupRow = Tables<"operator_menu_setup">;
 export type OperatorValidationSummary = Tables<"operator_validation_summary">;
 export type OperatorCaterer = Tables<"operator_caterers">;
@@ -40,6 +58,93 @@ export type ReadModelResult<T> =
 function readError(context: string, error: unknown): string {
   console.error(context, error);
   return `${context} is unavailable. Check operator access and secure operator data.`;
+}
+
+function metadataString(
+  metadata: OperatorCatererReply["metadata"],
+  key: string,
+): string | null {
+  if (!metadata || Array.isArray(metadata) || typeof metadata !== "object") {
+    return null;
+  }
+
+  const value = metadata[key];
+  return typeof value === "string" && value ? value : null;
+}
+
+export function scopeRepliesToOrderRunChain(
+  replies: OperatorCatererReply[],
+  anchorOrderRunId: string | null,
+): OperatorCatererReply[] {
+  if (!replies.length || !anchorOrderRunId) {
+    return [];
+  }
+
+  const parentByRevisedRun = new Map<string, string>();
+  for (const reply of replies) {
+    const revisedOrderRunId = metadataString(
+      reply.metadata,
+      "revised_order_run_id",
+    );
+    if (revisedOrderRunId && reply.order_run_id) {
+      parentByRevisedRun.set(revisedOrderRunId, reply.order_run_id);
+    }
+  }
+
+  const rootOrderRunId = (orderRunId: string | null): string | null => {
+    if (!orderRunId) {
+      return null;
+    }
+
+    let current = orderRunId;
+    const visited = new Set<string>();
+    while (parentByRevisedRun.has(current) && !visited.has(current)) {
+      visited.add(current);
+      current = parentByRevisedRun.get(current) ?? current;
+    }
+    return current;
+  };
+
+  const anchorRoot = rootOrderRunId(anchorOrderRunId);
+  if (!anchorRoot) {
+    return [];
+  }
+
+  return replies.filter(
+    (reply) => rootOrderRunId(reply.order_run_id) === anchorRoot,
+  );
+}
+
+export function scopeExceptionsToCurrentContext(
+  exceptions: OperatorAutopilotException[],
+  scopedReplies: OperatorCatererReply[],
+  currentAutopilotRunId: string | null,
+  currentOrderRunId: string | null,
+): OperatorAutopilotException[] {
+  const visibleReplyIds = new Set(
+    scopedReplies
+      .map((reply) => reply.reply_id)
+      .filter((replyId): replyId is string => Boolean(replyId)),
+  );
+
+  return exceptions.filter((exception) => {
+    if (
+      exception.caterer_reply_id &&
+      visibleReplyIds.has(exception.caterer_reply_id)
+    ) {
+      return true;
+    }
+
+    if (currentAutopilotRunId && exception.autopilot_run_id) {
+      return exception.autopilot_run_id === currentAutopilotRunId;
+    }
+
+    if (currentOrderRunId && exception.order_run_id) {
+      return exception.order_run_id === currentOrderRunId;
+    }
+
+    return !currentAutopilotRunId && !currentOrderRunId;
+  });
 }
 
 export async function getOperatorProfile(
@@ -66,15 +171,21 @@ export async function getShellWorkflowReadModel(
     currentWeekStart: string | null;
     weekStatuses: OperatorWeekStatus[];
     communications: OperatorShellCommunication[];
+    openExceptionCount: number;
   }>
 > {
-  const [currentWeekResult, statusesResult, communicationsResult] =
+  const [currentWeekResult, statusesResult, communicationsResult, exceptionsResult] =
     await Promise.all([
       supabase.from("operator_current_week").select("week_start").maybeSingle(),
       supabase.from("operator_week_status").select("*"),
       supabase
         .from("operator_communications")
         .select("week_start,order_run_id,email_state"),
+      supabase
+        .from("operator_autopilot_exceptions")
+        .select("exception_id")
+        .eq("status", "open")
+        .limit(50),
     ]);
 
   if (currentWeekResult.error) {
@@ -103,6 +214,7 @@ export async function getShellWorkflowReadModel(
       currentWeekStart: currentWeekResult.data?.week_start ?? null,
       weekStatuses: statusesResult.data ?? [],
       communications: communicationsResult.data ?? [],
+      openExceptionCount: exceptionsResult.data?.length ?? 0,
     },
     error: null,
   };
@@ -116,6 +228,7 @@ export async function getDashboardReadModel(
     weekStatus: OperatorWeekStatus | null;
     sessions: OperatorWeekSession[];
     latestOrderRun: OperatorOrderRun | null;
+    autopilotStatus: OperatorAutopilotStatus | null;
     auditEvents: OperatorAuditEvent[];
   }>
 > {
@@ -138,38 +251,49 @@ export async function getDashboardReadModel(
         weekStatus: null,
         sessions: [],
         latestOrderRun: null,
+        autopilotStatus: null,
         auditEvents: [],
       },
       error: null,
     };
   }
 
-  const [statusResult, sessionsResult, orderRunsResult, auditResult] =
-    await Promise.all([
-      supabase
-        .from("operator_week_status")
-        .select("*")
-        .eq("week_start", currentWeek.week_start)
-        .maybeSingle(),
-      supabase
-        .from("operator_week_sessions")
-        .select("*")
-        .eq("week_start", currentWeek.week_start)
-        .order("session_date", { ascending: true })
-        .order("school_name", { ascending: true })
-        .limit(6),
-      supabase
-        .from("operator_order_runs")
-        .select("*")
-        .eq("week_start", currentWeek.week_start)
-        .order("generated_at", { ascending: false })
-        .limit(1),
-      supabase
-        .from("operator_audit_events")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(5),
-    ]);
+  const [
+    statusResult,
+    sessionsResult,
+    orderRunsResult,
+    autopilotResult,
+    auditResult,
+  ] = await Promise.all([
+    supabase
+      .from("operator_week_status")
+      .select("*")
+      .eq("week_start", currentWeek.week_start)
+      .maybeSingle(),
+    supabase
+      .from("operator_week_sessions")
+      .select("*")
+      .eq("week_start", currentWeek.week_start)
+      .order("session_date", { ascending: true })
+      .order("school_name", { ascending: true })
+      .limit(6),
+    supabase
+      .from("operator_order_runs")
+      .select("*")
+      .eq("week_start", currentWeek.week_start)
+      .order("generated_at", { ascending: false })
+      .limit(1),
+    supabase
+      .from("operator_autopilot_status")
+      .select("*")
+      .eq("week_start", currentWeek.week_start)
+      .maybeSingle(),
+    supabase
+      .from("operator_audit_events")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
 
   if (statusResult.error) {
     return { data: null, error: readError("Week status", statusResult.error) };
@@ -189,6 +313,13 @@ export async function getDashboardReadModel(
     };
   }
 
+  if (autopilotResult.error) {
+    return {
+      data: null,
+      error: readError("Autopilot status", autopilotResult.error),
+    };
+  }
+
   if (auditResult.error) {
     return { data: null, error: readError("Audit events", auditResult.error) };
   }
@@ -199,7 +330,401 @@ export async function getDashboardReadModel(
       weekStatus: statusResult.data,
       sessions: sessionsResult.data ?? [],
       latestOrderRun: orderRunsResult.data?.[0] ?? null,
+      autopilotStatus: autopilotResult.data,
       auditEvents: auditResult.data ?? [],
+    },
+    error: null,
+  };
+}
+
+export async function getAutopilotReadModel(
+  supabase: OperatorSupabaseClient,
+): Promise<
+  ReadModelResult<{
+    currentWeek: OperatorCurrentWeek | null;
+    autopilotStatus: OperatorAutopilotStatus | null;
+    exceptions: OperatorAutopilotException[];
+    replies: OperatorCatererReply[];
+    resolutions: OperatorExceptionResolution[];
+    resolutionOptions: OperatorExceptionResolutionOption[];
+    mealFitSignals: OperatorMealFitSignal[];
+    qualitySignals: OperatorCatererQualitySignal[];
+    feedbackEvents: OperatorFeedbackEvent[];
+    aiInterpretations: OperatorAiInterpretation[];
+    timelineEvents: OperatorAuditEvent[];
+  }>
+> {
+  const { data: currentWeek, error: currentWeekError } = await supabase
+    .from("operator_current_week")
+    .select("*")
+    .maybeSingle();
+
+  if (currentWeekError) {
+    return {
+      data: null,
+      error: readError("Current week", currentWeekError),
+    };
+  }
+
+  if (!currentWeek?.week_start) {
+    return {
+      data: {
+        currentWeek: currentWeek ?? null,
+        autopilotStatus: null,
+        exceptions: [],
+        replies: [],
+        resolutions: [],
+        resolutionOptions: [],
+        mealFitSignals: [],
+        qualitySignals: [],
+        feedbackEvents: [],
+        aiInterpretations: [],
+        timelineEvents: [],
+      },
+      error: null,
+    };
+  }
+
+  const [statusResult, latestOrderRunResult] = await Promise.all([
+    supabase
+      .from("operator_autopilot_status")
+      .select("*")
+      .eq("week_start", currentWeek.week_start)
+      .maybeSingle(),
+    supabase
+      .from("operator_order_runs")
+      .select("order_run_id")
+      .eq("week_start", currentWeek.week_start)
+      .order("generated_at", { ascending: false })
+      .limit(1),
+  ]);
+
+  if (statusResult.error) {
+    return {
+      data: null,
+      error: readError("Autopilot status", statusResult.error),
+    };
+  }
+
+  if (latestOrderRunResult.error) {
+    return {
+      data: null,
+      error: readError("Latest order run", latestOrderRunResult.error),
+    };
+  }
+
+  const autopilotStatus = statusResult.data;
+  const latestOrderRunId = latestOrderRunResult.data?.[0]?.order_run_id ?? null;
+  const currentOrderRunId =
+    autopilotStatus?.generated_order_run_id ?? latestOrderRunId;
+  const currentAutopilotRunId = autopilotStatus?.autopilot_run_id ?? null;
+  const repliesQuery = supabase
+    .from("operator_caterer_replies")
+    .select("*")
+    .order("received_at", { ascending: false })
+    .limit(100);
+  const mealFitQuery = supabase
+    .from("operator_meal_fit_signals")
+    .select("*")
+    .not("chosen_score", "is", null)
+    .order("chosen_score", { ascending: true })
+    .limit(8);
+
+  const [
+    exceptionsResult,
+    repliesResult,
+    mealFitResult,
+    qualityResult,
+    feedbackResult,
+    aiResult,
+    resolutionsResult,
+    resolutionOptionsResult,
+  ] = await Promise.all([
+    supabase
+      .from("operator_autopilot_exceptions")
+      .select("*")
+      .eq("week_start", currentWeek.week_start)
+      .order("created_at", { ascending: false }),
+    repliesQuery.eq("week_start", currentWeek.week_start),
+    currentOrderRunId
+      ? mealFitQuery.eq("order_run_id", currentOrderRunId)
+      : mealFitQuery.eq("week_start", currentWeek.week_start),
+    supabase
+      .from("operator_caterer_quality_signals")
+      .select("*")
+      .order("serious_event_count", { ascending: false })
+      .order("review_event_count", { ascending: false })
+      .order("caterer_name", { ascending: true }),
+    supabase
+      .from("operator_feedback_events")
+      .select("*")
+      .gte("session_date", currentWeek.week_start)
+      .lte("session_date", currentWeek.week_end ?? currentWeek.week_start)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("operator_ai_interpretations")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(25),
+    supabase
+      .from("operator_exception_resolutions")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("operator_exception_resolution_options")
+      .select("*")
+      .order("display_name", { ascending: true }),
+  ]);
+
+  if (exceptionsResult.error) {
+    return {
+      data: null,
+      error: readError("Autopilot exceptions", exceptionsResult.error),
+    };
+  }
+
+  if (repliesResult.error) {
+    return {
+      data: null,
+      error: readError("Caterer replies", repliesResult.error),
+    };
+  }
+
+  if (mealFitResult.error) {
+    return {
+      data: null,
+      error: readError("Meal-fit signals", mealFitResult.error),
+    };
+  }
+
+  if (qualityResult.error) {
+    return {
+      data: null,
+      error: readError("Caterer quality signals", qualityResult.error),
+    };
+  }
+
+  if (feedbackResult.error) {
+    return {
+      data: null,
+      error: readError("Feedback events", feedbackResult.error),
+    };
+  }
+
+  if (aiResult.error) {
+    return {
+      data: null,
+      error: readError("AI interpretations", aiResult.error),
+    };
+  }
+  if (resolutionsResult.error) {
+    return {
+      data: null,
+      error: readError("Exception resolutions", resolutionsResult.error),
+    };
+  }
+  if (resolutionOptionsResult.error) {
+    return {
+      data: null,
+      error: readError("Resolution options", resolutionOptionsResult.error),
+    };
+  }
+
+  const scopedReplies = scopeRepliesToOrderRunChain(
+    repliesResult.data ?? [],
+    latestOrderRunId,
+  );
+  const scopedExceptions = scopeExceptionsToCurrentContext(
+    exceptionsResult.data ?? [],
+    scopedReplies,
+    currentAutopilotRunId,
+    currentOrderRunId,
+  );
+  const auditFilterIds = [
+    currentAutopilotRunId,
+    currentOrderRunId,
+    ...scopedExceptions.map((exception) => exception.exception_id),
+  ].filter((value): value is string => Boolean(value));
+
+  let timelineEvents: OperatorAuditEvent[] = [];
+
+  if (auditFilterIds.length) {
+    const { data: auditEvents, error: auditError } = await supabase
+      .from("operator_audit_events")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (auditError) {
+      return {
+        data: null,
+        error: readError("Autopilot timeline", auditError),
+      };
+    }
+
+    timelineEvents = (auditEvents ?? []).filter(
+      (event) =>
+        (event.entity_id ? auditFilterIds.includes(event.entity_id) : false) ||
+        (event.order_run_id
+          ? auditFilterIds.includes(event.order_run_id)
+          : false),
+    );
+  }
+
+  return {
+    data: {
+      currentWeek,
+      autopilotStatus,
+      exceptions: scopedExceptions.sort((left, right) => {
+        const statusWeight = (value: string | null) =>
+          value === "open" ? 0 : 1;
+        const severityWeight = (value: string | null) => {
+          if (value === "critical") return 0;
+          if (value === "blocked") return 1;
+          if (value === "review") return 2;
+          return 3;
+        };
+
+        return (
+          statusWeight(left.status) - statusWeight(right.status) ||
+          severityWeight(left.severity) - severityWeight(right.severity)
+        );
+      }),
+      replies: scopedReplies,
+      resolutions: (resolutionsResult.data ?? []).filter((resolution) =>
+        scopedExceptions.some(
+          (exception) => exception.exception_id === resolution.exception_id,
+        ),
+      ),
+      resolutionOptions: (resolutionOptionsResult.data ?? []).filter((option) =>
+        scopedExceptions.some(
+          (exception) => exception.exception_id === option.exception_id,
+        ),
+      ),
+      mealFitSignals: mealFitResult.data ?? [],
+      qualitySignals: qualityResult.data ?? [],
+      feedbackEvents: feedbackResult.data ?? [],
+      aiInterpretations: aiResult.data ?? [],
+      timelineEvents,
+    },
+    error: null,
+  };
+}
+
+export async function getFeedbackReadModel(
+  supabase: OperatorSupabaseClient,
+): Promise<
+  ReadModelResult<{
+    currentWeek: OperatorCurrentWeek | null;
+    overview: OperatorFeedbackOverview[];
+    trends: OperatorFeedbackTrend[];
+    caterers: OperatorCatererFeedbackPerformance[];
+    requests: OperatorFeedbackRequest[];
+    events: OperatorFeedbackEvent[];
+    qualitySignals: OperatorCatererQualitySignal[];
+  }>
+> {
+  const { data: currentWeek, error: currentWeekError } = await supabase
+    .from("operator_current_week")
+    .select("*")
+    .maybeSingle();
+
+  if (currentWeekError) {
+    return {
+      data: null,
+      error: readError("Current week", currentWeekError),
+    };
+  }
+
+  const [
+    overviewResult,
+    trendsResult,
+    caterersResult,
+    requestsResult,
+    eventsResult,
+    qualityResult,
+  ] = await Promise.all([
+    supabase
+      .from("operator_feedback_overview")
+      .select("*")
+      .order("week_start", { ascending: false })
+      .limit(8),
+    supabase
+      .from("operator_feedback_weekly_trends")
+      .select("*")
+      .order("week_start", { ascending: true })
+      .limit(12),
+    supabase
+      .from("operator_caterer_feedback_performance")
+      .select("*")
+      .order("serious_quality_event_count", { ascending: false })
+      .order("review_quality_event_count", { ascending: false })
+      .order("caterer_name", { ascending: true }),
+    supabase
+      .from("operator_feedback_requests")
+      .select("*")
+      .order("eligible_at", { ascending: false })
+      .limit(80),
+    supabase
+      .from("operator_feedback_events")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(40),
+    supabase
+      .from("operator_caterer_quality_signals")
+      .select("*")
+      .order("serious_event_count", { ascending: false })
+      .order("review_event_count", { ascending: false })
+      .order("caterer_name", { ascending: true }),
+  ]);
+
+  if (overviewResult.error) {
+    return {
+      data: null,
+      error: readError("Feedback overview", overviewResult.error),
+    };
+  }
+  if (trendsResult.error) {
+    return {
+      data: null,
+      error: readError("Feedback trends", trendsResult.error),
+    };
+  }
+  if (caterersResult.error) {
+    return {
+      data: null,
+      error: readError("Caterer feedback performance", caterersResult.error),
+    };
+  }
+  if (requestsResult.error) {
+    return {
+      data: null,
+      error: readError("Feedback requests", requestsResult.error),
+    };
+  }
+  if (eventsResult.error) {
+    return {
+      data: null,
+      error: readError("Feedback events", eventsResult.error),
+    };
+  }
+  if (qualityResult.error) {
+    return {
+      data: null,
+      error: readError("Quality signals", qualityResult.error),
+    };
+  }
+
+  return {
+    data: {
+      currentWeek: currentWeek ?? null,
+      overview: overviewResult.data ?? [],
+      trends: trendsResult.data ?? [],
+      caterers: caterersResult.data ?? [],
+      requests: requestsResult.data ?? [],
+      events: eventsResult.data ?? [],
+      qualitySignals: qualityResult.data ?? [],
     },
     error: null,
   };

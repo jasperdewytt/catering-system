@@ -219,7 +219,7 @@ Primary actions:
 
 Empty/loading states:
 
-- no run yet: show the CLI command needed for the current submission, `uv run python -m padea_catering.ordering --week-start 2026-05-01`, rather than exposing a fake Generate button.
+- no run yet: show the CLI command needed for the current submission, `uv run python -m padea_catering.ordering --week-start 2026-06-01`, rather than exposing a fake Generate button.
 
 ### Order Run Detail
 
