@@ -114,6 +114,18 @@ def parse_ordinal_english_date(text: str, year: int) -> date | None:
     return date(year, month, day)
 
 
+def correct_source_operational_date(value: date) -> date:
+    """Correct the source fixture's transcribed May dates to the intended June week.
+
+    The raw files must remain immutable, but the provided 2026 session week was
+    entered as May 1-4 while its weekday labels match June 1-4. Keep the fix
+    deliberately narrow so ordinary May dates in future data are not rewritten.
+    """
+    if value.year == 2026 and value.month == 5 and 1 <= value.day <= 4:
+        return date(2026, 6, value.day)
+    return value
+
+
 # --- Year levels -----------------------------------------------------------
 
 

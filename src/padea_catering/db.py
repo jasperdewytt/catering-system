@@ -16,14 +16,8 @@ from supabase import Client, create_client
 load_dotenv()
 
 
-@cache
-def get_client() -> Client:
-    """Return a service-role Supabase client.
-
-    Reads `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from the environment
-    (typically loaded from `.env`). Cached so repeated calls reuse the same
-    underlying HTTP client.
-    """
+def create_service_client() -> Client:
+    """Create an independent service-role Supabase client."""
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     if not url or not key:
@@ -32,3 +26,9 @@ def get_client() -> Client:
             "Set them in .env or export them before running."
         )
     return create_client(url, key)
+
+
+@cache
+def get_client() -> Client:
+    """Return the cached service-role client used by request handlers."""
+    return create_service_client()

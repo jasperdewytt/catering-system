@@ -79,7 +79,7 @@ def test_structured_draft_includes_subject_body_and_recipients() -> None:
         ],
     )
 
-    assert draft["subject"] == "Padea catering order - Example Caterer"
+    assert draft["subject"] == ("Padea catering order - Example Caterer - Week of 1 May 2026")
     assert draft["recipients"] == [
         {
             "caterer_contact_id": None,
@@ -97,7 +97,7 @@ def test_structured_draft_includes_subject_body_and_recipients() -> None:
     assert "Please confirm receipt" in draft["rendered_text"]
     assert "Item subtotal" not in draft["rendered_text"]
     assert "Delivery fee noted" not in draft["rendered_text"]
-    assert draft["template_version"] == "caterer-order-v2"
+    assert draft["template_version"] == "caterer-order-v3"
 
 
 def test_email_draft_includes_building_and_manager_mobile_without_room_warning() -> None:

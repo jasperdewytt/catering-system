@@ -17,6 +17,7 @@ import pdfplumber
 from .normalisation import (
     IngredientFlags,
     ParsedDietary,
+    correct_source_operational_date,
     infer_ingredient_flags,
     is_halal,
     parse_dietary,
@@ -319,10 +320,8 @@ class ParsedSession:
     caterer_name: str
     region: str | None
     session_date: date
-    # source-provided day-of-week (e.g. "Tuesday"). Cannot be derived from
-    # session_date because the source dataset's dates don't align with the real
-    # Gregorian calendar (2026-05-02 is labelled Tuesday but is actually Saturday).
-    # Used for matching students.xlsx sheet day suffixes to sessions.
+    # source-provided day-of-week (e.g. "Tuesday"). Used for matching
+    # students.xlsx sheet day suffixes to sessions.
     day_label: str
     start_time: time | None
     end_time: time | None
@@ -343,6 +342,7 @@ def parse_sessions_xlsx(path: Path) -> list[ParsedSession]:
         d = row["date"]
         if isinstance(d, pd.Timestamp):
             d = d.date()
+        d = correct_source_operational_date(d)
         out.append(
             ParsedSession(
                 school_name=str(row["school"]).strip(),
@@ -402,6 +402,7 @@ def parse_exclusions_pdf(path: Path) -> list[ParsedExclusion]:
         d = parse_ordinal_english_date(body, SOURCE_YEAR)
         if d is None:
             continue
+        d = correct_source_operational_date(d)
         reason_match = re.search(r"due to (?P<reason>[^.]+)", body, re.IGNORECASE)
         reason = reason_match.group("reason").strip() if reason_match else ""
 
@@ -525,7 +526,9 @@ def parse_absences_pdf(path: Path) -> list[ParsedAbsence]:
         m = header_re.match(stripped)
         if m:
             current_school = m.group("school").strip()
-            current_date = date(int(m.group("y")), int(m.group("m")), int(m.group("d")))
+            current_date = correct_source_operational_date(
+                date(int(m.group("y")), int(m.group("m")), int(m.group("d")))
+            )
             current_header = stripped
         else:
             if current_school is None or current_date is None:
