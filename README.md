@@ -1,8 +1,8 @@
 # Padea Catering Autopilot
 
-An operations platform that turns messy school catering data into safe, auditable weekly meal orders — then handles routine follow-up automatically.
+An operations platform that turns school catering data into weekly meal orders based on attendance, dietary restrictions, and exclusions. It also handles routine follow-up and records each action.
 
-Built for the **Padea Operations Engineer Competition**, this project combines a Next.js operator console, a deterministic Python ordering engine, Supabase/PostgreSQL, and the **Anthropic Claude API**. It was developed with help from Claude.
+I built this for the **Padea Operations Engineer Competition** with help from Claude. The system uses a Next.js operator console, a Python ordering engine, Supabase/PostgreSQL, and the **Anthropic Claude API**.
 
 ## Product tour
 
@@ -10,30 +10,28 @@ Built for the **Padea Operations Engineer Competition**, this project combines a
 
 ![Weekly operations dashboard](docs/screenshots/dashboard.png)
 
-See the active service week, delivery schedule, order readiness, automation status, and recent activity in one place.
+The dashboard shows the active service week, delivery schedule, order readiness, automation status, and recent activity.
 
 ### Catering Autopilot
 
 ![Catering Autopilot](docs/screenshots/autopilot.png)
 
-Run a normal week end to end, track durable background jobs, review caterer replies, and surface only the cases that need a person.
+The autopilot runs a normal week end to end. Operators can track background jobs, review caterer replies, and handle the cases that need a person.
 
 ### Feedback and quality loop
 
 ![Feedback and quality dashboard](docs/screenshots/feedback.png)
 
-Turn signed student and session-manager feedback into structured meal preferences and caterer quality signals for future weeks.
+Signed feedback from students and session managers becomes meal preference and caterer quality data for future weeks.
 
-## What makes it interesting
+## Highlights
 
-- **Real operational scope:** ingests spreadsheets and PDFs covering 307 students, 11 tutoring sessions, 5 schools, 4 caterers, and 40 menu dishes in the competition dataset.
-- **Safety before optimisation:** dietary restrictions, absences, exclusions, attendance, and quantities are handled by deterministic Python rules before preference scoring begins.
-- **Exception-based automation:** clean weeks can progress from offer selection to generated orders and prepared communications without operator input.
-- **Claude with clear boundaries:** the Claude API converts unstructured caterer replies and feedback into schema-constrained interpretations. Python remains the authority for dietary safety, replacements, quantities, approval, and sending.
-- **Safe reply handling:** clean confirmations can resolve automatically, while a narrowly defined unavailable-item workflow can create a checked replacement order. Ambiguous or unsafe replies become reviewable exceptions.
-- **Preference-aware ordering:** feedback, meal-fit history, novelty, and caterer quality influence future selections only after every safety filter passes.
-- **Designed for retries:** queued jobs, email preparation, approvals, reply processing, and revised orders use idempotency controls to avoid duplicate actions.
-- **Auditable by default:** automated actions, AI interpretations, operator decisions, email snapshots, and order revisions retain their source, reason, and timestamp.
+- The competition dataset covers 307 students, 11 tutoring sessions, 5 schools, 4 caterers, and 40 menu dishes supplied through spreadsheets and PDFs.
+- Python checks dietary restrictions, absences, exclusions, attendance, and quantities before preference scoring starts. A normal week can then move from offer selection to generated orders and prepared emails without operator input.
+- Claude parses free-text caterer replies and feedback into a fixed schema. Python still decides dietary safety, replacements, quantities, approval, and sending.
+- Clear confirmations resolve automatically. An unavailable item can trigger a checked replacement order; unclear or unsafe replies go to an operator.
+- Feedback, meal history, novelty, and caterer quality influence later selections only after the safety checks pass.
+- Idempotency controls stop retries from duplicating work, while actions, interpretations, decisions, email snapshots, and order revisions retain their source, reason, and timestamp.
 
 ## How it works
 
@@ -56,7 +54,7 @@ Deterministic validation and ordering
            └── Risk or ambiguity ► operator exception
 ```
 
-The same database state produces the same order facts. Claude supplies structured advice where language is ambiguous; it does not replace the deterministic safety layer.
+The same database state produces the same order facts. Claude handles ambiguous language but does not replace the deterministic safety checks.
 
 ## Architecture
 
@@ -68,7 +66,7 @@ The same database state produces the same order facts. Claude supplies structure
 | AI integration     | Anthropic Claude API                                      | Schema-constrained reply and feedback interpretation with recorded provenance       |
 | Background work    | Durable Python worker                                     | Autopilot runs, reply polling, feedback delivery, leases, retries, and job events   |
 
-The repository keeps the main boundaries deliberate:
+The code is split along these boundaries:
 
 - `src/padea_catering/` owns safety-critical and operational logic.
 - `web/` is the Next.js operator experience; it does not reimplement catering rules.
@@ -78,7 +76,7 @@ The repository keeps the main boundaries deliberate:
 
 ## Claude integration
 
-The backend uses the Anthropic SDK through an `AnthropicClaudeProvider`. Requests use structured JSON output, local Pydantic validation, stop-reason checks, and persisted provenance.
+The backend calls Claude through the Anthropic SDK. Responses must match a JSON schema, pass local Pydantic validation, and finish with an accepted stop reason. Each call records its provenance.
 
 Claude is used for:
 
@@ -86,7 +84,7 @@ Claude is used for:
 - extracting preference and quality signals from written feedback;
 - helping an operator turn an exception instruction into a proposed action.
 
-Claude is not allowed to decide dietary safety, absences, exclusions, quantities, recipients, approvals, or whether an email is sent. Those decisions remain deterministic and testable.
+Python decides dietary safety, absences, exclusions, quantities, recipients, approvals, and whether an email is sent.
 
 ## Run locally
 
@@ -157,4 +155,4 @@ The test suite covers ingestion normalisation, deterministic ordering, meal-fit 
 
 ## Competition and authorship
 
-This project was created for the **Padea Operations Engineer Competition**. I designed and implemented the system with help from Claude, and the application itself integrates the Anthropic Claude API for bounded language-understanding tasks.
+I designed and implemented this project for the **Padea Operations Engineer Competition** with help from Claude. The application uses the Anthropic Claude API for the language tasks described above.
