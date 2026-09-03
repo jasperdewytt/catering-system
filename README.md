@@ -1,107 +1,108 @@
-# Padea Catering System
+# Padea Catering Autopilot
 
-Padea runs tutoring sessions across multiple schools and needs to order meals
-from several caterers each week. This project is an operations system for that
-workflow. It turns source spreadsheets and PDFs into reviewable weekly orders,
-delivery notes, caterer email records, and an audit trail.
+An operations platform that turns messy school catering data into safe, auditable weekly meal orders — then handles routine follow-up automatically.
 
-The main idea is simple: the system should not just send emails. It should help
-make sure the order behind each email is correct.
+Built for the **Padea Operations Engineer Competition**, this project combines a Next.js operator console, a deterministic Python ordering engine, Supabase/PostgreSQL, and the **Anthropic Claude API**. It was developed with help from Claude.
 
-## What The System Handles
+## Product tour
 
-- Ingests student, session, caterer, menu, absence, and exclusion source files.
-- Preserves the original raw files and writes normalised records to
-  Supabase/PostgreSQL.
-- Applies deterministic rules for attendance, opt-outs, exclusions, dietary
-  restrictions, dish variants, and quantities.
-- Generates one meal allocation for each eligible attending student.
-- Aggregates allocations into caterer order lines and delivery notes.
-- Runs routine weeks as a catering autopilot: selects offer sets, generates
-  preference-aware orders, prepares and sends caterer emails, and resolves safe
-  caterer replies without human input.
-- Escalates only genuine exceptions — low-confidence interpretation, unsafe or
-  ambiguous replies, caterer quality issues, or failed safety gates — as
-  human-review items with the context needed to decide.
-- Gives operators a web console to review readiness, menus, generated orders,
-  student/caterer context, caterer emails, autopilot status, and audit history.
-- Collects student and session-manager feedback through signed forms and turns
-  that feedback into preference signals and caterer quality events.
-- Records every automated action and operator decision with actor, reason, and
-  timestamp metadata.
+### Weekly operations dashboard
+
+![Weekly operations dashboard](docs/screenshots/dashboard.png)
+
+See the active service week, delivery schedule, order readiness, automation status, and recent activity in one place.
+
+### Catering Autopilot
+
+![Catering Autopilot](docs/screenshots/autopilot.png)
+
+Run a normal week end to end, track durable background jobs, review caterer replies, and surface only the cases that need a person.
+
+### Feedback and quality loop
+
+![Feedback and quality dashboard](docs/screenshots/feedback.png)
+
+Turn signed student and session-manager feedback into structured meal preferences and caterer quality signals for future weeks.
+
+## What makes it interesting
+
+- **Real operational scope:** ingests spreadsheets and PDFs covering 307 students, 11 tutoring sessions, 5 schools, 4 caterers, and 40 menu dishes in the competition dataset.
+- **Safety before optimisation:** dietary restrictions, absences, exclusions, attendance, and quantities are handled by deterministic Python rules before preference scoring begins.
+- **Exception-based automation:** clean weeks can progress from offer selection to generated orders and prepared communications without operator input.
+- **Claude with clear boundaries:** the Claude API converts unstructured caterer replies and feedback into schema-constrained interpretations. Python remains the authority for dietary safety, replacements, quantities, approval, and sending.
+- **Safe reply handling:** clean confirmations can resolve automatically, while a narrowly defined unavailable-item workflow can create a checked replacement order. Ambiguous or unsafe replies become reviewable exceptions.
+- **Preference-aware ordering:** feedback, meal-fit history, novelty, and caterer quality influence future selections only after every safety filter passes.
+- **Designed for retries:** queued jobs, email preparation, approvals, reply processing, and revised orders use idempotency controls to avoid duplicate actions.
+- **Auditable by default:** automated actions, AI interpretations, operator decisions, email snapshots, and order revisions retain their source, reason, and timestamp.
+
+## How it works
+
+```text
+Source spreadsheets and PDFs
+           │
+           ▼
+  Python ingestion pipeline
+           │
+           ▼
+ Supabase / PostgreSQL  ◄──── Next.js operator console
+           │
+           ▼
+Deterministic validation and ordering
+           │
+           ▼
+ Autopilot, communications, and feedback
+           │
+           ├── Safe and clear ──► continue automatically
+           └── Risk or ambiguity ► operator exception
+```
+
+The same database state produces the same order facts. Claude supplies structured advice where language is ambiguous; it does not replace the deterministic safety layer.
 
 ## Architecture
 
-- **Operator web app**: `web/` contains the Next.js 16 App Router application.
-  It is the primary interface for reviewing and operating the weekly workflow.
-- **Python backend**: `src/padea_catering/` contains ingestion, validation,
-  order generation, email preparation/sending support, and backend-only audited
-  operations. It also owns the final-round automation: the autopilot runner,
-  meal-fit preference scoring, caterer reply handling, the feedback loop, and a
-  durable background worker that runs queued jobs.
-- **Database**: `supabase/migrations/` defines the Supabase/PostgreSQL schema,
-  read views, RPC contracts, audit tables, and communication records.
-- **AI/LLM plan**: `docs/LLM_INTEGRATION_PLAN.md` describes future advisory AI
-  support. Safety-critical decisions such as allergies, absences, exclusions,
-  and quantities stay rule-based.
+| Layer              | Technology                                                | Responsibility                                                                      |
+| ------------------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Operator interface | Next.js 16, TypeScript, React Server Components, Tailwind | Weekly status, menus, orders, approvals, exceptions, feedback, and audit history    |
+| Business logic     | Python 3.12, FastAPI, Pydantic                            | Ingestion, validation, allocation, meal-fit scoring, communications, and automation |
+| Data and auth      | Supabase, PostgreSQL, Row Level Security                  | Operational source of truth, operator access, read models, RPCs, and audit records  |
+| AI integration     | Anthropic Claude API                                      | Schema-constrained reply and feedback interpretation with recorded provenance       |
+| Background work    | Durable Python worker                                     | Autopilot runs, reply polling, feedback delivery, leases, retries, and job events   |
 
-## Demo Workflow
+The repository keeps the main boundaries deliberate:
 
-A normal week is designed to run end-to-end through the autopilot with no human
-input. The numbered surfaces below let an operator inspect, override, or run
-each step manually, and are also where exceptions surface when automation
-reaches its boundary.
+- `src/padea_catering/` owns safety-critical and operational logic.
+- `web/` is the Next.js operator experience; it does not reimplement catering rules.
+- `supabase/migrations/` defines the database, RLS policies, read views, and audited write contracts.
+- `data/raw/` contains immutable competition source files.
+- `docs/` records design decisions, edge cases, data provenance, and implementation stages.
 
-1. **Dashboard** — inspect the active week, readiness state, autopilot status,
-   sessions, generated runs, and recent audit activity.
-2. **Autopilot** — run a week end-to-end (offer selection, preference-aware
-   order generation, validation, caterer email preparation and test-routed
-   sending), watch live job progress, fetch and auto-resolve safe caterer
-   replies, and review human-review exceptions with their interpreted summary,
-   reason, and recommended action.
-3. **Menu setup** — review caterer offers, create concrete dish variants for
-   customisable meals, and confirm dietary/ingredient flags.
-4. **Validation** — check readiness summaries and latest persisted order issues.
-5. **Orders** — generate a weekly order run through the Python backend, then
-   inspect order lines, student allocations, contacts, and delivery notes.
-6. **Approval and notes** — approve or reopen runs and record follow-up or
-   override intent with an audit reason.
-7. **Caterer emails** — create or review saved email snapshots, inspect
-   recipients and delivery notes, and use the test-recipient send path.
-8. **Feedback** — inspect response trends, caterer performance, recent
-   submissions, student invitation status, and manager link/QR forms.
-9. **Audit** — review order generation, approval, email preparation, send
-   attempts, autopilot actions, reply handling, and manual decision history.
+## Claude integration
 
-Important data edge cases are documented in `docs/EDGE_CASES.md`, including
-missing student IDs, similar student names, partial year-level cancellations,
-customisable dishes, opt-outs, date/day mismatches, building-only delivery
-locations, and synthetic-looking caterer contacts.
+The backend uses the Anthropic SDK through an `AnthropicClaudeProvider`. Requests use structured JSON output, local Pydantic validation, stop-reason checks, and persisted provenance.
 
-## Reproducing Locally
+Claude is used for:
 
-You can read the code and run most tests without a live deployment. To run the
-full operator workflow with real data, you need a Supabase project configured
-with the migrations in this repository and the expected environment variables.
+- interpreting free-text caterer replies;
+- extracting preference and quality signals from written feedback;
+- helping an operator turn an exception instruction into a proposed action.
 
-### Prerequisites
+Claude is not allowed to decide dietary safety, absences, exclusions, quantities, recipients, approvals, or whether an email is sent. Those decisions remain deterministic and testable.
 
-- **Python 3.12**: used by the backend package and tests.
-- **uv**: the Python dependency and command runner. It creates the local virtual
-  environment and runs Python commands with the right dependencies.
-- **Node.js 20+**: used by the Next.js web app.
-- **pnpm**: the JavaScript package manager used by `web/`. It is commonly
-  enabled through Corepack, which ships with recent Node.js versions:
+## Run locally
 
-```bash
-corepack enable
-corepack prepare pnpm@latest --activate
-```
+You can inspect the code and run the test suite without external services. The complete operator workflow requires a configured Supabase project and local environment files.
 
-### Backend Setup
+### Requirements
 
-Backend-only environment values are read from an untracked `.env` file in the
-repository root:
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/)
+- Node.js 20+
+- pnpm
+- Supabase project with the repository migrations applied
+
+### Backend
+
+Create an untracked root `.env` with the required backend values:
 
 ```bash
 SUPABASE_URL=
@@ -109,86 +110,34 @@ SUPABASE_SERVICE_ROLE_KEY=
 PADEA_BACKEND_SHARED_SECRET=
 PADEA_FEEDBACK_LINK_SECRET=
 PADEA_WEB_PUBLIC_URL=http://localhost:3000
-PADEA_EMAIL_PROVIDER=gmail_smtp
-PADEA_EMAIL_FROM=
-PADEA_GMAIL_SMTP_USERNAME=
-PADEA_GMAIL_SMTP_APP_PASSWORD=
-PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE=
+ANTHROPIC_API_KEY=
+PADEA_CLAUDE_MODEL=
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY`, SMTP credentials, and
-`PADEA_BACKEND_SHARED_SECRET` are server-only secrets. Do not put them in
-`web/` or commit real `.env` files.
-
-Run backend commands:
+Then run:
 
 ```bash
 uv sync
 uv run python -m padea_catering.ingestion
 uv run python -m padea_catering.validation
-uv run python -m padea_catering.ordering --week-start 2026-06-01 --dry-run
 uv run uvicorn padea_catering.backend:app --reload
 ```
 
-The FastAPI server starts the durable automation worker by default, so the
-normal backend command is sufficient for queued runs and automatic reply
-checks, feedback invitation dispatch, and feedback processing.
+### Operator console
 
-For a dedicated worker deployment, disable the embedded worker on the API and
-run the worker separately:
-
-```bash
-PADEA_EMBEDDED_AUTOMATION_WORKER=false uv run uvicorn padea_catering.backend:app
-uv run python -m padea_catering.automation
-```
-
-The worker executes queued autopilot runs, checks Gmail for caterer replies
-every 2 minutes from 7am to 9pm Australia/Brisbane time and every 10 minutes
-overnight, and checks feedback invitations every 5 minutes by day and every
-15 minutes overnight. For a one-job deployment/health check, use
-`uv run python -m padea_catering.automation --once`.
-
-The current email send path requires `PADEA_EMAIL_TEST_RECIPIENT_OVERRIDE`.
-Reviewed caterer emails are sent only to that test recipient while preserving
-the intended caterer recipients in the audit/provider metadata.
-
-### Web App Setup
-
-Browser-safe Supabase values live in `web/.env.local`. Start from the example:
-
-```bash
-cp web/.env.example web/.env.local
-```
-
-`web/.env.example` contains:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
-```
-
-Server-side web actions that ask the Python backend to generate orders or handle
-caterer email records also need:
-
-```bash
-PADEA_BACKEND_URL=
-PADEA_BACKEND_SHARED_SECRET=
-```
-
-Public feedback links are generated by the Python backend with
-`PADEA_FEEDBACK_LINK_SECRET` and should use `PADEA_WEB_PUBLIC_URL` as their
-external base URL.
-
-Run the web app:
+Copy `web/.env.example` to `web/.env.local`, add the browser-safe Supabase values and backend bridge configuration, then run:
 
 ```bash
 pnpm --dir web install
 pnpm --dir web dev
 ```
 
-Then open the local URL printed by Next.js, usually `http://localhost:3000`.
+Open `http://localhost:3000`. Operator routes require a Supabase Auth account linked to `public.operators`.
 
-## Verification Commands
+> [!NOTE]
+> Outbound email is intentionally restricted to a configured test-recipient override. Real-recipient rollout is outside the competition build.
+
+## Verification
 
 ```bash
 uv run ruff check .
@@ -198,15 +147,14 @@ pnpm --dir web typecheck
 pnpm --dir web build
 ```
 
-## Where To Look
+The test suite covers ingestion normalisation, deterministic ordering, meal-fit selection, autopilot idempotency, Claude response validation, reply threading and revisions, feedback processing, exception resolution, and backend bridges.
 
-- `docs/current_stage.md` — current status and deferred production hardening.
-- `docs/EDGE_CASES.md` — data issues found in the source files and how they are
-  handled.
-- `docs/DECISIONS.md` — design decisions behind the schema, ordering rules,
-  audit model, and operator UI.
-- `docs/DATA_INVENTORY.md` — inventory of the raw source files.
-- `docs/WEBSITE_PLAN.md` — operator workflow and page reference.
-- `docs/WEBSITE_DATA_CONTRACTS.md` — database views and write contracts used by
-  the web app.
-- `web/README.md` — focused setup notes for the Next.js app.
+## Further reading
+
+- [`docs/current_stage.md`](docs/current_stage.md) — current implementation status and known follow-ups
+- [`docs/EDGE_CASES.md`](docs/EDGE_CASES.md) — source-data issues and how they are handled
+- [`docs/DECISIONS.md`](docs/DECISIONS.md) — architecture and domain decisions
+
+## Competition and authorship
+
+This project was created for the **Padea Operations Engineer Competition**. I designed and implemented the system with help from Claude, and the application itself integrates the Anthropic Claude API for bounded language-understanding tasks.
